@@ -6,10 +6,11 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
-interface Lesson {
+interface LessonProgress {
   id: string;
   title: string;
   order: number;
+  completed: boolean;
 }
 
 interface Exam {
@@ -24,25 +25,34 @@ interface Course {
   title: string;
   description?: string;
   teacher: { name: string };
-  lessons: Lesson[];
+  lessons: { id: string; title: string; order: number }[];
   exams: Exam[];
 }
 
 export default function CourseDetailPage() {
   const { id } = useParams();
   const [course, setCourse] = useState<Course | null>(null);
+  const [progress, setProgress] = useState<LessonProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    api
-      .get(`/courses/${id}`)
-      .then(({ data }) => setCourse(data))
-      .catch(() => {
+    const load = async () => {
+      try {
+        const [courseRes, progressRes] = await Promise.all([
+          api.get(`/courses/${id}`),
+          api.get(`/courses/${id}/lessons/progress/my`),
+        ]);
+        setCourse(courseRes.data);
+        setProgress(progressRes.data);
+      } catch {
         toast.error('Курс табылмады');
         router.push('/dashboard/courses');
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, [id]);
 
   if (loading) {
@@ -54,6 +64,17 @@ export default function CourseDetailPage() {
   }
 
   if (!course) return null;
+
+  const completedIds = new Set(progress.filter((l) => l.completed).map((l) => l.id));
+  const allLessonsCompleted = course.lessons.length > 0 && course.lessons.every((l) => completedIds.has(l.id));
+  const completedCount = completedIds.size;
+
+  // A lesson is accessible if it's first OR the previous lesson is completed
+  const isAccessible = (lesson: { id: string; order: number }) => {
+    if (lesson.order === 1) return true;
+    const prev = course.lessons.find((l) => l.order === lesson.order - 1);
+    return prev ? completedIds.has(prev.id) : false;
+  };
 
   return (
     <div className="max-w-4xl">
@@ -67,7 +88,39 @@ export default function CourseDetailPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">{course.title}</h1>
         {course.description && <p className="text-gray-600 mb-4">{course.description}</p>}
         <p className="text-sm text-gray-400">Мұғалім: {course.teacher.name}</p>
+
+        {/* Progress bar */}
+        {course.lessons.length > 0 && (
+          <div className="mt-4">
+            <div className="flex justify-between text-sm text-gray-500 mb-1">
+              <span>Прогресс</span>
+              <span>{completedCount}/{course.lessons.length} сабақ</span>
+            </div>
+            <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-green-500 rounded-full transition-all duration-500"
+                style={{ width: `${(completedCount / course.lessons.length) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* All lessons done → take exam banner */}
+      {allLessonsCompleted && course.exams.length > 0 && (
+        <div className="mb-6 p-5 bg-green-50 border border-green-200 rounded-xl flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">🎉</span>
+            <div>
+              <p className="font-semibold text-green-800">Барлық сабақтарды аяқтадыңыз!</p>
+              <p className="text-sm text-green-600">Енді емтиханды тапсыра аласыз</p>
+            </div>
+          </div>
+          <Link href={`/dashboard/exam/${course.exams[0].id}`} className="btn-primary whitespace-nowrap">
+            Емтиханды бастау →
+          </Link>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Lessons */}
@@ -77,12 +130,44 @@ export default function CourseDetailPage() {
             <p className="text-gray-400">Сабақ жоқ</p>
           ) : (
             <ul className="space-y-2">
-              {course.lessons.map((lesson) => (
-                <li key={lesson.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <span className="text-primary-600 font-bold text-sm">{lesson.order}</span>
-                  <span className="text-gray-800 text-sm">{lesson.title}</span>
-                </li>
-              ))}
+              {course.lessons.map((lesson) => {
+                const done = completedIds.has(lesson.id);
+                const accessible = isAccessible(lesson);
+                return (
+                  <li key={lesson.id}>
+                    {accessible ? (
+                      <Link
+                        href={`/dashboard/courses/${course.id}/lessons/${lesson.id}`}
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                          done
+                            ? 'bg-green-50 border-green-200 hover:bg-green-100'
+                            : 'bg-gray-50 border-transparent hover:bg-primary-50 hover:border-primary-200'
+                        }`}
+                      >
+                        <span className={`w-7 h-7 flex-shrink-0 rounded-full text-sm font-bold flex items-center justify-center ${
+                          done ? 'bg-green-500 text-white' : 'bg-primary-100 text-primary-700'
+                        }`}>
+                          {done ? '✓' : lesson.order}
+                        </span>
+                        <span className={`text-sm font-medium ${done ? 'text-green-800' : 'text-gray-800'}`}>
+                          {lesson.title}
+                        </span>
+                        <span className="ml-auto text-xs text-primary-600">
+                          {done ? '✓ Оқылды' : 'Оқу →'}
+                        </span>
+                      </Link>
+                    ) : (
+                      <div className="flex items-center gap-3 p-3 rounded-lg border border-transparent bg-gray-50 opacity-50 cursor-not-allowed">
+                        <span className="w-7 h-7 flex-shrink-0 rounded-full bg-gray-200 text-gray-500 text-sm font-bold flex items-center justify-center">
+                          🔒
+                        </span>
+                        <span className="text-sm font-medium text-gray-500">{lesson.title}</span>
+                        <span className="ml-auto text-xs text-gray-400">Жабық</span>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -101,12 +186,20 @@ export default function CourseDetailPage() {
                     <span>⏱ {exam.duration} мин</span>
                     <span>✓ Өту балы: {exam.passScore}%</span>
                   </div>
-                  <Link
-                    href={`/dashboard/exam/${exam.id}`}
-                    className="mt-2 inline-block btn-primary text-sm px-3 py-1.5"
-                  >
-                    Емтиханды бастау
-                  </Link>
+                  {allLessonsCompleted ? (
+                    <Link
+                      href={`/dashboard/exam/${exam.id}`}
+                      className="mt-2 inline-block btn-primary text-sm px-3 py-1.5"
+                    >
+                      Емтиханды бастау
+                    </Link>
+                  ) : (
+                    <div className="mt-2">
+                      <span className="inline-block text-xs text-gray-400 bg-gray-100 px-3 py-1.5 rounded-lg">
+                        🔒 Барлық сабақтарды аяқтаңыз
+                      </span>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

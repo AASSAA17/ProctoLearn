@@ -58,3 +58,22 @@ export class ChangePasswordDto {
   })
   newPassword: string;
 }
+
+export class ForgotPasswordDto {
+  @ApiProperty({ example: 'alibek@example.com' })
+  @IsEmail()
+  email: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+
+  @ApiProperty({ example: 'NewPass@12', minLength: 6 })
+  @IsString()
+  @MinLength(6, { message: 'Пароль кемінде 6 таңба болуы керек' })
+  newPassword: string;
+}
+

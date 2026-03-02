@@ -29,22 +29,30 @@ enum AttemptStatus {
   FLAGGED
 }
 
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
 model User {
-  id                  String           @id @default(uuid())
+  id                  String                @id @default(uuid())
   name                String
-  email               String           @unique
+  email               String                @unique
   phone               String?
   password            String
-  role                Role             @default(STUDENT)
-  createdAt           DateTime         @default(now())
+  role                Role                  @default(STUDENT)
+  createdAt           DateTime              @default(now())
   lastSeen            DateTime?
-  isOnline            Boolean          @default(false)
-  mustChangePassword  Boolean          @default(false)
+  isOnline            Boolean               @default(false)
+  mustChangePassword  Boolean               @default(false)
   courses             Course[]
   attempts            Attempt[]
   certificates        Certificate[]
   refreshToken        String?
   lessonProgress      LessonProgress[]
+  passwordResetTokens PasswordResetToken[]
+  enrollments         Enrollment[]
 
   @@map("users")
 }
@@ -68,22 +76,40 @@ model Course {
   title           String
   description     String?
   teacherId       String
+  level           CourseLevel      @default(BEGINNER)
   teacher         User             @relation(fields: [teacherId], references: [id])
   lessons         Lesson[]
   exams           Exam[]
   certificates    Certificate[]
   lessonProgress  LessonProgress[]
+  enrollments     Enrollment[]
   createdAt       DateTime         @default(now())
 
   @@map("courses")
+}
+
+model Enrollment {
+  id         String   @id @default(uuid())
+  userId     String
+  courseId   String
+  enrolledAt DateTime @default(now())
+  completedAt DateTime?
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
 }
 
 model Lesson {
   id             String           @id @default(uuid())
   courseId       String
   title          String
-  content        String
-  order          Int
+  content          String
+  videoUrl         String?
+  assignment       String?
+  assignmentAnswer String?
+  order            Int
   course         Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
   lessonProgress LessonProgress[]
   createdAt      DateTime         @default(now())
@@ -180,4 +206,15 @@ model Certificate {
   course   Course   @relation(fields: [courseId], references: [id])
 
   @@map("certificates")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }

@@ -1,24 +1,31 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { MinioService } from '../minio/minio.service';
-import { v4 as uuidv4 } from 'uuid';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class EvidenceService {
-  constructor(
-    private prisma: PrismaService,
-    private minioService: MinioService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
-  async saveScreenshot(attemptId: string, base64: string) {
+  async saveRecording(
+    attemptId: string,
+    buffer: Buffer,
+    mimeType: string,
+    recordingType: 'camera' | 'screen',
+  ) {
     const attempt = await this.prisma.attempt.findUnique({ where: { id: attemptId } });
     if (!attempt) throw new NotFoundException('Талпыныс табылмады');
 
-    const objectName = `screenshots/${attemptId}/${uuidv4()}.png`;
-    const url = await this.minioService.uploadBase64(base64, objectName, 'image/png');
+    const uploadDir = path.join(process.cwd(), 'uploads', 'recordings', attemptId);
+    fs.mkdirSync(uploadDir, { recursive: true });
 
+    const ext = mimeType.includes('webm') ? 'webm' : mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const filename = `${recordingType}-${Date.now()}.${ext}`;
+    fs.writeFileSync(path.join(uploadDir, filename), buffer);
+
+    const url = `/uploads/recordings/${attemptId}/${filename}`;
     return this.prisma.evidenceFile.create({
-      data: { attemptId, type: 'screenshot', url },
+      data: { attemptId, type: `recording_${recordingType}`, url },
     });
   }
 

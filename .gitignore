@@ -30,3 +30,6 @@ minio_data/
 
 # Docker volumes
 postgres_data/
+
+# Uploads (recordings, etc.)
+backend/uploads/

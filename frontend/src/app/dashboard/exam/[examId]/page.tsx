@@ -42,48 +42,153 @@ export default function ExamPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [currentQ, setCurrentQ] = useState(0);
+  const [tabBlocked, setTabBlocked] = useState(false);
+  const tabSwitchCountRef = useRef(0);
 
   const socketRef = useRef<Socket | null>(null);
   const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  const screenshotRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const faceCheckRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const attemptIdRef = useRef<string | null>(null);
+  // Video recording refs
+  const cameraRecorderRef = useRef<MediaRecorder | null>(null);
+  const screenRecorderRef = useRef<MediaRecorder | null>(null);
+  const cameraChunksRef = useRef<Blob[]>([]);
+  const screenChunksRef = useRef<Blob[]>([]);
 
   const sendEvent = useCallback((type: string, metadata?: Record<string, any>) => {
     socketRef.current?.emit('proctor:event', {
-      attemptId: attempt?.id,
+      attemptId: attemptIdRef.current ?? attempt?.id,
       type,
       metadata,
     });
   }, [attempt?.id]);
 
-  // Setup camera for screenshots
+  // Stop all media streams, recorders, and clear intervals
+  const stopAllMedia = useCallback(() => {
+    clearInterval(faceCheckRef.current);
+    clearInterval(timerRef.current);
+    // Stop recorders
+    if (cameraRecorderRef.current && cameraRecorderRef.current.state !== 'inactive') {
+      cameraRecorderRef.current.stop();
+    }
+    if (screenRecorderRef.current && screenRecorderRef.current.state !== 'inactive') {
+      screenRecorderRef.current.stop();
+    }
+    socketRef.current?.disconnect();
+    socketRef.current = null;
+    // Stop camera
+    const video = videoRef.current;
+    if (video?.srcObject) {
+      (video.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
+      video.srcObject = null;
+    }
+    // Stop screen share
+    screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+    screenStreamRef.current = null;
+    // Exit fullscreen
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  }, []);
+
+  // Setup camera + start recording
   const setupCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      if (videoRef.current) videoRef.current.srcObject = stream;
+      // Start camera recorder
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : 'video/webm';
+      const recorder = new MediaRecorder(stream, { mimeType });
+      cameraChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) cameraChunksRef.current.push(e.data); };
+      recorder.start(10000); // chunk every 10s
+      cameraRecorderRef.current = recorder;
     } catch {
       console.warn('Camera not available');
     }
   };
 
-  const captureScreenshot = useCallback(() => {
-    if (!canvasRef.current || !videoRef.current || !attempt) return;
+  // Setup screen sharing + start recording
+  const setupScreenShare = useCallback(async (attemptId: string) => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      screenStreamRef.current = stream;
+      // Start screen recorder
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : 'video/webm';
+      const recorder = new MediaRecorder(stream, { mimeType });
+      screenChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) screenChunksRef.current.push(e.data); };
+      recorder.start(10000);
+      screenRecorderRef.current = recorder;
+      // Detect if user stops sharing
+      stream.getVideoTracks()[0].addEventListener('ended', () => {
+        sendEvent('screen_share_stopped', { timestamp: new Date().toISOString() });
+        toast.error('Экран бөлісуді тоқтаттыңыз! -10 Trust Score', { duration: 4000 });
+        screenStreamRef.current = null;
+      });
+    } catch {
+      sendEvent('screen_share_denied', { timestamp: new Date().toISOString() });
+      toast.error('Экранды бөлісу талап етіледі', { duration: 4000 });
+    }
+  }, [sendEvent]);
+
+  // Upload recordings (fire-and-forget)
+  const uploadRecordings = useCallback((attemptId: string) => {
+    const uploadBlob = async (chunks: Blob[], type: 'camera' | 'screen') => {
+      if (chunks.length === 0) return;
+      try {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const formData = new FormData();
+        formData.append('file', blob, `${type}.webm`);
+        formData.append('type', type);
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/evidence/${attemptId}/recording`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+          body: formData,
+        });
+      } catch { /* silent */ }
+    };
+    void uploadBlob([...cameraChunksRef.current], 'camera');
+    void uploadBlob([...screenChunksRef.current], 'screen');
+  }, []);
+
+  // Detect face in camera canvas
+  const checkFace = useCallback(() => {
+    if (!canvasRef.current || !videoRef.current) return;
     const canvas = canvasRef.current;
     const video = videoRef.current;
+    if (video.readyState < 2) return; // not ready
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     canvas.width = video.videoWidth || 320;
     canvas.height = video.videoHeight || 240;
+    if (canvas.width === 0 || canvas.height === 0) return;
+
     ctx.drawImage(video, 0, 0);
-    const base64 = canvas.toDataURL('image/png').split(',')[1];
-    socketRef.current?.emit('proctor:screenshot', {
-      attemptId: attempt.id,
-      image: base64,
-    });
-  }, [attempt]);
+
+    // Simple brightness heuristic: if very dark or blank, no face
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    let totalBrightness = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      totalBrightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
+    }
+    const avgBrightness = totalBrightness / (data.length / 4);
+
+    if (avgBrightness < 10) {
+      // Camera feed is basically black — likely no face / camera blocked
+      sendEvent('face_not_detected', { reason: 'dark_frame', brightness: avgBrightness });
+      toast.error('Бет анықталмады! -5 Trust Score', { duration: 3000 });
+    }
+  }, [sendEvent]);
 
   // Proctoring event listeners
   useEffect(() => {
@@ -91,9 +196,16 @@ export default function ExamPage() {
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        sendEvent('tab_switch', { timestamp: new Date().toISOString() });
+        tabSwitchCountRef.current += 1;
+        sendEvent('tab_switch', { timestamp: new Date().toISOString(), count: tabSwitchCountRef.current });
         toast.error('Қойынды ауыстыру тіркелді! -10 Trust Score', { duration: 3000 });
+        setTabBlocked(true);
       }
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'Емтиханнан шығуға сенімдісіз бе?';
     };
 
     const handleCopy = () => {
@@ -114,6 +226,7 @@ export default function ExamPage() {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('copy', handleCopy);
     document.addEventListener('paste', handlePaste);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -123,6 +236,7 @@ export default function ExamPage() {
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('copy', handleCopy);
       document.removeEventListener('paste', handlePaste);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
@@ -135,6 +249,7 @@ export default function ExamPage() {
       try {
         const { data } = await api.post(`/attempts/start/${examId}`);
         setAttempt(data);
+        attemptIdRef.current = data.id;
         setTrustScore(data.trustScore);
         setTimeLeft(data.exam.duration * 60);
 
@@ -156,9 +271,10 @@ export default function ExamPage() {
         socketRef.current = socket;
 
         await setupCamera();
+        await setupScreenShare(data.id);
 
-        // Screenshot every 30 seconds
-        screenshotRef.current = setInterval(captureScreenshot, 30000);
+        // Face check every 15 seconds (no more screenshots)
+        faceCheckRef.current = setInterval(checkFace, 15000);
       } catch (err: any) {
         toast.error('Емтиханды бастау қатесі');
         router.push('/dashboard/courses');
@@ -170,14 +286,7 @@ export default function ExamPage() {
     init();
 
     return () => {
-      clearInterval(screenshotRef.current);
-      clearInterval(timerRef.current);
-      socketRef.current?.disconnect();
-      // Stop camera
-      const video = videoRef.current;
-      if (video?.srcObject) {
-        (video.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
-      }
+      stopAllMedia();
     };
   }, [examId]);
 
@@ -214,13 +323,19 @@ export default function ExamPage() {
         answers: answerList,
       });
 
+      // Upload recordings (fire-and-forget)
+      uploadRecordings(attempt.id);
+
+      // Stop camera and screen share immediately before navigating
+      stopAllMedia();
+
       if (data.passed) {
         toast.success(`Сіз өттіңіз! Балл: ${data.score}% 🎉`);
+        router.push('/dashboard/certificates');
       } else {
         toast.error(`Өтпедіңіз. Балл: ${data.score}%`);
+        router.push('/dashboard/my-attempts');
       }
-
-      router.push('/dashboard/my-attempts');
     } catch {
       toast.error('Жіберу қатесі');
       setSubmitting(false);
@@ -256,7 +371,25 @@ export default function ExamPage() {
   const question = questions[currentQ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+      {/* Tab switch blocking overlay */}
+      {tabBlocked && (
+        <div className="fixed inset-0 bg-red-900/95 z-50 flex flex-col items-center justify-center">
+          <div className="text-center text-white p-8 max-w-md">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h2 className="text-2xl font-bold mb-2">Қойынды ауыстыру тіркелді!</h2>
+            <p className="text-red-200 mb-2">Бұл оқиға проктор мен әкімшіге жіберілді.</p>
+            <p className="text-red-200 mb-6">Жалпы саны: {tabSwitchCountRef.current} рет</p>
+            <button
+              onClick={() => setTabBlocked(false)}
+              className="bg-white text-red-900 font-bold px-8 py-3 rounded-lg hover:bg-red-100 transition-colors"
+            >
+              Емтиханға оралу →
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="min-h-screen bg-gray-50">
       {/* Header bar */}
       <div className="bg-white shadow-sm border-b sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -323,30 +456,52 @@ export default function ExamPage() {
             <p className="text-sm text-gray-500 mb-2">
               Сұрақ {currentQ + 1} / {questions.length}
             </p>
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">{question.text}</h2>
+            {/* Question text — may contain code block */}
+            <div className="mb-6">
+              {question.text.includes('\n') || question.text.includes('```') ? (
+                <div>
+                  {question.text.split('```').map((part, i) =>
+                    i % 2 === 0 ? (
+                      <p key={i} className="text-xl font-semibold text-gray-900 whitespace-pre-line">{part}</p>
+                    ) : (
+                      <pre key={i} className="bg-gray-900 text-green-300 rounded-lg p-3 my-2 text-sm overflow-x-auto font-mono">{part.replace(/^[a-z]*\n/, '')}</pre>
+                    )
+                  )}
+                </div>
+              ) : (
+                <h2 className="text-xl font-semibold text-gray-900">{question.text}</h2>
+              )}
+            </div>
 
             {question.type === 'SINGLE_CHOICE' && question.options && (
               <div className="space-y-3">
-                {question.options.map((opt, idx) => (
-                  <label
-                    key={idx}
-                    className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      answers[question.id] === opt
-                        ? 'border-primary-500 bg-primary-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={`q-${question.id}`}
-                      value={opt}
-                      checked={answers[question.id] === opt}
-                      onChange={() => setAnswers((prev) => ({ ...prev, [question.id]: opt }))}
-                      className="text-primary-600"
-                    />
-                    <span className="text-gray-800">{opt}</span>
-                  </label>
-                ))}
+                {question.options.map((opt, idx) => {
+                  const isCode = opt.includes('\n') || opt.startsWith('<') || opt.startsWith('const ') || opt.startsWith('function ') || opt.startsWith('class ') || opt.startsWith('SELECT ') || opt.startsWith('INSERT ') || opt.startsWith('def ') || opt.startsWith('FROM ') || opt.startsWith('docker ') || opt.startsWith('git ') || opt.startsWith('npm ') || opt.startsWith('app.') || opt.startsWith('@') || opt.startsWith('services:');
+                  return (
+                    <label
+                      key={idx}
+                      className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        answers[question.id] === opt
+                          ? 'border-primary-500 bg-primary-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`q-${question.id}`}
+                        value={opt}
+                        checked={answers[question.id] === opt}
+                        onChange={() => setAnswers((prev) => ({ ...prev, [question.id]: opt }))}
+                        className="text-primary-600 mt-1 flex-shrink-0"
+                      />
+                      {isCode ? (
+                        <pre className="text-sm font-mono bg-gray-900 text-green-300 rounded px-3 py-2 overflow-x-auto w-full">{opt}</pre>
+                      ) : (
+                        <span className="text-gray-800">{opt}</span>
+                      )}
+                    </label>
+                  );
+                })}
               </div>
             )}
 
@@ -424,5 +579,6 @@ export default function ExamPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

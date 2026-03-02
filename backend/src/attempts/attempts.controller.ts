@@ -59,4 +59,12 @@ export class AttemptsController {
   flag(@Param('id') id: string) {
     return this.attemptsService.flagAttempt(id);
   }
+
+  @Get('exam/:examId/results')
+  @UseGuards(RolesGuard)
+  @Roles(Role.TEACHER, Role.ADMIN)
+  @ApiOperation({ summary: 'Емтихан нәтижелері (мұғалім)' })
+  getByExam(@Param('examId') examId: string, @CurrentUser('id') teacherId: string) {
+    return this.attemptsService.getAttemptsByExam(examId, teacherId);
+  }
 }

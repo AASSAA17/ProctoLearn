@@ -1,4 +1,4 @@
-'use client';
+п»ї'use client';
 
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
@@ -25,13 +25,13 @@ function EyeIcon({ open }: { open: boolean }) {
 
 function analyzePassword(pw: string) {
   const digits = (pw.match(/\d/g) || []).length;
-  const specials = (pw.match(/[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>\/?]/g) || []).length;
+  const specials = (pw.match(/[!@#$%^&*()\-_=+\[\]{};':"|,.<>\/?]/g) || []).length;
   const checks = { length: pw.length >= 6, digits: digits >= 2, specials: specials >= 2 };
   const score = Object.values(checks).filter(Boolean).length;
   return { checks, score, digits, specials };
 }
 
-const STRENGTH_LABELS = ['', 'Алсыз', 'Орташа', 'Кушти'];
+const STRENGTH_LABELS = ['', 'Alsiz', 'Ortasha', 'Kushti'];
 const STRENGTH_COLORS = ['', 'bg-red-500', 'bg-yellow-400', 'bg-green-500'];
 const STRENGTH_TEXT = ['', 'text-red-600', 'text-yellow-600', 'text-green-600'];
 
@@ -59,16 +59,16 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.password !== form.confirmPassword) { toast.error('Парольдер сайкес келмейди'); return; }
-    if (!isPasswordValid) { toast.error('Пароль талаптарга сай емес'); return; }
-    if (form.phoneDigits && form.phoneDigits.length !== 10) { toast.error('Телефон номири толык емес'); return; }
+    if (form.password !== form.confirmPassword) { toast.error('Parolder saykРµСЃ kelmeydi'); return; }
+    if (!isPasswordValid) { toast.error('Parol talaptatyna say emes'); return; }
+    if (form.phoneDigits && form.phoneDigits.length !== 10) { toast.error('Telefon nomiri tolyk emes'); return; }
     setLoading(true);
     try {
       await register(form.name, form.email, form.password, phone || undefined);
-      toast.success('Тiркелу сатти!');
+      toast.success('TirkelСѓ satty!');
       router.push('/dashboard');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Тiркелу сатсiз болды');
+      toast.error(err?.response?.data?.message || 'TirkelСѓ katesi oryn aldy');
     } finally {
       setLoading(false);
     }
@@ -81,20 +81,23 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8">
       <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-blue-700">ProctoLearn</h1>
-          <p className="text-gray-500 mt-2">Жана тiркелгi жасау</p>
+          <Link href="/" className="inline-flex items-center gap-1 mb-4">
+            <span className="text-2xl font-extrabold text-primary-700">Procto</span>
+            <span className="text-2xl font-extrabold text-gray-800">Learn</span>
+          </Link>
+          <p className="text-gray-500 text-sm">Р–Р°ТЈР° С‚С–СЂРєРµР»РіС– Р¶Р°СЃР°Сѓ</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Аты-жонi <span className="text-red-500">*</span></label>
-            <input name="name" type="text" className={ic()} value={form.name} onChange={handleChange} placeholder="Алибек Сейтов" required />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Aty-zhoni <span className="text-red-500">*</span></label>
+            <input name="name" type="text" className={ic()} value={form.name} onChange={handleChange} placeholder="Tolyk atyngyz" required />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
             <input name="email" type="email" className={ic()} value={form.email} onChange={handleChange} placeholder="email@example.com" required />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Телефон номiрi</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Telefon nomiri</label>
             <div className="flex">
               <span className="inline-flex items-center px-3 border border-r-0 border-gray-300 rounded-l-lg bg-gray-100 text-gray-700 font-mono font-semibold text-sm select-none">+7</span>
               <input type="tel" inputMode="numeric"
@@ -102,22 +105,22 @@ export default function RegisterPage() {
                 value={form.phoneDigits} onChange={handlePhone} placeholder="7001234567" maxLength={10} />
             </div>
             {form.phoneDigits.length > 0 && form.phoneDigits.length < 10 && (
-              <p className="text-xs text-red-500 mt-1">Тагы {10 - form.phoneDigits.length} цифр кiргiзiнiз</p>
+              <p className="text-xs text-red-500 mt-1">Tagy {10 - form.phoneDigits.length} tsifrdi engizingiz</p>
             )}
-            {form.phoneDigits.length === 10 && <p className="text-xs text-green-600 mt-1">? {phone}</p>}
+            {form.phoneDigits.length === 10 && <p className="text-xs text-green-600 mt-1">OK: {phone}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Пароль <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Parol <span className="text-red-500">*</span></label>
             <div className="relative">
               <input name="password" type={showPassword ? 'text' : 'password'}
                 className={`w-full border rounded-lg px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 ${form.password && !isPasswordValid ? 'border-red-300' : 'border-gray-300'}`}
-                value={form.password} onChange={handleChange} placeholder="••••••••" required />
+                value={form.password} onChange={handleChange} placeholder="Parol" required />
               <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center" onClick={() => setShowPassword(v => !v)}><EyeIcon open={showPassword} /></button>
             </div>
             {form.password.length > 0 && (
               <div className="mt-2">
                 <div className="flex gap-1 mb-1">
-                  {[1,2,3].map(i => (
+                  {[1, 2, 3].map(i => (
                     <div key={i} className={`h-1.5 flex-1 rounded-full transition-all ${pwA.score >= i ? STRENGTH_COLORS[i] : 'bg-gray-200'}`} />
                   ))}
                 </div>
@@ -126,35 +129,38 @@ export default function RegisterPage() {
             )}
             <div className="mt-2 space-y-1">
               {[
-                { ok: pwA.checks.length, label: 'Кемiнде 6 тангба' },
-                { ok: pwA.checks.digits, label: `Кемiнде 2 сан (казiр: ${pwA.digits})` },
-                { ok: pwA.checks.specials, label: `Кемiнде 2 арнайы тангба (казiр: ${pwA.specials})` },
+                { ok: pwA.checks.length, label: 'Keminde 6 symbol' },
+                { ok: pwA.checks.digits, label: `Keminde 2 tsirf (kazir: ${pwA.digits})` },
+                { ok: pwA.checks.specials, label: `Keminde 2 arnayy tanha (kazir: ${pwA.specials})` },
               ].map(({ ok, label }) => (
                 <p key={label} className={`text-xs flex items-center gap-1 ${ok ? 'text-green-600' : 'text-gray-400'}`}>
-                  <span>{ok ? '?' : '0'}</span> {label}
+                  <span>{ok ? '+' : 'o'}</span> {label}
                 </p>
               ))}
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Парольдi растау <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Paroldi rastau <span className="text-red-500">*</span></label>
             <div className="relative">
               <input name="confirmPassword" type={showConfirm ? 'text' : 'password'} className={ic(passwordMismatch)}
-                value={form.confirmPassword} onChange={handleChange} placeholder="••••••••" required />
+                value={form.confirmPassword} onChange={handleChange} placeholder="Parol" required />
               <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center" onClick={() => setShowConfirm(v => !v)}><EyeIcon open={showConfirm} /></button>
             </div>
-            {passwordMismatch && <p className="text-xs text-red-500 mt-1">Парольдер сайкес келмейдi</p>}
-            {form.confirmPassword && !passwordMismatch && <p className="text-xs text-green-600 mt-1">? Парольдер сайкес</p>}
+            {passwordMismatch && <p className="text-xs text-red-500 mt-1">Parolder saykРµs kelmeydi</p>}
+            {form.confirmPassword && !passwordMismatch && <p className="text-xs text-green-600 mt-1">OK: Parolder saykРµs</p>}
           </div>
           <button type="submit"
             disabled={loading || !isPasswordValid || passwordMismatch || (form.phoneDigits.length > 0 && form.phoneDigits.length !== 10)}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2.5 rounded-lg transition-colors">
-            {loading ? 'Тiркелу...' : 'Тiркелу'}
+            {loading ? 'TirkelСѓde...' : 'TirkelСѓ'}
           </button>
         </form>
         <p className="text-center text-sm text-gray-500 mt-6">
-          Тiркелгiнiз бар ма?{' '}
-          <Link href="/auth/login" className="text-blue-600 hover:underline font-medium">Жуйеге кiру</Link>
+          РўС–СЂРєРµР»РіС–ТЈС–Р· Р±Р°СЂ РјР°?{' '}
+          <Link href="/auth/login" className="text-primary-600 hover:underline font-medium">РљС–СЂСѓ</Link>
+        </p>
+        <p className="text-center mt-4">
+          <Link href="/" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">в†ђ Р‘Р°СЃС‚С‹ Р±РµС‚РєРµ РѕСЂР°Р»Сѓ</Link>
         </p>
       </div>
     </div>

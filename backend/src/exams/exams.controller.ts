@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ExamsService } from './exams.service';
-import { CreateExamDto } from './dto/exam.dto';
+import { CreateExamDto, UpdateExamDto, CreateQuestionDto, UpdateQuestionDto } from './dto/exam.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -45,5 +45,52 @@ export class ExamsController {
   @ApiOperation({ summary: 'Емтиханды жою' })
   remove(@Param('id') id: string, @CurrentUser('id') teacherId: string) {
     return this.examsService.remove(id, teacherId);
+  }
+
+  @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.TEACHER, Role.ADMIN)
+  @ApiOperation({ summary: 'Емтиханды жаңарту' })
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateExamDto,
+    @CurrentUser('id') teacherId: string,
+  ) {
+    return this.examsService.update(id, dto, teacherId);
+  }
+
+  @Post(':id/questions')
+  @UseGuards(RolesGuard)
+  @Roles(Role.TEACHER, Role.ADMIN)
+  @ApiOperation({ summary: 'Сұрақ қосу' })
+  addQuestion(
+    @Param('id') examId: string,
+    @Body() dto: CreateQuestionDto,
+    @CurrentUser('id') teacherId: string,
+  ) {
+    return this.examsService.addQuestion(examId, dto, teacherId);
+  }
+
+  @Patch(':examId/questions/:questionId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.TEACHER, Role.ADMIN)
+  @ApiOperation({ summary: 'Сұрақты жаңарту' })
+  updateQuestion(
+    @Param('questionId') questionId: string,
+    @Body() dto: UpdateQuestionDto,
+    @CurrentUser('id') teacherId: string,
+  ) {
+    return this.examsService.updateQuestion(questionId, dto, teacherId);
+  }
+
+  @Delete(':examId/questions/:questionId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.TEACHER, Role.ADMIN)
+  @ApiOperation({ summary: 'Сұрақты жою' })
+  removeQuestion(
+    @Param('questionId') questionId: string,
+    @CurrentUser('id') teacherId: string,
+  ) {
+    return this.examsService.removeQuestion(questionId, teacherId);
   }
 }

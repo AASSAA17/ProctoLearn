@@ -3,12 +3,15 @@ import {
   ConflictException,
   UnauthorizedException,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { RegisterDto, LoginDto, ChangePasswordDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +19,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private mailService: MailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -36,7 +40,7 @@ export class AuthService {
         phone: dto.phone,
         password: hashedPassword,
       },
-      select: { id: true, name: true, email: true, role: true, createdAt: true },
+      select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true, mustChangePassword: true },
     });
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
@@ -134,5 +138,45 @@ export class AuthService {
       where: { id: userId },
       data: { refreshToken },
     });
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    // Don't reveal whether user exists
+    if (!user) return { message: 'Егер email тіркелген болса, нұсқаулық жіберілді' };
+
+    // Delete any existing tokens for this user
+    await this.prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await this.prisma.passwordResetToken.create({
+      data: { token, userId: user.id, expiresAt },
+    });
+
+    await this.mailService.sendPasswordReset(user.email, user.name, token);
+
+    return { message: 'Егер email тіркелген болса, нұсқаулық жіберілді' };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const record = await this.prisma.passwordResetToken.findUnique({
+      where: { token: dto.token },
+      include: { user: true },
+    });
+
+    if (!record || record.expiresAt < new Date()) {
+      throw new BadRequestException('Сілтеме жарамсыз немесе мерзімі өткен');
+    }
+
+    const hashed = await bcrypt.hash(dto.newPassword, 12);
+    await this.prisma.user.update({
+      where: { id: record.userId },
+      data: { password: hashed, mustChangePassword: false },
+    });
+    await this.prisma.passwordResetToken.delete({ where: { token: dto.token } });
+
+    return { message: 'Пароль сәтті өзгертілді' };
   }
 }

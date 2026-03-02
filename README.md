@@ -204,10 +204,14 @@ proctolearn/
 ### Docker Compose арқылы (ұсынылады)
 
 ```bash
-# 1. .env конфигурациялау (өзгерту ұсынылады)
-cp .env .env.local
+# 1. .env файлын жасау
+cp .env.example .env
+# .env файлын өзіңіздің мәндеріңізбен толтырыңыз
 
-# 2. Барлық сервистерді іске қосу
+# 2. Разработка режимі (hot-reload)
+docker compose -f docker-compose.dev.yml up --build
+
+# 3. Продакшн режимі
 docker compose up --build
 ```
 
@@ -337,6 +341,12 @@ MINIO_SECRET_KEY=minioadmin
 
 ### 3️⃣ Docker арқылы іске қосу
 
+**Разработка режимі (hot-reload):**
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+**Продакшн режимі:**
 ```bash
 docker compose up --build
 ```

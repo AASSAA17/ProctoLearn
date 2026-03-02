@@ -8,7 +8,9 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger, UseGuards } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { ProctorService } from './proctor.service';
 
 const TRUST_SCORE_DEDUCTIONS: Record<string, number> = {
@@ -35,10 +37,30 @@ export class ProctorGateway implements OnGatewayConnection, OnGatewayDisconnect 
   // Map: attemptId -> Set of proctor socketIds
   private proctorRooms = new Map<string, Set<string>>();
 
-  constructor(private readonly proctorService: ProctorService) {}
+  constructor(
+    private readonly proctorService: ProctorService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
 
   handleConnection(client: Socket) {
-    this.logger.log(`Client connected: ${client.id}`);
+    try {
+      const token = client.handshake.auth?.token as string;
+      if (!token) {
+        this.logger.warn(`Client ${client.id} rejected: no token`);
+        client.disconnect();
+        return;
+      }
+      const payload = this.jwtService.verify(token, {
+        secret: this.configService.get('JWT_ACCESS_SECRET', 'access_secret'),
+      });
+      client.data.userId = payload.sub;
+      client.data.role = payload.role;
+      this.logger.log(`Client connected: ${client.id} (user: ${payload.sub})`);
+    } catch {
+      this.logger.warn(`Client ${client.id} rejected: invalid token`);
+      client.disconnect();
+    }
   }
 
   handleDisconnect(client: Socket) {

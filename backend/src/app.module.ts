@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
@@ -13,6 +14,8 @@ import { CertificatesModule } from './certificates/certificates.module';
 import { MinioModule } from './minio/minio.module';
 import { AdminModule } from './admin/admin.module';
 import { MailModule } from './mail/mail.module';
+import { EnrollmentsModule } from './enrollments/enrollments.module';
+import { ActivityInterceptor } from './common/interceptors/activity.interceptor';
 
 @Module({
   imports: [
@@ -30,6 +33,13 @@ import { MailModule } from './mail/mail.module';
     EvidenceModule,
     CertificatesModule,
     AdminModule,
+    EnrollmentsModule,
+  ],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ActivityInterceptor,
+    },
   ],
 })
 export class AppModule {}

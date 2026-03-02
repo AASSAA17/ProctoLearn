@@ -1,5 +1,6 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { CourseLevel } from '@prisma/client';
 
 export class CreateCourseDto {
   @ApiProperty({ example: 'Математика негіздері' })
@@ -11,6 +12,11 @@ export class CreateCourseDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional({ enum: CourseLevel, default: CourseLevel.BEGINNER })
+  @IsOptional()
+  @IsEnum(CourseLevel)
+  level?: CourseLevel;
 }
 
 export class UpdateCourseDto {
@@ -23,4 +29,9 @@ export class UpdateCourseDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional({ enum: CourseLevel })
+  @IsOptional()
+  @IsEnum(CourseLevel)
+  level?: CourseLevel;
 }

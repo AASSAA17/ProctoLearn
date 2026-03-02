@@ -36,6 +36,22 @@ export default function CertificatesPage() {
   const verifyUrl = (code: string) =>
     `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/certificates/verify/${code}`;
 
+  const downloadPdf = async (certId: string, courseTitle: string) => {
+    try {
+      const { data } = await api.get(`/certificates/${certId}/pdf`, { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `certificate-${courseTitle}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('PDF жүктеу қатесі');
+    }
+  };
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-8">Менің сертификаттарым</h1>
@@ -57,7 +73,16 @@ export default function CertificatesPage() {
               <div className="flex justify-center mb-4">
                 <QRCodeSVG value={verifyUrl(cert.qrCode)} size={120} />
               </div>
-              <p className="text-xs text-gray-400">Тексеру үшін QR кодын сканерлеңіз</p>
+              <p className="text-xs text-gray-400 mb-4">Тексеру үшін QR кодын сканерлеңіз</p>
+              <button
+                onClick={() => downloadPdf(cert.id, cert.course.title)}
+                className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                PDF жүктеу
+              </button>
             </div>
           ))}
         </div>

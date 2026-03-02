@@ -7,6 +7,12 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
+import { IsString, IsNotEmpty } from 'class-validator';
+
+class CheckAssignmentDto {
+  @IsString() @IsNotEmpty()
+  answer: string;
+}
 
 @ApiTags('Сабақтар')
 @ApiBearerAuth()
@@ -57,5 +63,27 @@ export class LessonsController {
   @ApiOperation({ summary: 'Сабақты жою' })
   remove(@Param('id') id: string, @CurrentUser('id') teacherId: string) {
     return this.lessonsService.remove(id, teacherId);
+  }
+
+  @Get('progress/my')
+  @ApiOperation({ summary: 'Менің прогресім (курс бойынша)' })
+  getMyProgress(@Param('courseId') courseId: string, @CurrentUser('id') userId: string) {
+    return this.lessonsService.getMyProgress(courseId, userId);
+  }
+
+  @Post(':id/check-assignment')
+  @ApiOperation({ summary: 'Тапсырма жауабын тексеру' })
+  checkAssignment(
+    @Param('id') lessonId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: CheckAssignmentDto,
+  ) {
+    return this.lessonsService.checkAssignment(lessonId, userId, dto.answer);
+  }
+
+  @Post(':id/complete')
+  @ApiOperation({ summary: 'Сабақты аяқтандыру (оқу сабақтары үшін)' })
+  markCompleted(@Param('id') lessonId: string, @CurrentUser('id') userId: string) {
+    return this.lessonsService.markCompleted(lessonId, userId);
   }
 }

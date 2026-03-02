@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCourseDto, UpdateCourseDto } from './dto/course.dto';
+import { CourseLevel } from '@prisma/client';
 
 @Injectable()
 export class CoursesService {
@@ -13,13 +14,23 @@ export class CoursesService {
     });
   }
 
-  async findAll() {
-    return this.prisma.course.findMany({
-      include: {
-        teacher: { select: { id: true, name: true } },
-        _count: { select: { lessons: true, exams: true } },
-      },
-    });
+  async findAll(page = 1, limit = 20, level?: CourseLevel) {
+    const skip = (page - 1) * limit;
+    const where = level ? { level } : {};
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.course.findMany({
+        skip,
+        take: limit,
+        where,
+        include: {
+          teacher: { select: { id: true, name: true } },
+          _count: { select: { lessons: true, exams: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.course.count({ where }),
+    ]);
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findById(id: string) {

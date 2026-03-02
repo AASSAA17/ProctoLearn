@@ -20,8 +20,13 @@ export class AttemptsService {
     const exam = await this.prisma.exam.findUnique({ where: { id: examId } });
     if (!exam) throw new NotFoundException('Емтихан табылмады');
 
+    const includeExam = {
+      exam: { include: { questions: { select: { id: true, text: true, type: true, options: true } } } },
+    } as const;
+
     const existingAttempt = await this.prisma.attempt.findFirst({
       where: { examId, userId, status: 'IN_PROGRESS' },
+      include: includeExam,
     });
 
     if (existingAttempt) {
@@ -30,9 +35,7 @@ export class AttemptsService {
 
     return this.prisma.attempt.create({
       data: { examId, userId },
-      include: {
-        exam: { include: { questions: { select: { id: true, text: true, type: true, options: true } } } },
-      },
+      include: includeExam,
     });
   }
 
@@ -78,13 +81,14 @@ export class AttemptsService {
 
     const totalQuestions = questions.length;
     const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
-    const status = score >= attempt.exam.passScore ? 'FINISHED' : 'FINISHED';
+    const passed = score >= attempt.exam.passScore;
+    const status = passed ? 'FINISHED' : 'FLAGGED';
 
     await this.prisma.$transaction([
       this.prisma.answer.createMany({ data: answerRecords }),
       this.prisma.attempt.update({
         where: { id: attemptId },
-        data: { score, status: 'FINISHED', finishedAt: new Date() },
+        data: { score, status, finishedAt: new Date() },
       }),
     ]);
 
@@ -93,15 +97,23 @@ export class AttemptsService {
       await this.certificatesService.issue(userId, attempt.exam.courseId);
     }
 
-    return { attemptId, score, correctCount, totalQuestions, passed: score >= attempt.exam.passScore };
+    return { attemptId, score, correctCount, totalQuestions, passed };
   }
 
   async getAttempt(id: string, userId: string) {
     const attempt = await this.prisma.attempt.findUnique({
       where: { id },
       include: {
-        exam: { select: { id: true, title: true, duration: true, passScore: true } },
-        answers: true,
+        exam: {
+          select: { id: true, title: true, duration: true, passScore: true },
+        },
+        answers: {
+          include: {
+            question: {
+              select: { id: true, text: true, type: true, options: true, answer: true },
+            },
+          },
+        },
         events: { orderBy: { timestamp: 'asc' } },
       },
     });
@@ -138,6 +150,25 @@ export class AttemptsService {
     return this.prisma.attempt.update({
       where: { id: attemptId },
       data: { status: 'FLAGGED' },
+    });
+  }
+
+  async getAttemptsByExam(examId: string, teacherId: string) {
+    // Validate teacher ownership
+    const exam = await this.prisma.exam.findUnique({
+      where: { id: examId },
+      include: { course: true },
+    });
+    if (!exam) throw new NotFoundException('Емтихан табылмады');
+    if (exam.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
+
+    return this.prisma.attempt.findMany({
+      where: { examId, status: { not: 'IN_PROGRESS' } },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        _count: { select: { events: true } },
+      },
+      orderBy: { finishedAt: 'desc' },
     });
   }
 }

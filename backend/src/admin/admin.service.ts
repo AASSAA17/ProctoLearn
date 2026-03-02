@@ -311,7 +311,7 @@ export class AdminService {
       }
     });
 
-    return workbook.xlsx.writeBuffer() as Promise<Buffer>;
+    return workbook.xlsx.writeBuffer() as unknown as Promise<Buffer>;
   }
 
   async exportCoursesExcel(): Promise<Buffer> {
@@ -373,6 +373,6 @@ export class AdminService {
       }
     });
 
-    return workbook.xlsx.writeBuffer() as Promise<Buffer>;
+    return workbook.xlsx.writeBuffer() as unknown as Promise<Buffer>;
   }
 }

@@ -1,24 +1,23 @@
 import {
-  Controller, Get, Post, Patch, Delete, Body, Param, UseGuards,
+  Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto, UpdateCourseDto } from './dto/course.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { Role } from '@prisma/client';
+import { Role, CourseLevel } from '@prisma/client';
 
 @ApiTags('Курстар')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('courses')
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
   @Post()
-  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Курс жасау (мұғалім)' })
   create(@Body() dto: CreateCourseDto, @CurrentUser('id') teacherId: string) {
@@ -26,19 +25,31 @@ export class CoursesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Барлық курстар' })
-  findAll() {
-    return this.coursesService.findAll();
+  @ApiOperation({ summary: 'Барлық курстар (жалпыға қолжетімді)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'level', required: false, enum: CourseLevel })
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('level') level?: CourseLevel,
+  ) {
+    return this.coursesService.findAll(
+      page ? parseInt(page) : 1,
+      limit ? parseInt(limit) : 100,
+      level,
+    );
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Курсты ID бойынша алу' })
+  @ApiOperation({ summary: 'Курсты ID бойынша алу (жалпыға қолжетімді)' })
   findById(@Param('id') id: string) {
     return this.coursesService.findById(id);
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Курсты жаңарту' })
   update(
@@ -50,7 +61,8 @@ export class CoursesController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Курсты жою' })
   remove(@Param('id') id: string, @CurrentUser('id') teacherId: string) {

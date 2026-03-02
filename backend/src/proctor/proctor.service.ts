@@ -34,8 +34,9 @@ export class ProctorService {
     return { event, trustScore: updatedAttempt.trustScore };
   }
 
-  async saveScreenshot(attemptId: string, base64: string) {
-    return this.evidenceService.saveScreenshot(attemptId, base64);
+  async saveScreenshot(_attemptId: string, _base64: string) {
+    // Screenshots disabled — recordings are used instead
+    return null;
   }
 
   async endSession(attemptId: string) {

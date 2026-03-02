@@ -42,10 +42,41 @@ export class MailService {
         subject,
         html,
       });
-      this.logger.log(`Уақытша пароль жіберілді: ${email}`);
+      this.logger.log(`Uakytsha parol zhiberildi: ${email}`);
+    } catch (err) {
+      this.logger.warn(`Email zhiberу satssiz boldy (${email}): ${err.message}`);
+    }
+  }
+
+  async sendPasswordReset(email: string, name: string, token: string): Promise<void> {
+    const resetUrl = `${this.configService.get('FRONTEND_URL', 'http://localhost:3000')}/auth/reset-password?token=${token}`;
+    const subject = 'ProctoLearn — Парольды қалпына келтіру';
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2563eb;">ProctoLearn</h2>
+        <p>Сәлем, <strong>${name}</strong>!</p>
+        <p>Парольды қалпына келтіру сұрауы алынды. Төмендегі сілтемені басыңыз:</p>
+        <div style="margin: 24px 0;">
+          <a href="${resetUrl}" style="background:#2563eb;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">
+            Парольды қалпына келтіру
+          </a>
+        </div>
+        <p style="color: #6b7280; font-size: 0.875rem;">Сілтеме 1 сағат бойы жарамды. Бұл өтінімді сіз жасамаған болсаңыз, хабарламаны елемеңіз.</p>
+        <hr style="border: 1px solid #e5e7eb; margin: 24px 0;" />
+        <p style="color: #6b7280; font-size: 0.875rem;">ProctoLearn жүйесі автоматты хабарламасы</p>
+      </div>
+    `;
+
+    try {
+      await this.transporter.sendMail({
+        from: `"ProctoLearn" <${this.configService.get('SMTP_USER', 'noreply@proctolearn.kz')}>`,
+        to: email,
+        subject,
+        html,
+      });
+      this.logger.log(`Пароль қалпына келтіру сілтемесі жіберілді: ${email}`);
     } catch (err) {
       this.logger.warn(`Email жіберу сәтсіз болды (${email}): ${err.message}`);
-      // Don't throw — just log, admin will see temp password in response
     }
   }
 }

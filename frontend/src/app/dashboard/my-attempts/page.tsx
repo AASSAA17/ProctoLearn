@@ -79,11 +79,18 @@ export default function MyAttemptsPage() {
                   {new Date(attempt.startedAt).toLocaleDateString('kk-KZ')}
                 </p>
               </div>
-              {attempt.status === 'IN_PROGRESS' && (
-                <Link href={`/dashboard/exam/${attempt.exam.id}`} className="btn-primary text-sm">
-                  Жалғастыру
-                </Link>
-              )}
+              <div className="flex gap-2">
+                {attempt.status === 'IN_PROGRESS' && (
+                  <Link href={`/dashboard/exam/${attempt.exam.id}`} className="btn-primary text-sm">
+                    Жалғастыру
+                  </Link>
+                )}
+                {(attempt.status === 'FINISHED' || attempt.status === 'FLAGGED') && (
+                  <Link href={`/dashboard/my-attempts/${attempt.id}`} className="btn-secondary text-sm">
+                    Нәтижені қарау
+                  </Link>
+                )}
+              </div>
             </div>
           ))}
         </div>

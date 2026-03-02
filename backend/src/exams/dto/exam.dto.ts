@@ -25,6 +25,28 @@ export class CreateQuestionDto {
   answer: string;
 }
 
+export class UpdateQuestionDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  text?: string;
+
+  @ApiPropertyOptional({ enum: QuestionType })
+  @IsOptional()
+  @IsEnum(QuestionType)
+  type?: QuestionType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  options?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  answer?: string;
+}
+
 export class CreateExamDto {
   @ApiProperty({ example: 'Математика финалдық емтиханы' })
   @IsString()
@@ -47,4 +69,24 @@ export class CreateExamDto {
   @ValidateNested({ each: true })
   @Type(() => CreateQuestionDto)
   questions: CreateQuestionDto[];
+}
+
+export class UpdateExamDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  title?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  duration?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  passScore?: number;
 }
