@@ -1,0 +1,183 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+  PROCTOR
+  ADMIN
+}
+
+enum QuestionType {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+  TEXT
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  FINISHED
+  FLAGGED
+}
+
+model User {
+  id                  String           @id @default(uuid())
+  name                String
+  email               String           @unique
+  phone               String?
+  password            String
+  role                Role             @default(STUDENT)
+  createdAt           DateTime         @default(now())
+  lastSeen            DateTime?
+  isOnline            Boolean          @default(false)
+  mustChangePassword  Boolean          @default(false)
+  courses             Course[]
+  attempts            Attempt[]
+  certificates        Certificate[]
+  refreshToken        String?
+  lessonProgress      LessonProgress[]
+
+  @@map("users")
+}
+
+model LessonProgress {
+  id        String   @id @default(uuid())
+  userId    String
+  courseId  String
+  lessonId  String
+  viewedAt  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("lesson_progress")
+}
+
+model Course {
+  id              String           @id @default(uuid())
+  title           String
+  description     String?
+  teacherId       String
+  teacher         User             @relation(fields: [teacherId], references: [id])
+  lessons         Lesson[]
+  exams           Exam[]
+  certificates    Certificate[]
+  lessonProgress  LessonProgress[]
+  createdAt       DateTime         @default(now())
+
+  @@map("courses")
+}
+
+model Lesson {
+  id             String           @id @default(uuid())
+  courseId       String
+  title          String
+  content        String
+  order          Int
+  course         Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessonProgress LessonProgress[]
+  createdAt      DateTime         @default(now())
+
+  @@map("lessons")
+}
+
+model Exam {
+  id        String     @id @default(uuid())
+  courseId  String
+  title     String
+  duration  Int
+  passScore Int        @default(60)
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions Question[]
+  attempts  Attempt[]
+  createdAt DateTime   @default(now())
+
+  @@map("exams")
+}
+
+model Question {
+  id      String       @id @default(uuid())
+  examId  String
+  text    String
+  type    QuestionType
+  options Json?
+  answer  String
+  exam    Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  answers Answer[]
+
+  @@map("questions")
+}
+
+model Attempt {
+  id         String        @id @default(uuid())
+  examId     String
+  userId     String
+  startedAt  DateTime      @default(now())
+  finishedAt DateTime?
+  score      Int?
+  trustScore Int           @default(100)
+  status     AttemptStatus @default(IN_PROGRESS)
+  exam       Exam          @relation(fields: [examId], references: [id])
+  user       User          @relation(fields: [userId], references: [id])
+  events     ProctorEvent[]
+  evidences  EvidenceFile[]
+  answers    Answer[]
+
+  @@map("attempts")
+}
+
+model Answer {
+  id         String   @id @default(uuid())
+  attemptId  String
+  questionId String
+  answer     String
+  isCorrect  Boolean?
+  attempt    Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question   Question @relation(fields: [questionId], references: [id])
+
+  @@map("answers")
+}
+
+model ProctorEvent {
+  id        String   @id @default(uuid())
+  attemptId String
+  type      String
+  timestamp DateTime @default(now())
+  metadata  Json?
+  attempt   Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@map("proctor_events")
+}
+
+model EvidenceFile {
+  id        String   @id @default(uuid())
+  attemptId String
+  type      String
+  url       String
+  createdAt DateTime @default(now())
+  attempt   Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@map("evidence_files")
+}
+
+model Certificate {
+  id       String   @id @default(uuid())
+  userId   String
+  courseId String
+  issuedAt DateTime @default(now())
+  qrCode   String   @unique
+  user     User     @relation(fields: [userId], references: [id])
+  course   Course   @relation(fields: [courseId], references: [id])
+
+  @@map("certificates")
+}
