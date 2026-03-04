@@ -23,7 +23,14 @@ const TRUST_SCORE_DEDUCTIONS: Record<string, number> = {
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: (origin: string, callback: (err: Error | null, allow?: boolean) => void) => {
+      const allowed = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',').map((s) => s.trim());
+      if (process.env.NODE_ENV !== 'production') {
+        allowed.push('http://localhost:3000', 'http://localhost:3001');
+      }
+      if (!origin || allowed.includes(origin)) return callback(null, true);
+      return callback(new Error('CORS not allowed'));
+    },
     credentials: true,
   },
   namespace: '/proctor',
@@ -73,6 +80,15 @@ export class ProctorGateway implements OnGatewayConnection, OnGatewayDisconnect 
     @MessageBody() data: { attemptId: string; role: 'student' | 'proctor' },
   ) {
     const { attemptId, role } = data;
+
+    // Verify that the claimed role matches the JWT role
+    const userRole = client.data.role;
+    if (role === 'proctor' && !['PROCTOR', 'ADMIN'].includes(userRole)) {
+      this.logger.warn(`User ${client.data.userId} tried to join as proctor with role ${userRole}`);
+      client.emit('proctor:error', { message: 'Рұқсат жоқ' });
+      return;
+    }
+
     client.join(`attempt:${attemptId}`);
 
     if (role === 'proctor') {
@@ -112,6 +128,12 @@ export class ProctorGateway implements OnGatewayConnection, OnGatewayDisconnect 
   ) {
     const { attemptId, image } = data;
     const evidence = await this.proctorService.saveScreenshot(attemptId, image);
+
+    // saveScreenshot may return null when screenshots are disabled
+    if (!evidence) {
+      this.logger.debug(`Screenshot skipped for attempt ${attemptId} (storage disabled)`);
+      return;
+    }
 
     // Notify proctors
     this.server.to(`attempt:${attemptId}`).emit('proctor:screenshot:saved', {

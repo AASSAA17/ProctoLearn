@@ -30,7 +30,9 @@ export default function MyAttemptsPage() {
   const statusLabel = (s: string) => {
     if (s === 'FINISHED') return <span className="badge-success">Аяқталды</span>;
     if (s === 'IN_PROGRESS') return <span className="badge-warning">Жүргізілуде</span>;
-    return <span className="badge-danger">Белгіленді</span>;
+    if (s === 'FAILED') return <span className="badge-danger">Сәтсіз ✗</span>;
+    if (s === 'FLAGGED') return <span className="badge-danger">Белгіленді 🚩</span>;
+    return <span className="badge-danger">{s}</span>;
   };
 
   const trustColor = (score: number) => {
@@ -72,7 +74,7 @@ export default function MyAttemptsPage() {
                     </span>
                   )}
                   <span className={`font-medium ${trustColor(attempt.trustScore)}`}>
-                    Trust Score: {attempt.trustScore}/100
+                    Сенімділік: {attempt.trustScore}/100
                   </span>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
@@ -85,7 +87,7 @@ export default function MyAttemptsPage() {
                     Жалғастыру
                   </Link>
                 )}
-                {(attempt.status === 'FINISHED' || attempt.status === 'FLAGGED') && (
+                {(attempt.status === 'FINISHED' || attempt.status === 'FLAGGED' || attempt.status === 'FAILED') && (
                   <Link href={`/dashboard/my-attempts/${attempt.id}`} className="btn-secondary text-sm">
                     Нәтижені қарау
                   </Link>

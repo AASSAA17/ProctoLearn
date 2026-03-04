@@ -5,13 +5,38 @@ import { v4 as uuidv4 } from 'uuid';
 const PDFDocument = require('pdfkit') as typeof import('pdfkit');
 import * as fs from 'fs';
 
-const FONT_REGULAR = 'C:\\Windows\\Fonts\\arial.ttf';
-const FONT_BOLD    = 'C:\\Windows\\Fonts\\arialbd.ttf';
-const FONT_ITALIC  = 'C:\\Windows\\Fonts\\ariali.ttf';
-const FONT_SCRIPT  = 'C:\\Windows\\Fonts\\timesbi.ttf';
-const hasFonts  = fs.existsSync(FONT_REGULAR) && fs.existsSync(FONT_BOLD);
-const hasItalic = fs.existsSync(FONT_ITALIC);
-const hasScript = fs.existsSync(FONT_SCRIPT);
+// Font candidates: Windows paths first, then common Linux container paths
+function resolveFont(...candidates: string[]): string | null {
+  for (const p of candidates) if (fs.existsSync(p)) return p;
+  return null;
+}
+const FONT_REGULAR_PATH = resolveFont(
+  'C:\\Windows\\Fonts\\arial.ttf',
+  '/usr/share/fonts/truetype/msttcorefonts/Arial.ttf',
+  '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+  '/usr/share/fonts/liberation/LiberationSans-Regular.ttf',
+);
+const FONT_BOLD_PATH = resolveFont(
+  'C:\\Windows\\Fonts\\arialbd.ttf',
+  '/usr/share/fonts/truetype/msttcorefonts/Arial_Bold.ttf',
+  '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+  '/usr/share/fonts/liberation/LiberationSans-Bold.ttf',
+);
+const FONT_ITALIC_PATH = resolveFont(
+  'C:\\Windows\\Fonts\\ariali.ttf',
+  '/usr/share/fonts/truetype/msttcorefonts/Arial_Italic.ttf',
+  '/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf',
+  '/usr/share/fonts/liberation/LiberationSans-Italic.ttf',
+);
+const FONT_SCRIPT_PATH = resolveFont(
+  'C:\\Windows\\Fonts\\timesbi.ttf',
+  '/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman_Bold_Italic.ttf',
+  '/usr/share/fonts/truetype/liberation/LiberationSerif-BoldItalic.ttf',
+  '/usr/share/fonts/liberation/LiberationSerif-BoldItalic.ttf',
+);
+const hasFonts  = !!(FONT_REGULAR_PATH && FONT_BOLD_PATH);
+const hasItalic = !!FONT_ITALIC_PATH;
+const hasScript = !!FONT_SCRIPT_PATH;
 
 @Injectable()
 export class CertificatesService {
@@ -54,7 +79,7 @@ export class CertificatesService {
         user:   { select: { name: true } },
       },
     });
-    if (!cert) throw new NotFoundException('Сертификат табылмады');
+    if (!cert) throw new NotFoundException('Certificate not found');
 
     return new Promise((resolve, reject) => {
       // 7 x 5 inches  =  504 x 360 pt
@@ -69,9 +94,9 @@ export class CertificatesService {
       doc.on('end',   () => resolve(Buffer.concat(buffers)));
       doc.on('error', reject);
 
-      if (hasFonts)  { doc.registerFont('R', FONT_REGULAR); doc.registerFont('B', FONT_BOLD); }
-      if (hasItalic) { doc.registerFont('I', FONT_ITALIC); }
-      if (hasScript) { doc.registerFont('S', FONT_SCRIPT); }
+      if (hasFonts)  { doc.registerFont('R', FONT_REGULAR_PATH!); doc.registerFont('B', FONT_BOLD_PATH!); }
+      if (hasItalic) { doc.registerFont('I', FONT_ITALIC_PATH!); }
+      if (hasScript) { doc.registerFont('S', FONT_SCRIPT_PATH!); }
 
       const fR = hasFonts  ? 'R' : 'Helvetica';
       const fB = hasFonts  ? 'B' : 'Helvetica-Bold';
@@ -230,9 +255,9 @@ export class CertificatesService {
       doc.text(cert.user.name, lPad, 86, { width: lW, lineBreak: true });
       const afterName = doc.y + 8;
 
-      // ── "курсты сәтті аяқтады" ────────────────────────────────
+      // ── "has successfully completed" ────────────────────────────
       doc.fillColor('#6b7280').fontSize(7.5).font(fI);
-      t('курсты сәтті аяқтады', lPad, afterName);
+      t('has successfully completed the course', lPad, afterName);
 
       // thin separator
       doc.moveTo(lPad, afterName + 15)
@@ -247,7 +272,7 @@ export class CertificatesService {
       // ── Description ───────────────────────────────────────────
       doc.fillColor('#6b7280').fontSize(7).font(fR);
       doc.text(
-        'ProctoLearn онлайн оқыту платформасы ұйымдастырған және ұсынған курс бойынша онлайн сертификат',
+        'Online certificate for the course organized and offered by ProctoLearn online learning platform',
         lPad, afterCourse, { width: lW * 0.82, lineBreak: true }
       );
 
@@ -270,22 +295,23 @@ export class CertificatesService {
       doc.moveTo(lPad, sigY + 36).lineTo(lPad + 130, sigY + 36).lineWidth(0.5).stroke('#9ca3af');
 
       doc.fillColor('#374151').fontSize(7).font(fB);
-      t('ProctoLearn Жобасы', lPad, sigY + 42);
+      t('ProctoLearn Project', lPad, sigY + 42);
       doc.fillColor('#6b7280').fontSize(6.5).font(fR);
-      t('Онлайн оқыту платформасы директоры', lPad, sigY + 53);
-      t('ProctoLearn Сертификат Бағдарламасы', lPad, sigY + 63);
+      t('Director of Online Learning Platform', lPad, sigY + 53);
+      t('ProctoLearn Certificate Program', lPad, sigY + 63);
 
       // ── Verify URL ────────────────────────────────────────────
-      const verifyUrl = `localhost:3000/verify/${cert.qrCode}`;
+      const frontendBase = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',')[0].trim();
+      const verifyUrl = `${frontendBase}/verify/${cert.qrCode}`;
       const vx = rX - 10;
       const vy = H - 42;
       doc.fillColor('#374151').fontSize(6).font(fR);
-      t('Тексеру мекенжайы:', vx, vy, { width: 160, align: 'right', lineBreak: false });
+      t('Verification URL:', vx, vy, { width: 160, align: 'right', lineBreak: false });
       doc.fillColor('#1a73e8').fontSize(6).font(fR);
       t(verifyUrl, vx, vy + 10, { width: 160, align: 'right', lineBreak: false });
       doc.fillColor('#6b7280').fontSize(6).font(fR);
       doc.text(
-        'ProctoLearn осы тұлғаның жеке басын және курсқа қатысуын растады.',
+        'ProctoLearn has verified the identity and course participation of this individual.',
         vx - 150, vy + 20,
         { width: 160, align: 'right', lineBreak: true }
       );

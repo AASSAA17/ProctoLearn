@@ -1,4 +1,5 @@
 FROM node:22-alpine AS builder
+RUN apk add --no-cache font-liberation fontconfig
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
@@ -7,6 +8,7 @@ RUN ./node_modules/.bin/prisma generate
 RUN npm run build
 
 FROM node:22-alpine AS production
+RUN apk add --no-cache font-liberation fontconfig
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/node_modules ./node_modules

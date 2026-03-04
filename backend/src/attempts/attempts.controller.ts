@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Param, Body, Query, UseGuards, Patch } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AttemptsService } from './attempts.service';
 import { SubmitAnswersDto } from './dto/attempt.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -16,6 +17,7 @@ export class AttemptsController {
   constructor(private readonly attemptsService: AttemptsService) {}
 
   @Post('start/:examId')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @ApiOperation({ summary: 'Емтиханды бастау (студент)' })
   start(@Param('examId') examId: string, @CurrentUser('id') userId: string) {
     return this.attemptsService.startAttempt(examId, userId);
@@ -47,9 +49,17 @@ export class AttemptsController {
   @UseGuards(RolesGuard)
   @Roles(Role.PROCTOR, Role.ADMIN, Role.TEACHER)
   @ApiQuery({ name: 'examId', required: false })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page (default: 50, max: 200)' })
   @ApiOperation({ summary: 'Барлық талпынулар (проктор/мұғалім)' })
-  getAll(@Query('examId') examId?: string) {
-    return this.attemptsService.getAllAttempts(examId);
+  getAll(
+    @Query('examId') examId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = Math.max(1, parseInt(page || '1', 10) || 1);
+    const limitNum = Math.min(200, Math.max(1, parseInt(limit || '50', 10) || 50));
+    return this.attemptsService.getAllAttempts(examId, pageNum, limitNum);
   }
 
   @Patch(':id/flag')

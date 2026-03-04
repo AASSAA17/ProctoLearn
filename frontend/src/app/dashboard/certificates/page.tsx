@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api from '@/lib/api';
+import api, { API_URL } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -34,7 +34,7 @@ export default function CertificatesPage() {
   }
 
   const verifyUrl = (code: string) =>
-    `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/certificates/verify/${code}`;
+    `${API_URL}/certificates/verify/${code}`;
 
   const downloadPdf = async (certId: string, courseTitle: string) => {
     try {

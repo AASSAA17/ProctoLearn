@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import Link from 'next/link';
+import { NavIcon } from '@/components/nav-icon';
+import { Spinner } from '@/components/ui';
 
 const ROLE_LABEL: Record<string, string> = {
   STUDENT: 'Студент',
@@ -36,7 +38,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <Spinner size="lg" className="mx-auto mb-4" />
           <p className="text-gray-500 text-sm">Жүктелуде...</p>
         </div>
       </div>
@@ -44,6 +46,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   if (!user) return null;
+
+  // Exam mode: hide entire shell, render only the exam page
+  if (pathname.startsWith('/dashboard/exam/')) {
+    return <>{children}</>;
+  }
 
   const handleLogout = async () => {
     setProfileOpen(false);
@@ -57,7 +64,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard/my-attempts', label: 'Нәтижелер', icon: '📊', exact: false },
     { href: '/dashboard/certificates', label: 'Сертификаттар', icon: '🏆', exact: false },
     ...(user.role === 'TEACHER' || user.role === 'ADMIN'
-      ? [{ href: '/dashboard/teacher', label: 'Мұғалім', icon: '🎓', exact: false }]
+      ? [
+          { href: '/dashboard/teacher/courses', label: 'Мұғалім', icon: '🎓', exact: false },
+        ]
       : []),
     ...(user.role === 'PROCTOR' || user.role === 'ADMIN'
       ? [{ href: '/dashboard/proctor', label: 'Проктор', icon: '🔍', exact: false }]
@@ -104,13 +113,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Link
                     key={link.href}
                     href={link.href}
+                    aria-label={link.label}
+                    aria-current={isActive(link) ? 'page' : undefined}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive(link)
                         ? 'bg-primary-50 text-primary-700'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                   >
-                    <span>{link.icon}</span>
+                    <NavIcon icon={link.icon} className="w-4.5 h-4.5" />
                     {link.label}
                   </Link>
                 ))}
@@ -123,6 +134,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="relative">
                 <button
                   onClick={() => setProfileOpen((v) => !v)}
+                  aria-label="Профиль мәзірі"
+                  aria-expanded={profileOpen}
                   className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-gray-100 transition-colors"
                 >
                   <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
@@ -151,21 +164,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       >
-                        👤 Профиль
+                        <NavIcon icon="👤" className="w-4 h-4" /> Профиль
                       </Link>
                       <Link
                         href="/dashboard/change-password"
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       >
-                        🔑 Парольді өзгерту
+                        <NavIcon icon="🔑" className="w-4 h-4" /> Парольді өзгерту
                       </Link>
                       <div className="border-t border-gray-100 mt-1 pt-1">
                         <button
                           onClick={handleLogout}
                           className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                         >
-                          🚪 Шығу
+                          <NavIcon icon="🚪" className="w-4 h-4" /> Шығу
                         </button>
                       </div>
                     </div>
@@ -177,6 +190,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button
                 className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
                 onClick={() => setMenuOpen((v) => !v)}
+                aria-label="Мәзірді ашу"
+                aria-expanded={menuOpen}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -195,13 +210,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 key={link.href}
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
+                aria-label={link.label}
+                aria-current={isActive(link) ? 'page' : undefined}
                 className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium mb-1 transition-colors ${
                   isActive(link)
                     ? 'bg-primary-50 text-primary-700'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <span>{link.icon}</span>
+                <NavIcon icon={link.icon} className="w-5 h-5" />
                 {link.label}
               </Link>
             ))}

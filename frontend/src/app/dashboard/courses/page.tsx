@@ -46,21 +46,21 @@ export default function CoursesPage() {
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [activeEnrollment, setActiveEnrollment] = useState<Enrollment | null>(null);
   const [certCourseIds, setCertCourseIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [activeLevel, setActiveLevel] = useState<CourseLevel>('BEGINNER');
   const [enrollModal, setEnrollModal] = useState<{ course: Course } | null>(null);
   const [enrolling, setEnrolling] = useState(false);
 
+  // Free enrollment — no active-enrollment restriction
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [coursesRes, enrollmentsRes, certsRes, activeRes] = await Promise.allSettled([
-        api.get('/courses?limit=100'),
+      const [coursesRes, enrollmentsRes, certsRes] = await Promise.allSettled([
+        api.get('/courses?limit=200'),
         api.get('/enrollments/my'),
         api.get('/certificates/my'),
-        api.get('/enrollments/active'),
       ]);
 
       if (coursesRes.status === 'fulfilled') {
@@ -73,9 +73,6 @@ export default function CoursesPage() {
       if (certsRes.status === 'fulfilled') {
         const ids = new Set<string>(certsRes.value.data.map((c: any) => c.course?.id ?? c.courseId));
         setCertCourseIds(ids);
-      }
-      if (activeRes.status === 'fulfilled') {
-        setActiveEnrollment(activeRes.value.data);
       }
     } catch {
       toast.error('Деректерді жүктеу қатесі');
@@ -92,10 +89,6 @@ export default function CoursesPage() {
     const enrollment = getEnrollment(course.id);
     if (enrollment && !enrollment.completedAt) { router.push(`/dashboard/courses/${course.id}`); return; }
     if (certCourseIds.has(course.id)) { router.push(`/dashboard/courses/${course.id}`); return; }
-    if (activeEnrollment && activeEnrollment.courseId !== course.id) {
-      toast.error(`Алдымен "${activeEnrollment.course.title}" курсын аяқтаңыз`);
-      return;
-    }
     setEnrollModal({ course });
   };
 
@@ -133,18 +126,6 @@ export default function CoursesPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Курстар</h1>
-        {activeEnrollment && (
-          <div className="flex items-center gap-2 text-sm mt-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
-            <span className="text-blue-600">📚</span>
-            <span className="text-blue-700">Белсенді курс: <strong>{activeEnrollment.course.title}</strong></span>
-            <button
-              onClick={() => router.push(`/dashboard/courses/${activeEnrollment.courseId}`)}
-              className="ml-auto text-xs bg-blue-600 text-white px-3 py-1 rounded-full hover:bg-blue-700"
-            >
-              Жалғастыру →
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
@@ -170,14 +151,12 @@ export default function CoursesPage() {
           {filteredCourses.map((course, idx) => {
             const enrollment = getEnrollment(course.id);
             const hasCert = certCourseIds.has(course.id);
-            const isActiveHere = activeEnrollment?.courseId === course.id;
-            const isBlocked = !!(activeEnrollment && !isActiveHere && !hasCert);
+            const isActive = !!(enrollment && !enrollment.completedAt);
             const cover = COURSE_COVERS[idx % COURSE_COVERS.length];
             let borderClass = 'border border-gray-200 hover:border-primary-300';
             let badgeEl: React.ReactNode = null;
             if (hasCert) { borderClass = 'border-2 border-green-400'; badgeEl = <span className="absolute top-3 right-3 bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">✅ Сертификат</span>; }
-            else if (isActiveHere) { borderClass = 'border-2 border-blue-400'; badgeEl = <span className="absolute top-3 right-3 bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">📚 Белсенді</span>; }
-            else if (isBlocked) { borderClass = 'border border-gray-200 opacity-60'; badgeEl = <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><span className="text-4xl">🔒</span></div>; }
+            else if (isActive) { borderClass = 'border-2 border-blue-400'; badgeEl = <span className="absolute top-3 right-3 bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">📚 Белсенді</span>; }
 
             return (
               <div key={course.id} onClick={() => handleCourseClick(course)}
@@ -191,19 +170,18 @@ export default function CoursesPage() {
                   <span className="absolute top-3 left-3 bg-black/40 text-white text-xs font-bold px-2 py-0.5 rounded-full">{idx + 1}-курс</span>
                 </div>
                 <div className="p-4 flex flex-col flex-1">
-                  <h3 className={`text-base font-semibold mb-2 leading-tight ${hasCert ? 'text-green-800' : isBlocked ? 'text-gray-400' : 'text-gray-900'}`}>
+                  <h3 className={`text-base font-semibold mb-2 leading-tight ${hasCert ? 'text-green-800' : 'text-gray-900'}`}>
                     {course.title}
                   </h3>
                   {course.description && (
-                    <p className={`text-sm mb-3 line-clamp-3 flex-1 ${isBlocked ? 'text-gray-400' : 'text-gray-500'}`}>{course.description}</p>
+                    <p className="text-sm mb-3 line-clamp-3 flex-1 text-gray-500">{course.description}</p>
                   )}
-                  <div className={`flex items-center justify-between mt-auto pt-2 border-t text-xs ${isBlocked ? 'text-gray-300 border-gray-100' : 'text-gray-400 border-gray-100'}`}>
+                  <div className="flex items-center justify-between mt-auto pt-2 border-t text-xs text-gray-400 border-gray-100">
                     <span>👤 {course.teacher.name}</span>
                     <div className="flex gap-3"><span>📖 {course._count.lessons}</span><span>📝 {course._count.exams}</span></div>
                   </div>
-                  {isBlocked && <p className="text-xs text-red-400 mt-2 text-center font-medium">🔒 Алдымен белсенді курсты аяқтаңыз</p>}
-                  {isActiveHere && <p className="text-xs text-blue-600 mt-2 text-center font-medium">▶ Жалғастыру</p>}
-                  {!hasCert && !isActiveHere && !isBlocked && <p className="text-xs text-primary-600 mt-2 text-center font-medium">+ Курсқа тіркелу</p>}
+                  {isActive && <p className="text-xs text-blue-600 mt-2 text-center font-medium">▶ Жалғастыру</p>}
+                  {!hasCert && !isActive && <p className="text-xs text-primary-600 mt-2 text-center font-medium">+ Курсқа тіркелу</p>}
                 </div>
               </div>
             );
@@ -216,9 +194,7 @@ export default function CoursesPage() {
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-2">Курсқа тіркелу</h2>
             <p className="text-gray-600 mb-4"><strong>{enrollModal.course.title}</strong> курсын таңдадыңыз.</p>
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-800">
-              ⚠️ <strong>Маңызды ережесі:</strong> Бұл курсқа тіркелген соң, оны аяқтамайынша басқа курсқа кіре алмайсыз.
-            </div>
+
             <div className="flex gap-2 mb-2 text-sm text-gray-500">
               <span className="bg-gray-100 rounded-lg px-3 py-1">Деңгей: <strong>{levelLabel(enrollModal.course.level)}</strong></span>
               <span className="bg-gray-100 rounded-lg px-3 py-1">📖 {enrollModal.course._count.lessons} сабақ</span>

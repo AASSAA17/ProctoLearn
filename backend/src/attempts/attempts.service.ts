@@ -8,13 +8,17 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SubmitAnswersDto } from './dto/attempt.dto';
 import { QuestionType } from '@prisma/client';
 import { CertificatesService } from '../certificates/certificates.service';
+import { EnrollmentsService } from '../enrollments/enrollments.service';
 
 @Injectable()
 export class AttemptsService {
   constructor(
     private prisma: PrismaService,
     private certificatesService: CertificatesService,
+    private enrollmentsService: EnrollmentsService,
   ) {}
+
+  private static readonly MAX_ATTEMPTS_PER_EXAM = 5;
 
   async startAttempt(examId: string, userId: string) {
     const exam = await this.prisma.exam.findUnique({ where: { id: examId } });
@@ -31,6 +35,16 @@ export class AttemptsService {
 
     if (existingAttempt) {
       return existingAttempt;
+    }
+
+    // Enforce max attempts per exam per user
+    const totalAttempts = await this.prisma.attempt.count({
+      where: { examId, userId },
+    });
+    if (totalAttempts >= AttemptsService.MAX_ATTEMPTS_PER_EXAM) {
+      throw new BadRequestException(
+        `Сіз бұл емтиханға ${AttemptsService.MAX_ATTEMPTS_PER_EXAM} рет талпыныс жасадыңыз. Максималды шек.`,
+      );
     }
 
     return this.prisma.attempt.create({
@@ -82,7 +96,8 @@ export class AttemptsService {
     const totalQuestions = questions.length;
     const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
     const passed = score >= attempt.exam.passScore;
-    const status = passed ? 'FINISHED' : 'FLAGGED';
+    // FLAGGED is reserved for proctoring violations; academic failure uses FAILED
+    const status = passed ? 'FINISHED' : 'FAILED';
 
     await this.prisma.$transaction([
       this.prisma.answer.createMany({ data: answerRecords }),
@@ -95,6 +110,36 @@ export class AttemptsService {
     // Issue certificate if passed
     if (score >= attempt.exam.passScore) {
       await this.certificatesService.issue(userId, attempt.exam.courseId);
+
+      // Auto-complete enrollment so new courses become available
+      try {
+        await this.enrollmentsService.completeEnrollment(userId, attempt.exam.courseId);
+      } catch {
+        // enrollment may already be completed — ignore
+      }
+
+      // Fetch available courses the user hasn't enrolled in yet
+      const enrolledCourseIds = (
+        await this.prisma.enrollment.findMany({
+          where: { userId },
+          select: { courseId: true },
+        })
+      ).map((e) => e.courseId);
+
+      const availableCourses = await this.prisma.course.findMany({
+        where: { id: { notIn: enrolledCourseIds } },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          level: true,
+          teacher: { select: { name: true } },
+          _count: { select: { lessons: true, exams: true } },
+        },
+        orderBy: { level: 'asc' },
+      });
+
+      return { attemptId, score, correctCount, totalQuestions, passed, availableCourses };
     }
 
     return { attemptId, score, correctCount, totalQuestions, passed };
@@ -134,16 +179,29 @@ export class AttemptsService {
     });
   }
 
-  async getAllAttempts(examId?: string) {
-    return this.prisma.attempt.findMany({
-      where: examId ? { examId } : undefined,
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        exam: { select: { id: true, title: true } },
-        _count: { select: { events: true, evidences: true } },
-      },
-      orderBy: { startedAt: 'desc' },
-    });
+  async getAllAttempts(examId?: string, page = 1, limit = 50) {
+    const skip = (page - 1) * limit;
+    const where = examId ? { examId } : undefined;
+
+    const [data, total] = await Promise.all([
+      this.prisma.attempt.findMany({
+        where,
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          exam: { select: { id: true, title: true } },
+          _count: { select: { events: true, evidences: true } },
+        },
+        orderBy: { startedAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.attempt.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async flagAttempt(attemptId: string) {

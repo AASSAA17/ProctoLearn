@@ -1,5 +1,6 @@
 import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, RefreshTokenDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -10,18 +11,23 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // 5 registrations per minute per IP
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('register')
   @ApiOperation({ summary: 'Тіркелу' })
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
+  // 10 login attempts per minute per IP
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @Post('login')
   @ApiOperation({ summary: 'Жүйеге кіру' })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
 
+  @SkipThrottle()
   @Post('refresh')
   @ApiOperation({ summary: 'Токенді жаңарту' })
   refresh(@Body() dto: RefreshTokenDto) {
@@ -52,6 +58,8 @@ export class AuthController {
     return this.authService.changePassword(userId, dto);
   }
 
+  // 3 password-reset requests per 15 minutes per IP
+  @Throttle({ default: { ttl: 15 * 60_000, limit: 3 } })
   @Post('forgot-password')
   @ApiOperation({ summary: 'Пароль ұмытылды — email жіберу' })
   forgotPassword(@Body() dto: ForgotPasswordDto) {

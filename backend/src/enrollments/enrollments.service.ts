@@ -26,17 +26,6 @@ export class EnrollmentsService {
       return { message: 'Курсқа тіркелгенсіз', enrollment: existing };
     }
 
-    // Check if user has another active (not completed) enrollment
-    const activeEnrollment = await this.prisma.enrollment.findFirst({
-      where: { userId, completedAt: null },
-      include: { course: { select: { id: true, title: true } } },
-    });
-    if (activeEnrollment) {
-      throw new ForbiddenException(
-        `Алдымен "${activeEnrollment.course.title}" курсын аяқтаңыз`,
-      );
-    }
-
     const enrollment = await this.prisma.enrollment.create({
       data: { userId, courseId },
       include: { course: { select: { id: true, title: true, level: true } } },

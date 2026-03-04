@@ -29,15 +29,18 @@ export class CoursesController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'level', required: false, enum: CourseLevel })
+  @ApiQuery({ name: 'teacherId', required: false, type: String })
   findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('level') level?: CourseLevel,
+    @Query('teacherId') teacherId?: string,
   ) {
     return this.coursesService.findAll(
-      page ? parseInt(page) : 1,
-      limit ? parseInt(limit) : 100,
+      page ? Math.max(1, parseInt(page)) : 1,
+      limit ? Math.min(100, Math.max(1, parseInt(limit))) : 20,
       level,
+      teacherId,
     );
   }
 
@@ -56,8 +59,9 @@ export class CoursesController {
     @Param('id') id: string,
     @Body() dto: UpdateCourseDto,
     @CurrentUser('id') teacherId: string,
+    @CurrentUser('role') role: string,
   ) {
-    return this.coursesService.update(id, dto, teacherId);
+    return this.coursesService.update(id, dto, teacherId, role);
   }
 
   @Delete(':id')
@@ -65,7 +69,11 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Курсты жою' })
-  remove(@Param('id') id: string, @CurrentUser('id') teacherId: string) {
-    return this.coursesService.remove(id, teacherId);
+  remove(
+    @Param('id') id: string,
+    @CurrentUser('id') teacherId: string,
+    @CurrentUser('role') role: string,
+  ) {
+    return this.coursesService.remove(id, teacherId, role);
   }
 }

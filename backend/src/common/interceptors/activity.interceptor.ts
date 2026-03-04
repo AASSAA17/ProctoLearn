@@ -18,11 +18,11 @@ export class ActivityInterceptor implements NestInterceptor {
     const user = request.user;
 
     if (user?.id) {
-      // Fire-and-forget: update lastSeen and isOnline
+      // Fire-and-forget: update lastSeen (isOnline is computed dynamically from lastSeen in queries)
       this.prisma.user
         .update({
           where: { id: user.id },
-          data: { lastSeen: new Date(), isOnline: true },
+          data: { lastSeen: new Date() },
         })
         .catch(() => {});
     }

@@ -32,8 +32,16 @@ export class AdminController {
   @Get('users')
   @ApiOperation({ summary: 'Барлық пайдаланушылар (іздеу қолдауымен)' })
   @ApiQuery({ name: 'search', required: false })
-  getUsers(@Query('search') search?: string) {
-    return this.adminService.getUsers(search);
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page (default: 50, max: 200)' })
+  getUsers(
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = Math.max(1, parseInt(page || '1', 10) || 1);
+    const limitNum = Math.min(200, Math.max(1, parseInt(limit || '50', 10) || 50));
+    return this.adminService.getUsers(search, pageNum, limitNum);
   }
 
   @Get('users/online')

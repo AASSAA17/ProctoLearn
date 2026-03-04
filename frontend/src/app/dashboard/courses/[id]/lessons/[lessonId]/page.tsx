@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Lesson {
   id: string;
@@ -43,21 +45,33 @@ export default function LessonViewerPage() {
 
   const load = useCallback(async () => {
     try {
-      const [lessonRes, progressRes] = await Promise.all([
+      const [lessonRes, progressRes] = await Promise.allSettled([
         api.get(`/courses/${courseId}/lessons/${lessonId}`),
         api.get(`/courses/${courseId}/lessons/progress/my`),
       ]);
-      setLesson(lessonRes.data);
-      const progress: LessonNav[] = progressRes.data;
-      setLessons(progress);
-      const cur = progress.find((l) => l.id === lessonId);
-      setIsCompleted(!!cur?.completed);
-    } catch (err: any) {
-      if (err?.response?.status === 403) {
-        toast.error('Алдыңғы сабақтарды аяқтаңыз');
-      } else {
-        toast.error('Сабақ жүктеу қатесі');
+
+      // Lesson data is required
+      if (lessonRes.status === 'rejected') {
+        const status = lessonRes.reason?.response?.status;
+        if (status === 403) {
+          toast.error('Алдыңғы сабақтарды аяқтаңыз');
+        } else {
+          toast.error('Сабақ жүктеу қатесі');
+        }
+        router.push(`/dashboard/courses/${courseId}`);
+        return;
       }
+      setLesson(lessonRes.value.data);
+
+      // Progress is optional — load what we can
+      if (progressRes.status === 'fulfilled') {
+        const progress: LessonNav[] = progressRes.value.data;
+        setLessons(progress);
+        const cur = progress.find((l) => l.id === lessonId);
+        setIsCompleted(!!cur?.completed);
+      }
+    } catch (err: any) {
+      toast.error('Сабақ жүктеу қатесі');
       router.push(`/dashboard/courses/${courseId}`);
     } finally {
       setLoading(false);
@@ -263,8 +277,38 @@ export default function LessonViewerPage() {
             )}
 
             {/* Lesson content */}
-            <div className="prose prose-gray max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap mb-8">
-              {lesson.content}
+            <div className="mb-8">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h1: ({ children }) => <h1 className="text-2xl font-bold text-gray-900 mt-6 mb-3">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-xl font-bold text-gray-800 mt-5 mb-2 border-b border-gray-100 pb-1">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-lg font-semibold text-gray-800 mt-4 mb-2">{children}</h3>,
+                  p: ({ children }) => <p className="text-gray-700 leading-relaxed mb-3">{children}</p>,
+                  ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mb-3 text-gray-700 pl-4">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 mb-3 text-gray-700 pl-4">{children}</ol>,
+                  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                  code: ({ className, children, ...props }: any) => {
+                    const isBlock = className?.includes('language-');
+                    return isBlock ? (
+                      <code className="block bg-gray-900 text-green-300 rounded-lg p-4 my-3 text-sm font-mono overflow-x-auto whitespace-pre">{children}</code>
+                    ) : (
+                      <code className="bg-gray-100 text-primary-700 rounded px-1.5 py-0.5 text-sm font-mono" {...props}>{children}</code>
+                    );
+                  },
+                  pre: ({ children }) => <div className="my-3">{children}</div>,
+                  blockquote: ({ children }) => <blockquote className="border-l-4 border-primary-400 pl-4 italic text-gray-600 my-3">{children}</blockquote>,
+                  table: ({ children }) => <div className="overflow-x-auto my-4"><table className="min-w-full border border-gray-200 rounded-lg text-sm">{children}</table></div>,
+                  thead: ({ children }) => <thead className="bg-gray-100">{children}</thead>,
+                  th: ({ children }) => <th className="px-4 py-2 text-left font-semibold text-gray-700 border-b border-gray-200">{children}</th>,
+                  td: ({ children }) => <td className="px-4 py-2 text-gray-700 border-b border-gray-100">{children}</td>,
+                  a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">{children}</a>,
+                  strong: ({ children }) => <strong className="font-bold text-gray-900">{children}</strong>,
+                  hr: () => <hr className="my-4 border-gray-200" />,
+                }}
+              >
+                {lesson.content}
+              </ReactMarkdown>
             </div>
 
             {/* ─────────── ASSIGNMENT BLOCK ─────────── */}

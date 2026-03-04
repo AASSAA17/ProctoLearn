@@ -46,8 +46,8 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id },
       data: {
-        ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.phone !== undefined && { phone: dto.phone }),
+        ...(dto.name !== undefined && { name: dto.name.trim() }),
+        ...(dto.phone !== undefined && { phone: dto.phone?.trim() || null }),
       },
       select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true },
     });

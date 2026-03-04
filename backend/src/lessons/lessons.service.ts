@@ -20,12 +20,35 @@ export class LessonsService {
     });
   }
 
+  async createForModule(moduleId: string, dto: CreateLessonDto, teacherId: string) {
+    const mod = await this.prisma.courseModule.findUnique({
+      where: { id: moduleId },
+      include: { course: true },
+    });
+    if (!mod) throw new NotFoundException('Бөлім табылмады');
+    if (mod.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
+    return this.prisma.lesson.create({ data: { ...dto, moduleId } });
+  }
+
+  async findByModule(moduleId: string) {
+    return this.prisma.lesson.findMany({
+      where: { moduleId },
+      orderBy: { order: 'asc' },
+      include: { steps: { orderBy: { order: 'asc' }, select: { id: true, type: true, order: true } } },
+    });
+  }
+
   async findById(id: string, userId?: string) {
-    const lesson = await this.prisma.lesson.findUnique({ where: { id } });
+    const lesson = await this.prisma.lesson.findUnique({
+      where: { id },
+      include: {
+        steps: { orderBy: { order: 'asc' } },
+      },
+    });
     if (!lesson) throw new NotFoundException('Сабақ табылмады');
 
-    // Block skipping: user must complete all previous lessons first
-    if (userId && lesson.order > 1) {
+    // Block skipping only for old-style (course-direct) lessons
+    if (userId && lesson.courseId && lesson.order > 1) {
       const prevLessons = await this.prisma.lesson.findMany({
         where: { courseId: lesson.courseId, order: { lt: lesson.order } },
         select: { id: true },
@@ -38,8 +61,8 @@ export class LessonsService {
       }
     }
 
-    // Track progress (fire-and-forget)
-    if (userId) {
+    // Track progress (fire-and-forget) — only for course-direct lessons
+    if (userId && lesson.courseId) {
       this.prisma.lessonProgress.upsert({
         where: { userId_lessonId: { userId, lessonId: id } },
         update: { viewedAt: new Date() },
@@ -50,13 +73,26 @@ export class LessonsService {
     return lesson;
   }
 
+  private async resolveTeacherId(lesson: any): Promise<string | undefined> {
+    if (lesson.course) return lesson.course.teacherId;
+    if (lesson.moduleId) {
+      const mod = await this.prisma.courseModule.findUnique({
+        where: { id: lesson.moduleId },
+        include: { course: true },
+      });
+      return mod?.course?.teacherId;
+    }
+    return undefined;
+  }
+
   async update(id: string, dto: Partial<CreateLessonDto>, teacherId: string) {
     const lesson = await this.prisma.lesson.findUnique({
       where: { id },
       include: { course: true },
     });
     if (!lesson) throw new NotFoundException('Сабақ табылмады');
-    if (lesson.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
+    const ownerId = await this.resolveTeacherId(lesson);
+    if (ownerId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
     return this.prisma.lesson.update({ where: { id }, data: dto });
   }
 
@@ -66,7 +102,8 @@ export class LessonsService {
       include: { course: true },
     });
     if (!lesson) throw new NotFoundException('Сабақ табылмады');
-    if (lesson.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
+    const ownerId = await this.resolveTeacherId(lesson);
+    if (ownerId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
     await this.prisma.lesson.delete({ where: { id } });
     return { message: 'Сабақ жойылды' };
   }
@@ -103,7 +140,7 @@ export class LessonsService {
     const correct = normalize(userAnswer) === normalize(lesson.assignmentAnswer);
 
     // If correct: mark lesson as completed
-    if (correct) {
+    if (correct && lesson.courseId) {
       await this.prisma.lessonProgress.upsert({
         where: { userId_lessonId: { userId, lessonId } },
         update: { viewedAt: new Date() },
@@ -118,11 +155,13 @@ export class LessonsService {
   async markCompleted(lessonId: string, userId: string) {
     const lesson = await this.prisma.lesson.findUnique({ where: { id: lessonId } });
     if (!lesson) throw new NotFoundException('Сабақ табылмады');
-    await this.prisma.lessonProgress.upsert({
-      where: { userId_lessonId: { userId, lessonId } },
-      update: { viewedAt: new Date() },
-      create: { userId, courseId: lesson.courseId, lessonId },
-    });
+    if (lesson.courseId) {
+      await this.prisma.lessonProgress.upsert({
+        where: { userId_lessonId: { userId, lessonId } },
+        update: { viewedAt: new Date() },
+        create: { userId, courseId: lesson.courseId, lessonId },
+      });
+    }
     return { message: 'Сабақ аяқталды' };
   }
 }

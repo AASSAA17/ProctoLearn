@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import api from '@/lib/api';
+import api, { API_URL } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { useRouter } from 'next/navigation';
 
@@ -39,7 +39,7 @@ export default function AdminPage() {
 
   const downloadExcel = (type: 'users' | 'courses') => {
     const token = localStorage.getItem('accessToken');
-    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/admin/export/${type}`;
+    const url = `${API_URL}/admin/export/${type}`;
     const a = document.createElement('a');
     a.href = url;
     a.download = `${type}.xlsx`;

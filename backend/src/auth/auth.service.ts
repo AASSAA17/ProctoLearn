@@ -23,8 +23,9 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
+    const email = dto.email.toLowerCase().trim();
     const exists = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+      where: { email },
     });
 
     if (exists) {
@@ -35,9 +36,9 @@ export class AuthService {
 
     const user = await this.prisma.user.create({
       data: {
-        name: dto.name,
-        email: dto.email,
-        phone: dto.phone,
+        name: dto.name.trim(),
+        email,
+        phone: dto.phone?.trim() || null,
         password: hashedPassword,
       },
       select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true, mustChangePassword: true },
@@ -50,8 +51,9 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
+    const email = dto.email.toLowerCase().trim();
     const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+      where: { email },
     });
 
     if (!user) {
@@ -80,7 +82,13 @@ export class AuthService {
         where: { id: payload.sub },
       });
 
-      if (!user || user.refreshToken !== token) {
+      if (!user || !user.refreshToken) {
+        throw new UnauthorizedException('Жарамсыз refresh token');
+      }
+
+      // Compare raw token against stored bcrypt hash
+      const isValid = await bcrypt.compare(token, user.refreshToken);
+      if (!isValid) {
         throw new UnauthorizedException('Жарамсыз refresh token');
       }
 
@@ -134,14 +142,16 @@ export class AuthService {
   }
 
   private async saveRefreshToken(userId: string, refreshToken: string) {
+    // Store a bcrypt hash instead of the raw token — DB leak doesn't expose active sessions
+    const hashed = await bcrypt.hash(refreshToken, 10);
     await this.prisma.user.update({
       where: { id: userId },
-      data: { refreshToken },
+      data: { refreshToken: hashed },
     });
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email.toLowerCase().trim() } });
     // Don't reveal whether user exists
     if (!user) return { message: 'Егер email тіркелген болса, нұсқаулық жіберілді' };
 

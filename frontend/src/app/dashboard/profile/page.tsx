@@ -55,7 +55,7 @@ export default function ProfilePage() {
             <p className="text-lg font-semibold text-gray-900">{info?.name}</p>
             <p className="text-sm text-gray-500">{info?.email}</p>
             <span className="inline-block mt-1 px-2 py-0.5 bg-primary-100 text-primary-700 text-xs rounded-full font-medium">
-              {info?.role}
+              {{ STUDENT: 'Студент', TEACHER: 'Мұғалім', PROCTOR: 'Проктор', ADMIN: 'Админ' }[info?.role as string] ?? info?.role}
             </span>
           </div>
         </div>

@@ -39,6 +39,12 @@ export class LessonsController {
     return this.lessonsService.findByCourse(courseId);
   }
 
+  @Get('progress/my')
+  @ApiOperation({ summary: 'Менің прогресім (курс бойынша)' })
+  getMyProgress(@Param('courseId') courseId: string, @CurrentUser('id') userId: string) {
+    return this.lessonsService.getMyProgress(courseId, userId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Сабақты ID бойынша алу' })
   findById(@Param('id') id: string, @CurrentUser('id') userId: string) {
@@ -65,12 +71,6 @@ export class LessonsController {
     return this.lessonsService.remove(id, teacherId);
   }
 
-  @Get('progress/my')
-  @ApiOperation({ summary: 'Менің прогресім (курс бойынша)' })
-  getMyProgress(@Param('courseId') courseId: string, @CurrentUser('id') userId: string) {
-    return this.lessonsService.getMyProgress(courseId, userId);
-  }
-
   @Post(':id/check-assignment')
   @ApiOperation({ summary: 'Тапсырма жауабын тексеру' })
   checkAssignment(
@@ -85,5 +85,67 @@ export class LessonsController {
   @ApiOperation({ summary: 'Сабақты аяқтандыру (оқу сабақтары үшін)' })
   markCompleted(@Param('id') lessonId: string, @CurrentUser('id') userId: string) {
     return this.lessonsService.markCompleted(lessonId, userId);
+  }
+}
+
+// ─── Module-based lessons ────────────────────────────────────────────────────
+@ApiTags('Сабақтар')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Controller('modules/:moduleId/lessons')
+export class ModuleLessonsController {
+  constructor(private readonly lessonsService: LessonsService) {}
+
+  @Post()
+  @UseGuards(RolesGuard)
+  @Roles(Role.TEACHER, Role.ADMIN)
+  @ApiOperation({ summary: 'Бөлімге сабақ қосу' })
+  create(
+    @Param('moduleId') moduleId: string,
+    @Body() dto: CreateLessonDto,
+    @CurrentUser('id') teacherId: string,
+  ) {
+    return this.lessonsService.createForModule(moduleId, dto, teacherId);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Бөлімнің барлық сабақтары' })
+  findByModule(@Param('moduleId') moduleId: string) {
+    return this.lessonsService.findByModule(moduleId);
+  }
+}
+
+// ─── Standalone lesson routes (no courseId prefix) ────────────────────────────
+@ApiTags('Сабақтар')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Controller('lessons')
+export class StandaloneLessonsController {
+  constructor(private readonly lessonsService: LessonsService) {}
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Сабақты ID бойынша алу (модуль сабақтары үшін)' })
+  findById(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.lessonsService.findById(id, userId);
+  }
+
+  @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.TEACHER, Role.ADMIN)
+  @ApiOperation({ summary: 'Сабақты жаңарту' })
+  update(
+    @Param('id') id: string,
+    @Body() dto: Partial<CreateLessonDto>,
+    @CurrentUser('id') teacherId: string,
+  ) {
+    return this.lessonsService.update(id, dto, teacherId);
+  }
+
+  @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.TEACHER, Role.ADMIN)
+  @ApiOperation({ summary: 'Сабақты жою' })
+  remove(@Param('id') id: string, @CurrentUser('id') teacherId: string) {
+    return this.lessonsService.remove(id, teacherId);
   }
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
-import api from '@/lib/api';
+import api, { API_URL, WS_URL } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -25,10 +25,9 @@ interface Exam {
 interface Attempt {
   id: string;
   trustScore: number;
+  startedAt: string;
   exam: Exam;
 }
-
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000';
 
 export default function ExamPage() {
   const { examId } = useParams();
@@ -45,6 +44,14 @@ export default function ExamPage() {
   const [tabBlocked, setTabBlocked] = useState(false);
   const tabSwitchCountRef = useRef(0);
 
+  // Post-exam results modal state
+  const [resultModal, setResultModal] = useState<{
+    passed: boolean;
+    score: number;
+    availableCourses: { id: string; title: string; description?: string; level: string; teacher: { name: string }; _count: { lessons: number; exams: number } }[];
+  } | null>(null);
+  const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
+
   const socketRef = useRef<Socket | null>(null);
   const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const faceCheckRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -52,6 +59,8 @@ export default function ExamPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const attemptIdRef = useRef<string | null>(null);
+  // Ref to always point to the latest handleSubmit (avoids stale closure in timer)
+  const handleSubmitRef = useRef<() => Promise<void>>(() => Promise.resolve());
   // Video recording refs
   const cameraRecorderRef = useRef<MediaRecorder | null>(null);
   const screenRecorderRef = useRef<MediaRecorder | null>(null);
@@ -148,7 +157,7 @@ export default function ExamPage() {
         const formData = new FormData();
         formData.append('file', blob, `${type}.webm`);
         formData.append('type', type);
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/evidence/${attemptId}/recording`, {
+        await fetch(`${API_URL}/evidence/${attemptId}/recording`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
           body: formData,
@@ -205,7 +214,15 @@ export default function ExamPage() {
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
-      e.returnValue = 'Емтиханнан шығуға сенімдісіз бе?';
+      e.returnValue = '';
+    };
+
+    // Back button → auto-submit the attempt
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      // Push state again so navigation is truly blocked, then submit
+      window.history.pushState(null, '', window.location.href);
+      void handleSubmitRef.current();
     };
 
     const handleCopy = () => {
@@ -227,6 +244,7 @@ export default function ExamPage() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
     document.addEventListener('copy', handleCopy);
     document.addEventListener('paste', handlePaste);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -237,6 +255,7 @@ export default function ExamPage() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
       document.removeEventListener('copy', handleCopy);
       document.removeEventListener('paste', handlePaste);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
@@ -251,7 +270,9 @@ export default function ExamPage() {
         setAttempt(data);
         attemptIdRef.current = data.id;
         setTrustScore(data.trustScore);
-        setTimeLeft(data.exam.duration * 60);
+        // Persist timer: compute remaining time based on when the attempt started
+        const elapsed = Math.floor((Date.now() - new Date(data.startedAt as string).getTime()) / 1000);
+        setTimeLeft(Math.max(0, data.exam.duration * 60 - elapsed));
 
         // Initialize socket
         const token = localStorage.getItem('accessToken');
@@ -298,7 +319,7 @@ export default function ExamPage() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timerRef.current);
-          handleSubmit();
+          handleSubmitRef.current();
           return 0;
         }
         return prev - 1;
@@ -308,7 +329,13 @@ export default function ExamPage() {
     return () => clearInterval(timerRef.current);
   }, [attempt]);
 
-  const handleSubmit = async () => {
+  const handleExit = () => {
+    if (window.confirm('Емтиханнан шығуға сенімдісіз бе? Барлық берілген жауаптар жіберіледі.')) {
+      void handleSubmitRef.current();
+    }
+  };
+
+  const handleSubmit = useCallback(async () => {
     if (!attempt || submitting) return;
     setSubmitting(true);
 
@@ -331,16 +358,27 @@ export default function ExamPage() {
 
       if (data.passed) {
         toast.success(`Сіз өттіңіз! Балл: ${data.score}% 🎉`);
-        router.push('/dashboard/certificates');
+        setResultModal({
+          passed: true,
+          score: data.score,
+          availableCourses: data.availableCourses ?? [],
+        });
       } else {
         toast.error(`Өтпедіңіз. Балл: ${data.score}%`);
-        router.push('/dashboard/my-attempts');
+        setResultModal({
+          passed: false,
+          score: data.score,
+          availableCourses: [],
+        });
       }
     } catch {
       toast.error('Жіберу қатесі');
       setSubmitting(false);
     }
-  };
+  }, [attempt, submitting, answers, uploadRecordings, stopAllMedia, router]);
+
+  // Keep ref in sync so timer/event-listeners always call the latest version
+  useEffect(() => { handleSubmitRef.current = handleSubmit; });
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -353,6 +391,30 @@ export default function ExamPage() {
     if (score >= 50) return 'bg-yellow-500';
     return 'bg-red-500';
   };
+
+  const handleEnrollCourse = async (courseId: string) => {
+    setEnrollingCourseId(courseId);
+    try {
+      await api.post(`/enrollments/courses/${courseId}`);
+      toast.success('Курсқа тіркелдіңіз!');
+      router.push(`/dashboard/courses/${courseId}`);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Тіркелу қатесі');
+    } finally {
+      setEnrollingCourseId(null);
+    }
+  };
+
+  const handleCloseResult = () => {
+    if (resultModal?.passed) {
+      router.push('/dashboard/certificates');
+    } else {
+      router.push('/dashboard/my-attempts');
+    }
+  };
+
+  const levelLabel = (l: string) =>
+    l === 'BEGINNER' ? '🟢 Бастаушы' : l === 'INTERMEDIATE' ? '🟡 Орта' : '🔴 Жоғары';
 
   if (loading) {
     return (
@@ -400,7 +462,7 @@ export default function ExamPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
             {/* Trust Score */}
             <div className="text-center">
               <p className="text-xs text-gray-500 mb-1">Trust Score</p>
@@ -420,6 +482,15 @@ export default function ExamPage() {
               <p className="text-xs text-gray-500">Қалған уақыт</p>
               <p className="text-2xl font-mono font-bold">{formatTime(timeLeft)}</p>
             </div>
+
+            {/* Exit button */}
+            <button
+              onClick={handleExit}
+              disabled={submitting}
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors"
+            >
+              🚪 Шығу
+            </button>
           </div>
         </div>
       </div>
@@ -579,6 +650,97 @@ export default function ExamPage() {
         </div>
       </div>
     </div>
+
+    {/* Post-exam results modal */}
+    {resultModal && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className={`p-6 rounded-t-2xl text-center ${resultModal.passed ? 'bg-gradient-to-r from-green-500 to-emerald-600' : 'bg-gradient-to-r from-red-500 to-rose-600'}`}>
+            <div className="text-5xl mb-2">{resultModal.passed ? '🎉' : '😔'}</div>
+            <h2 className="text-2xl font-bold text-white">
+              {resultModal.passed ? 'Құттықтаймыз!' : 'Өтпедіңіз'}
+            </h2>
+            <p className="text-white/90 text-lg mt-1">Балл: {resultModal.score}%</p>
+          </div>
+
+          <div className="p-6">
+            {resultModal.passed && resultModal.availableCourses.length > 0 ? (
+              <>
+                <p className="text-gray-700 font-medium mb-4 text-center">
+                  Келесі курсты таңдаңыз:
+                </p>
+                <div className="space-y-3">
+                  {resultModal.availableCourses.map((course) => (
+                    <div
+                      key={course.id}
+                      className="border border-gray-200 rounded-xl p-4 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer group"
+                      onClick={() => handleEnrollCourse(course.id)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
+                            {course.title}
+                          </h3>
+                          {course.description && (
+                            <p className="text-sm text-gray-500 mt-1 line-clamp-2">{course.description}</p>
+                          )}
+                          <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                            <span>{levelLabel(course.level)}</span>
+                            <span>👤 {course.teacher.name}</span>
+                            <span>📖 {course._count.lessons} сабақ</span>
+                          </div>
+                        </div>
+                        <div className="ml-3 flex-shrink-0">
+                          {enrollingCourseId === course.id ? (
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                          ) : (
+                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors text-lg">
+                              →
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={handleCloseResult}
+                  className="w-full mt-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Сертификаттарға өту →
+                </button>
+              </>
+            ) : resultModal.passed ? (
+              <>
+                <p className="text-center text-gray-600 mb-4">
+                  Барлық курстарды аяқтадыңыз! 🏆
+                </p>
+                <button
+                  onClick={handleCloseResult}
+                  className="w-full py-3 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors"
+                >
+                  Сертификаттарға өту
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-center text-gray-600 mb-4">
+                  Қайта тапсыруға болады. Алдымен сабақтарды қайта қараңыз.
+                </p>
+                <button
+                  onClick={handleCloseResult}
+                  className="w-full py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors"
+                >
+                  Нәтижелерді көру
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
     </>
   );
 }

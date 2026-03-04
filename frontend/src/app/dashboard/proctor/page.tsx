@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api from '@/lib/api';
+import api, { WS_URL } from '@/lib/api';
 import { io, Socket } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
@@ -15,8 +15,6 @@ interface AttemptSummary {
   exam: { title: string };
   _count: { events: number; evidences: number };
 }
-
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000';
 
 export default function ProctorDashboardPage() {
   const [attempts, setAttempts] = useState<AttemptSummary[]>([]);
@@ -86,7 +84,9 @@ export default function ProctorDashboardPage() {
   const statusBadge = (s: string) => {
     if (s === 'FINISHED') return <span className="badge-success">Аяқталды</span>;
     if (s === 'IN_PROGRESS') return <span className="badge-warning">Жүргізілуде</span>;
-    return <span className="badge-danger">Белгіленді 🚩</span>;
+    if (s === 'FAILED') return <span className="badge-danger">Сәтсіз ✗</span>;
+    if (s === 'FLAGGED') return <span className="badge-danger">Белгіленді 🚩</span>;
+    return <span className="badge-danger">{s}</span>;
   };
 
   const eventTypeLabel = (type: string) => {
@@ -135,7 +135,7 @@ export default function ProctorDashboardPage() {
                       <div className="text-right">
                         {statusBadge(attempt.status)}
                         <p className={`text-sm font-bold mt-1 ${trustColor(attempt.trustScore)}`}>
-                          Trust: {attempt.trustScore}
+                          Сенімділік: {attempt.trustScore}
                         </p>
                       </div>
                     </div>
@@ -149,7 +149,7 @@ export default function ProctorDashboardPage() {
                         >
                           Дәлелдемелер
                         </Link>
-                        {attempt.status !== 'FLAGGED' && attempt.status !== 'FINISHED' && (
+                        {attempt.status !== 'FLAGGED' && attempt.status !== 'FINISHED' && attempt.status !== 'FAILED' && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleFlag(attempt.id); }}
                             className="text-red-600 hover:underline"

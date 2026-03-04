@@ -98,37 +98,48 @@ export class AdminService {
 
   // ─── Пайдаланушылар ────────────────────────────────────────────────────────
 
-  async getUsers(search?: string) {
+  async getUsers(search?: string, page = 1, limit = 50) {
     const onlineThreshold = new Date(Date.now() - 5 * 60 * 1000);
+    const skip = (page - 1) * limit;
 
-    const users = await this.prisma.user.findMany({
-      where: search
-        ? {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { email: { contains: search, mode: 'insensitive' } },
-            ],
-          }
-        : undefined,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-        createdAt: true,
-        lastSeen: true,
-        isOnline: true,
-        mustChangePassword: true,
-        _count: { select: { attempts: true, certificates: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const where = search
+      ? {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' as const } },
+            { email: { contains: search, mode: 'insensitive' as const } },
+          ],
+        }
+      : undefined;
 
-    return users.map((u) => ({
-      ...u,
-      isOnline: u.lastSeen ? u.lastSeen >= onlineThreshold : false,
-    }));
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          createdAt: true,
+          lastSeen: true,
+          isOnline: true,
+          mustChangePassword: true,
+          _count: { select: { attempts: true, certificates: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return {
+      data: users.map((u) => ({
+        ...u,
+        isOnline: u.lastSeen ? u.lastSeen >= onlineThreshold : false,
+      })),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async getOnlineUsers() {

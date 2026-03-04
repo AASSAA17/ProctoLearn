@@ -7,6 +7,8 @@ import api from '@/lib/api';
 
 interface Enrollment {
   id: string;
+  courseId: string;
+  completedAt: string | null;
   course: {
     id: string;
     title: string;
@@ -32,12 +34,15 @@ const ROLE_GRAD: Record<string, string> = {
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
-  const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
+  const [activeEnrollments, setActiveEnrollments] = useState<Enrollment[]>([]);
   const [attempts, setAttempts] = useState<number>(0);
   const [certs, setCerts] = useState<number>(0);
 
   useEffect(() => {
-    api.get('/enrollments/active').then((r) => setEnrollment(r.data)).catch(() => {});
+    api.get('/enrollments/my').then((r) => {
+      const all: Enrollment[] = Array.isArray(r.data) ? r.data : [];
+      setActiveEnrollments(all.filter(e => !e.completedAt));
+    }).catch(() => {});
     api.get('/attempts/my').then((r) => setAttempts(Array.isArray(r.data) ? r.data.length : 0)).catch(() => {});
     api.get('/certificates/my').then((r) => setCerts(Array.isArray(r.data) ? r.data.length : 0)).catch(() => {});
   }, []);
@@ -52,7 +57,7 @@ export default function DashboardPage() {
     { href: '/dashboard/my-attempts', icon: '📊', label: 'Нәтижелерім', desc: `${attempts} емтихан` },
     { href: '/dashboard/certificates', icon: '🏆', label: 'Сертификаттар', desc: `${certs} сертификат` },
     ...(user.role === 'TEACHER' || user.role === 'ADMIN'
-      ? [{ href: '/dashboard/teacher', icon: '🎓', label: 'Мұғалім панелі', desc: 'Курс басқару' }]
+      ? [{ href: '/dashboard/teacher/courses', icon: '🎓', label: 'Мұғалім панелі', desc: 'Курс басқару' }]
       : []),
     ...(user.role === 'PROCTOR' || user.role === 'ADMIN'
       ? [{ href: '/dashboard/proctor', icon: '🔍', label: 'Проктор панелі', desc: 'Бақылау' }]
@@ -92,10 +97,10 @@ export default function DashboardPage() {
       {/* ─── Stats row ─── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Белсенді курс', value: enrollment ? '1' : '0', icon: '📚', color: 'text-primary-600' },
+          { label: 'Белсенді курс', value: String(activeEnrollments.length), icon: '📚', color: 'text-primary-600' },
           { label: 'Емтихан', value: String(attempts), icon: '📝', color: 'text-blue-600' },
           { label: 'Сертификат', value: String(certs), icon: '🏆', color: 'text-yellow-600' },
-          { label: 'Деңгей', value: user.role === 'ADMIN' ? 'Admin' : 'Student', icon: '⭐', color: 'text-purple-600' },
+          { label: 'Деңгей', value: { STUDENT: 'Студент', TEACHER: 'Мұғалім', PROCTOR: 'Проктор', ADMIN: 'Админ' }[user.role] ?? user.role, icon: '⭐', color: 'text-purple-600' },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4 shadow-sm">
             <span className="text-3xl">{s.icon}</span>
@@ -108,37 +113,41 @@ export default function DashboardPage() {
       </div>
 
       {/* ─── Continue learning ─── */}
-      {enrollment && (
+      {activeEnrollments.length > 0 && (
         <div>
           <h2 className="text-lg font-bold text-gray-900 mb-3">Оқуды жалғастыру</h2>
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="flex-1">
-                <span className={`text-xs font-semibold px-2 py-1 rounded-full ${LEVEL_COLOR[enrollment.course.level] ?? 'bg-gray-100 text-gray-600'} mb-2 inline-block`}>
-                  {enrollment.course.level === 'BEGINNER' ? '🟢 Бастаушы' : enrollment.course.level === 'INTERMEDIATE' ? '🟡 Орта' : '🔴 Жоғары'}
-                </span>
-                <h3 className="text-base font-bold text-gray-900 mb-1">{enrollment.course.title}</h3>
-                <p className="text-sm text-gray-500 mb-3">{enrollment.completedLessons ?? 0} / {enrollment.totalLessons ?? '?'} сабақ аяқталды</p>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-1">
-                  <div
-                    className="h-full bg-primary-500 rounded-full transition-all"
-                    style={{ width: `${Math.min(enrollment.progress ?? 0, 100)}%` }}
-                  />
+          <div className="flex flex-col gap-3">
+            {activeEnrollments.slice(0, 3).map(enrollment => (
+              <div key={enrollment.id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex-1">
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${LEVEL_COLOR[enrollment.course.level] ?? 'bg-gray-100 text-gray-600'} mb-2 inline-block`}>
+                      {enrollment.course.level === 'BEGINNER' ? '🟢 Бастаушы' : enrollment.course.level === 'INTERMEDIATE' ? '🟡 Орта' : '🔴 Жоғары'}
+                    </span>
+                    <h3 className="text-base font-bold text-gray-900 mb-1">{enrollment.course.title}</h3>
+                    <p className="text-sm text-gray-500 mb-3">{enrollment.completedLessons ?? 0} / {enrollment.totalLessons ?? '?'} сабақ аяқталды</p>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-1">
+                      <div
+                        className="h-full bg-primary-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(enrollment.progress ?? 0, 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400">{enrollment.progress ?? 0}% аяқталды</p>
+                  </div>
+                  <Link
+                    href={`/dashboard/courses/${enrollment.course.id}`}
+                    className="bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm px-6 py-3 rounded-xl transition-colors flex-shrink-0 text-center"
+                  >
+                    Жалғастыру →
+                  </Link>
                 </div>
-                <p className="text-xs text-gray-400">{enrollment.progress ?? 0}% аяқталды</p>
               </div>
-              <Link
-                href={`/dashboard/courses/${enrollment.course.id}`}
-                className="bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm px-6 py-3 rounded-xl transition-colors flex-shrink-0 text-center"
-              >
-                Жалғастыру →
-              </Link>
-            </div>
+            ))}
           </div>
         </div>
       )}
 
-      {!enrollment && (
+      {activeEnrollments.length === 0 && (
         <div className="bg-gradient-to-r from-primary-50 to-blue-50 border border-primary-100 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <span className="text-4xl">🎯</span>
           <div className="flex-1">
@@ -153,8 +162,6 @@ export default function DashboardPage() {
           </Link>
         </div>
       )}
-
-      {/* ─── Quick links ─── */}
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-3">Жылдам өту</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

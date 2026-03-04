@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import api from '@/lib/api';
+import api, { API_URL } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 interface User {
@@ -30,7 +30,11 @@ export default function AdminUsersPage() {
   const load = (q = '') => {
     setLoading(true);
     api.get('/admin/users', { params: q ? { search: q } : {} })
-      .then((r) => setUsers(r.data))
+      .then((r) => {
+        const raw = r.data;
+        const list = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
+        setUsers(list);
+      })
       .finally(() => setLoading(false));
   };
 
@@ -59,7 +63,7 @@ export default function AdminUsersPage() {
 
   const downloadExcel = () => {
     const token = localStorage.getItem('accessToken');
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/admin/export/users`,
+    fetch(`${API_URL}/admin/export/users`,
       { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.blob()).then(blob => {
         const u = URL.createObjectURL(blob);
@@ -102,7 +106,7 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {users.map((u) => (
+                {(Array.isArray(users) ? users : []).map((u) => (
                   <tr key={u.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import api from '@/lib/api';
+import api, { API_URL } from '@/lib/api';
 
 interface CourseStat {
   id: string; title: string; teacher: { name: string };
@@ -20,7 +20,7 @@ export default function AdminCoursesPage() {
 
   const downloadExcel = () => {
     const token = localStorage.getItem('accessToken');
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/admin/export/courses`,
+    fetch(`${API_URL}/admin/export/courses`,
       { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.blob()).then(blob => {
         const u = URL.createObjectURL(blob);
