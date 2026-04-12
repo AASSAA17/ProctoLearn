@@ -6,8 +6,9 @@
 # Cron: 0 2 * * * /home/user/ProctoLearn/scripts/backup.sh
 # ============================================
 
-BACKUP_DIR="/home/user/backups/proctolearn"
-PROJECT_DIR="/home/user/ProctoLearn"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+BACKUP_DIR="$PROJECT_DIR/backups"
 DATE=$(date +"%Y-%m-%d_%H-%M-%S")
 DB_CONTAINER="proctolearn_postgres"
 DB_NAME="${POSTGRES_DB:-proctolearn_db}"
@@ -43,14 +44,27 @@ fi
 
 # --- 3. Бэкап .env файла ---
 cp "$PROJECT_DIR/.env" "$BACKUP_DIR/env_$DATE.bak"
+
+# --- 4. Снимок ключевых файлов для гида ---
+mkdir -p "$BACKUP_DIR/snapshot_$DATE"
+cp "$PROJECT_DIR/Jenkinsfile" "$BACKUP_DIR/snapshot_$DATE/" 2>/dev/null || true
+cp "$PROJECT_DIR/docker-compose.yml" "$BACKUP_DIR/snapshot_$DATE/" 2>/dev/null || true
+cp "$PROJECT_DIR/docker-compose.dev.yml" "$BACKUP_DIR/snapshot_$DATE/" 2>/dev/null || true
+cp -R "$PROJECT_DIR/backend/src" "$BACKUP_DIR/snapshot_$DATE/" 2>/dev/null || true
+cp -R "$PROJECT_DIR/backend/prisma" "$BACKUP_DIR/snapshot_$DATE/" 2>/dev/null || true
+cp -R "$PROJECT_DIR/frontend/src" "$BACKUP_DIR/snapshot_$DATE/" 2>/dev/null || true
+cp -R "$PROJECT_DIR/n8n/workflows" "$BACKUP_DIR/snapshot_$DATE/" 2>/dev/null || true
+cp -R "$PROJECT_DIR/opal/policies" "$BACKUP_DIR/snapshot_$DATE/" 2>/dev/null || true
+cp -R "$PROJECT_DIR/opal/data" "$BACKUP_DIR/snapshot_$DATE/" 2>/dev/null || true
+cp -R "$PROJECT_DIR/scripts" "$BACKUP_DIR/snapshot_$DATE/" 2>/dev/null || true
 echo "✅ .env сохранён: env_$DATE.bak"
 
-# --- 4. Удаляем старые бэкапы ---
+# --- 5. Удаляем старые бэкапы ---
 echo "🗑️  Удаление бэкапов старше $KEEP_DAYS дней..."
 find "$BACKUP_DIR" -name "*.gz" -mtime +$KEEP_DAYS -delete
 find "$BACKUP_DIR" -name "*.bak" -mtime +$KEEP_DAYS -delete
 
-# --- 5. Итог ---
+# --- 6. Итог ---
 echo ""
 echo "=========================================="
 echo "✅ Резервное копирование завершено!"

@@ -46,6 +46,8 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       MINIO_ENDPOINT: minio
+      N8N_EXAM_SUBMIT_WEBHOOK_URL: ${N8N_EXAM_SUBMIT_WEBHOOK_URL:-http://n8n:5678/webhook/proctolearn/exam-submit}
+      N8N_WEBHOOK_TOKEN: ${N8N_WEBHOOK_TOKEN:-change_me}
       NODE_ENV: development
     ports:
       - '4000:4000'
@@ -93,6 +95,102 @@ services:
     volumes:
       - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: proctolearn_mailpit
+    restart: unless-stopped
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: proctolearn_n8n
+    restart: unless-stopped
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE:-true}
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-admin123}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-proctolearn_n8n_encryption_key}
+      WEBHOOK_URL: ${N8N_PUBLIC_WEBHOOK_URL:-http://localhost:5678/}
+      N8N_HOST: n8n
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      TZ: Asia/Almaty
+    ports:
+      - '5678:5678'
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/data/import:ro
+    depends_on:
+      - mailpit
+
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile
+    container_name: proctolearn_jenkins
+    restart: unless-stopped
+    user: root
+    environment:
+      JENKINS_ADMIN_ID: ${JENKINS_ADMIN_ID:-admin}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:-admin123}
+      JENKINS_ADMIN_EMAIL: ${JENKINS_ADMIN_EMAIL:-admin@proctolearn.com}
+    ports:
+      - '8088:8080'
+      - '50000:50000'
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - ./:/var/jenkins_home/proctolearn:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  opa:
+    image: openpolicyagent/opa:0.68.0
+    container_name: proctolearn_opa
+    command:
+      - run
+      - --server
+      - --addr=0.0.0.0:8181
+      - --set=decision_logs.console=true
+      - /policy
+    ports:
+      - '8181:8181'
+    volumes:
+      - ./opal/policies:/policy:ro
+
+  opal_redis:
+    image: redis:7-alpine
+    container_name: proctolearn_opal_redis
+    ports:
+      - '6380:6379'
+
+  opal_server:
+    image: permitio/opal-server:latest
+    container_name: proctolearn_opal_server
+    environment:
+      OPAL_MASTER_TOKEN: ${OPAL_MASTER_TOKEN:-proctolearn-opal-token}
+      OPAL_POLICY_REPO_URL: ${OPAL_POLICY_REPO_URL:-https://github.com/AASSAA17/ProctoLearn}
+      OPAL_POLICY_REPO_POLLING_INTERVAL: ${OPAL_POLICY_REPO_POLLING_INTERVAL:-20}
+      OPAL_BROADCAST_URI: redis://opal_redis:6379
+    ports:
+      - '7002:7002'
+    depends_on:
+      - opal_redis
+
+  opal_client:
+    image: permitio/opal-client:latest
+    container_name: proctolearn_opal_client
+    environment:
+      OPAL_SERVER_URL: http://opal_server:7002
+      OPAL_CLIENT_TOKEN: ${OPAL_CLIENT_TOKEN:-proctolearn-opal-token}
+      OPAL_POLICY_STORE_URL: http://opa:8181
+      OPAL_DATA_UPDATER_ENABLED: 'false'
+    depends_on:
+      - opa
+      - opal_server
+
 volumes:
   postgres_data:
   minio_data:
+  n8n_data:
+  jenkins_home:

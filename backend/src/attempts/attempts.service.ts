@@ -3,7 +3,9 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitAnswersDto } from './dto/attempt.dto';
 import { QuestionType } from '@prisma/client';
@@ -12,10 +14,13 @@ import { EnrollmentsService } from '../enrollments/enrollments.service';
 
 @Injectable()
 export class AttemptsService {
+  private readonly logger = new Logger(AttemptsService.name);
+
   constructor(
     private prisma: PrismaService,
     private certificatesService: CertificatesService,
     private enrollmentsService: EnrollmentsService,
+    private configService: ConfigService,
   ) {}
 
   private static readonly MAX_ATTEMPTS_PER_EXAM = 5;
@@ -58,6 +63,7 @@ export class AttemptsService {
       where: { id: attemptId },
       include: {
         exam: { include: { questions: true, course: true } },
+        user: { select: { id: true, email: true, name: true } },
       },
     });
 
@@ -107,6 +113,21 @@ export class AttemptsService {
       }),
     ]);
 
+    const submitPayload = {
+      attemptId,
+      userId,
+      studentEmail: attempt.user.email,
+      studentName: attempt.user.name,
+      examId: attempt.exam.id,
+      examTitle: attempt.exam.title,
+      score,
+      passed,
+      trustScore: attempt.trustScore,
+      submittedAt: new Date().toISOString(),
+    };
+
+    await this.notifyN8nExamSubmit(submitPayload);
+
     // Issue certificate if passed
     if (score >= attempt.exam.passScore) {
       await this.certificatesService.issue(userId, attempt.exam.courseId);
@@ -143,6 +164,50 @@ export class AttemptsService {
     }
 
     return { attemptId, score, correctCount, totalQuestions, passed };
+  }
+
+  private async notifyN8nExamSubmit(payload: {
+    attemptId: string;
+    userId: string;
+    studentEmail: string;
+    studentName: string;
+    examId: string;
+    examTitle: string;
+    score: number;
+    passed: boolean;
+    trustScore: number;
+    submittedAt: string;
+  }) {
+    const webhookUrl = this.configService.get<string>('N8N_EXAM_SUBMIT_WEBHOOK_URL');
+    if (!webhookUrl) return;
+
+    const webhookToken = this.configService.get<string>('N8N_WEBHOOK_TOKEN');
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (webhookToken) {
+        headers['x-webhook-token'] = webhookToken;
+      }
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        this.logger.warn(
+          `n8n webhook returned non-OK status ${response.status} for attempt ${payload.attemptId}`,
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to send n8n webhook for attempt ${payload.attemptId}: ${(error as Error).message}`,
+      );
+    }
   }
 
   async getAttempt(id: string, userId: string) {
