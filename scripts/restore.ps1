@@ -1,10 +1,29 @@
 ﻿# ProctoLearn - Database Restore (via Docker)
 # Run: powershell -ExecutionPolicy Bypass -File scripts\restore.ps1
 
-$BackupDir = "C:\Users\user\ProctoLearn\backups"
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$RepoRoot  = Split-Path -Parent $ScriptDir
+$BackupDir = Join-Path $RepoRoot "backups"
+$EnvFile   = Join-Path $RepoRoot ".env"
+
 $Container = "proctolearn_postgres"
 $DbUser    = "postgres"
 $DbName    = "proctolearn_db"
+
+if (Test-Path $EnvFile) {
+    $envLines = Get-Content $EnvFile | Where-Object { $_ -match "=" -and -not $_.Trim().StartsWith("#") }
+    foreach ($line in $envLines) {
+        $parts = $line -split "=", 2
+        if ($parts.Count -eq 2) {
+            $key = $parts[0].Trim()
+            $value = $parts[1].Trim().Trim('"')
+            switch ($key) {
+                "POSTGRES_USER" { if ($value) { $DbUser = $value } }
+                "POSTGRES_DB"   { if ($value) { $DbName = $value } }
+            }
+        }
+    }
+}
 
 $sqlFiles = Get-ChildItem $BackupDir -Filter "db_*.sql" | Sort-Object LastWriteTime -Descending
 

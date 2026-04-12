@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "ProctoLearn Postgres",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "proctolearn_db",
+      "Username": "postgres",
+      "SSLMode": "prefer"
+    }
+  }
+}

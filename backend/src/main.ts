@@ -6,6 +6,9 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import * as path from 'path';
 import * as fs from 'fs';
+import { collectDefaultMetrics, register } from 'prom-client';
+
+let metricsInitialized = false;
 
 function checkEnv() {
   const logger = new Logger('Bootstrap');
@@ -26,6 +29,11 @@ function checkEnv() {
 async function bootstrap() {
   checkEnv();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  if (!metricsInitialized) {
+    collectDefaultMetrics();
+    metricsInitialized = true;
+  }
 
   // Serve uploaded recordings statically
   const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -68,6 +76,10 @@ async function bootstrap() {
   // Lightweight health check endpoint (used by Docker healthcheck)
   const httpAdapter = app.getHttpAdapter();
   httpAdapter.get('/health', (_req: any, res: any) => res.status(200).json({ status: 'ok' }));
+  httpAdapter.get('/metrics', async (_req: any, res: any) => {
+    res.setHeader('Content-Type', register.contentType);
+    res.send(await register.metrics());
+  });
 
   const port = process.env.API_PORT || 4000;
   await app.listen(port);

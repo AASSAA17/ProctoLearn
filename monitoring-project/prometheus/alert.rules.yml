@@ -1,0 +1,84 @@
+groups:
+  - name: server_alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode='idle'}[5m])) * 100) > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU жүктемесі жоғары"
+          description: "CPU пайдалануы {{ $value | printf \"%.1f\" }}% жетті"
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RAM пайдалануы жоғары"
+          description: "Жад пайдалануы {{ $value | printf \"%.1f\" }}%"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 15
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Диск орны аз қалды"
+          description: "Бос орын {{ $value | printf \"%.1f\" }}% ғана"
+
+      - alert: ServiceDown
+        expr: up{job!="proctolearn_api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Сервис өшіп қалды: {{ $labels.instance }}"
+          description: "1 минуттан астам уақыт бойы байланыс жоқ"
+
+      - alert: PostgreSQLExporterDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL exporter қолжетімсіз"
+          description: "postgres_exporter метрикалары 1 минуттан көп жиналмай тұр"
+
+      - alert: PostgreSQLHighConnections
+        expr: sum(pg_stat_database_numbackends{datname="zabbix"}) > 120
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL қосылым саны жоғары"
+          description: "zabbix базасында белсенді қосылым саны {{ $value | printf \"%.0f\" }}"
+
+      - alert: PostgreSQLHighRollbackRatio
+        expr: (sum(rate(pg_stat_database_xact_rollback{datname="zabbix"}[5m])) / clamp_min(sum(rate(pg_stat_database_xact_commit{datname="zabbix"}[5m])) + sum(rate(pg_stat_database_xact_rollback{datname="zabbix"}[5m])), 1)) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL rollback үлесі жоғары"
+          description: "Соңғы 5 минуттағы rollback үлесі {{ $value | printf \"%.2f\" }}"
+
+      - alert: PostgreSQLDeadlocksDetected
+        expr: sum(increase(pg_stat_database_deadlocks{datname="zabbix"}[15m])) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL deadlock анықталды"
+          description: "Соңғы 15 минутта deadlock саны {{ $value | printf \"%.0f\" }}"
+
+      - alert: MonitoringStackStarted
+        expr: (time() - process_start_time_seconds{job="prometheus"}) < 180
+        for: 0m
+        labels:
+          severity: info
+          lifecycle: startup
+        annotations:
+          summary: "Monitoring стек іске қосылды"
+          description: "Prometheus жаңа іске қосылды. Monitoring сервистері көтеріліп жатыр."

@@ -1,0 +1,268 @@
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - node_exporter
+      - alertmanager
+      - nginx_exporter
+      - postgres_exporter
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana-oss:11.1.4
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  node_exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: node_exporter
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  nginx:
+    image: nginx:latest
+    container_name: monitoring_nginx
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  nginx_exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: nginx_exporter
+    command:
+      - "-nginx.scrape-uri=http://nginx:8080/stub_status"
+    ports:
+      - "9113:9113"
+    depends_on:
+      - nginx
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  blackbox_exporter:
+    image: prom/blackbox-exporter:latest
+    container_name: blackbox_exporter
+    command:
+      - "--config.file=/etc/blackbox_exporter/config.yml"
+    ports:
+      - "9115:9115"
+    volumes:
+      - ./blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    ports:
+      - "9002:9000"
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  telegram_bot:
+    build:
+      context: ./telegram-bot
+      dockerfile: Dockerfile
+    container_name: monitoring_telegram_bot
+    environment:
+      TELEGRAM_BOT_TOKEN: "7613071728:AAH_iDQggErNIC--BSbqupkIVbe4HnLCSE4"
+      TELEGRAM_CHAT_ID: "6331359365"
+      PROM_URL: "http://prometheus:9090"
+      STATUS_INTERVAL_MINUTES: "30"
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "UTF-8"
+      LANG: "C.UTF-8"
+      LC_ALL: "C.UTF-8"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  zabbix_pgsql:
+    image: postgres:16-alpine
+    container_name: zabbix_pgsql
+    environment:
+      POSTGRES_DB: zabbix
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:-zabbixpass}
+    volumes:
+      - zabbix_pgsql_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  zabbix_server:
+    image: zabbix/zabbix-server-pgsql:alpine-7.0-latest
+    container_name: zabbix_server
+    environment:
+      DB_SERVER_HOST: zabbix_pgsql
+      POSTGRES_DB: zabbix
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:-zabbixpass}
+    ports:
+      - "10051:10051"
+    depends_on:
+      - zabbix_pgsql
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  zabbix_web:
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest
+    container_name: zabbix_web
+    environment:
+      ZBX_SERVER_HOST: zabbix_server
+      DB_SERVER_HOST: zabbix_pgsql
+      POSTGRES_DB: zabbix
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:-zabbixpass}
+      PHP_TZ: Asia/Almaty
+    ports:
+      - "8082:8080"
+    depends_on:
+      - zabbix_server
+      - zabbix_pgsql
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  zabbix_agent:
+    image: zabbix/zabbix-agent2:alpine-7.0-latest
+    container_name: zabbix_agent
+    environment:
+      ZBX_HOSTNAME: Zabbix server
+      ZBX_SERVER_HOST: 127.0.0.1
+    network_mode: "service:zabbix_server"
+    depends_on:
+      - zabbix_server
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: monitoring_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@local.test}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
+    ports:
+      - "5051:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - zabbix_pgsql
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  postgres_exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: postgres_exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://zabbix:${ZABBIX_DB_PASSWORD:-zabbixpass}@zabbix_pgsql:5432/zabbix?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      - zabbix_pgsql
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  graphite:
+    image: graphiteapp/graphite-statsd:1.1.10-5
+    container_name: graphite
+    ports:
+      - "8085:80"
+      - "2003:2003"
+      - "8125:8125/udp"
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  nagios:
+    image: jasonrivers/nagios:latest
+    container_name: nagios
+    environment:
+      NAGIOSADMIN_USER: ${NAGIOSADMIN_USER:-nagiosadmin}
+      NAGIOSADMIN_PASS: ${NAGIOSADMIN_PASS:-nagiosadmin}
+    ports:
+      - "8084:80"
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  portainer_data:
+  zabbix_pgsql_data:
+  pgadmin_data:

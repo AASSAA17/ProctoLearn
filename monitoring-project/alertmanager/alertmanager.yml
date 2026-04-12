@@ -1,0 +1,31 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ["alertname", "severity"]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 30m
+  receiver: "telegram-alerts"
+
+receivers:
+  - name: "telegram-alerts"
+    telegram_configs:
+      - bot_token: "7613071728:AAH_iDQggErNIC--BSbqupkIVbe4HnLCSE4"
+        chat_id: 6331359365
+        parse_mode: "HTML"
+        message: |
+          <b>{{ if eq .Status "firing" }}ALERT{{ else }}RESOLVED{{ end }}</b>
+          <b>{{ .GroupLabels.alertname }}</b>
+
+          {{ range .Alerts }}
+          <b>Summary:</b> {{ .Annotations.summary }}
+          <b>Details:</b> {{ .Annotations.description }}
+          <b>Severity:</b> {{ .Labels.severity }}
+          <b>Time:</b> {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+
+inhibit_rules:
+  - source_matchers: ["severity=critical"]
+    target_matchers: ["severity=warning"]
+    equal: ["alertname", "instance"]

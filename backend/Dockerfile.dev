@@ -9,4 +9,4 @@ COPY . .
 RUN ./node_modules/.bin/prisma generate
 
 EXPOSE 4000
-CMD ["/bin/sh", "-c", "node_modules/.bin/prisma db push --skip-generate && node_modules/.bin/prisma generate && npm run start:dev"]
+CMD ["/bin/sh", "-c", "node_modules/.bin/prisma generate && npm run start:dev"]
