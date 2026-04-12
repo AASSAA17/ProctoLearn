@@ -21,17 +21,13 @@ pipeline {
 
     stage('Backend Tests') {
       steps {
-        dir("${env.REPO_PATH}/backend") {
-          sh 'docker run --rm -v "$PWD:/app" -w /app node:22-alpine sh -lc "npm ci && npm run test --if-present"'
-        }
+        sh 'docker run --rm proctolearn-api sh -lc "npm run test --if-present"'
       }
     }
 
     stage('Frontend Tests') {
       steps {
-        dir("${env.REPO_PATH}/frontend") {
-          sh 'docker run --rm -v "$PWD:/app" -w /app node:22-alpine sh -lc "npm ci && npm run test --if-present"'
-        }
+        sh 'docker run --rm proctolearn-web sh -lc "npm run test --if-present"'
       }
     }
 
