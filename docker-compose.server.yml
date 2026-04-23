@@ -1,0 +1,199 @@
+# ОСНОВНОЙ СЕРВЕР (BACKEND + FRONTEND + БАЗА ДАННЫХ)
+# Запуск: docker compose -f docker-compose.server.yml up -d
+# Остановка: docker compose -f docker-compose.server.yml down
+
+services:
+  # ─── Databases ───
+  postgres:
+    image: postgres:16-alpine
+    container_name: proctolearn_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: proctolearn_redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Storage ───
+  minio:
+    image: minio/minio:latest
+    container_name: proctolearn_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Backend API ───
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: proctolearn_api_dev
+    restart: unless-stopped
+    command: /bin/sh -c "node_modules/.bin/prisma generate && npm run start:dev"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      MINIO_ENDPOINT: minio
+      REDIS_URL: redis://redis:6379
+      N8N_EXAM_SUBMIT_WEBHOOK_URL: ${N8N_EXAM_SUBMIT_WEBHOOK_URL:-http://n8n:5678/webhook/proctolearn/exam-submit}
+      N8N_WEBHOOK_TOKEN: ${N8N_WEBHOOK_TOKEN:-change_me}
+      NODE_ENV: development
+    ports:
+      - '4000:4000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  # ─── Frontend ───
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: proctolearn_web_dev
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      NEXT_PUBLIC_WS_URL: ws://localhost:4000
+      NODE_ENV: development
+    ports:
+      - '3001:3000'
+    depends_on:
+      - api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  # ─── Development Tools ───
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: proctolearn_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@proctolearn.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-1234}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - '5050:80'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: proctolearn_mailpit
+    restart: unless-stopped
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
+  # ─── Automation & Service Integration ───
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: proctolearn_n8n
+    restart: unless-stopped
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE:-true}
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-admin123}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-proctolearn_n8n_encryption_key}
+      WEBHOOK_URL: ${N8N_PUBLIC_WEBHOOK_URL:-http://localhost:5678/}
+      N8N_HOST: n8n
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      TZ: Asia/Almaty
+    ports:
+      - '5678:5678'
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/data/import:ro
+    depends_on:
+      - mailpit
+
+  # ─── CI/CD ───
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile
+    container_name: proctolearn_jenkins
+    restart: unless-stopped
+    user: root
+    environment:
+      JENKINS_ADMIN_ID: ${JENKINS_ADMIN_ID:-admin}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:-admin123}
+      JENKINS_ADMIN_EMAIL: ${JENKINS_ADMIN_EMAIL:-admin@proctolearn.com}
+    ports:
+      - '8088:8080'
+      - '50000:50000'
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - ./:/var/jenkins_home/proctolearn:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # ─── Policy & Authorization ───
+  opa:
+    image: openpolicyagent/opa:0.68.0
+    container_name: proctolearn_opa
+    command: run --server --addr=:8181 --log-level=debug
+    ports:
+      - '8181:8181'
+    volumes:
+      - ./opal/policies:/policies
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  n8n_data:
+    driver: local
+  jenkins_home:
+    driver: local
+
+networks:
+  default:
+    name: proctolearn_server_network

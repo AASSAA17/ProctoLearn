@@ -1,0 +1,204 @@
+/* ─── Scroll Animation Classes ─── */
+[data-animate] {
+  will-change: transform, opacity;
+}
+
+/* ─── Smooth Transitions ─── */
+* {
+  transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ─── Button Enhancements ─── */
+button {
+  position: relative;
+  overflow: hidden;
+}
+
+button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(255,255,255, 0.4) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+button:hover::before {
+  opacity: 1;
+}
+
+/* ─── Card Hover Effects ─── */
+.course-card {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.course-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.course-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+  opacity: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.course-card:hover::before {
+  opacity: 1;
+}
+
+/* ─── Animating Counters ─── */
+.stat-number {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Section Dividers with Animation ─── */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, currentColor 10%, currentColor 90%, transparent);
+  opacity: 0.2;
+  margin: 3rem 0;
+}
+
+/* ─── Tech Icons Glow ─── */
+.tech-icon-box {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.tech-icon-box::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+  opacity: 0;
+  border-radius: inherit;
+  transition: opacity 0.3s ease;
+}
+
+.tech-icon-box:hover {
+  transform: scale(1.08) translateY(-4px);
+}
+
+.tech-icon-box:hover::after {
+  opacity: 1;
+}
+
+/* ─── Feature Card Enhancements ─── */
+.feature-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.3s ease;
+}
+
+.feature-card:hover::after {
+  transform: scaleX(1);
+}
+
+/* ─── Text Gradient Animation ─── */
+.gradient-text {
+  background: linear-gradient(135deg, #5227FF, #FF9FFC, #B497CF);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* ─── Smooth Section Backgrounds ─── */
+.section-fade {
+  position: relative;
+}
+
+.section-fade::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(82, 39, 255, 0.02) 100%);
+  pointer-events: none;
+}
+
+/* ─── Interactive Link Underline ─── */
+a[href^="#"],
+a[href^="/"] {
+  position: relative;
+  text-decoration: none;
+}
+
+a[href^="#"]::after,
+a[href^="/"]::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: currentColor;
+  transition: width 0.3s ease;
+}
+
+a[href^="#"]:hover::after,
+a[href^="/"]::hover::after {
+  width: 100%;
+}
+
+/* ─── Number Counter Animation ─── */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.count-animate {
+  animation: countUp 0.6s ease-out forwards;
+}
+
+/* ─── Mobile Optimization ─── */
+@media (max-width: 768px) {
+  .course-card:hover {
+    transform: translateY(-4px);
+  }
+
+  .tech-icon-box:hover {
+    transform: scale(1.04) translateY(-2px);
+  }
+
+  button::before {
+    display: none;
+  }
+}

@@ -1,0 +1,414 @@
+﻿name: monitoring-project
+services:
+  alertmanager:
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --config.expand-env
+    container_name: alertmanager
+    environment:
+      TELEGRAM_BOT_TOKEN: ""
+      TELEGRAM_CHAT_ID: "0"
+    image: prom/alertmanager:latest
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 9093
+        published: "9093"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: C:\Users\Arsen\ProctoLearn\monitoring-project\alertmanager\alertmanager.yml
+        target: /etc/alertmanager/alertmanager.yml
+        read_only: true
+        bind: {}
+  blackbox_exporter:
+    command:
+      - --config.file=/etc/blackbox_exporter/config.yml
+    container_name: blackbox_exporter
+    image: prom/blackbox-exporter:latest
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 9115
+        published: "9115"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: C:\Users\Arsen\ProctoLearn\monitoring-project\blackbox\blackbox.yml
+        target: /etc/blackbox_exporter/config.yml
+        read_only: true
+        bind: {}
+  cadvisor:
+    container_name: cadvisor
+    image: gcr.io/cadvisor/cadvisor:latest
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 8080
+        published: "8081"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: /
+        target: /rootfs
+        read_only: true
+        bind: {}
+      - type: bind
+        source: /var/run
+        target: /var/run
+        read_only: true
+        bind: {}
+      - type: bind
+        source: /sys
+        target: /sys
+        read_only: true
+        bind: {}
+      - type: bind
+        source: /var/lib/docker
+        target: /var/lib/docker
+        read_only: true
+        bind: {}
+  grafana:
+    container_name: grafana
+    depends_on:
+      prometheus:
+        condition: service_started
+        required: true
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_SECURITY_ADMIN_USER: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    image: grafana/grafana-oss:11.1.4
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 3000
+        published: "3000"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: grafana_data
+        target: /var/lib/grafana
+        volume: {}
+      - type: bind
+        source: C:\Users\Arsen\ProctoLearn\monitoring-project\grafana\provisioning
+        target: /etc/grafana/provisioning
+        read_only: true
+        bind: {}
+      - type: bind
+        source: C:\Users\Arsen\ProctoLearn\monitoring-project\grafana\dashboards
+        target: /var/lib/grafana/dashboards
+        read_only: true
+        bind: {}
+  graphite:
+    container_name: graphite
+    image: graphiteapp/graphite-statsd:1.1.10-5
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 80
+        published: "8085"
+        protocol: tcp
+      - mode: ingress
+        target: 2003
+        published: "2003"
+        protocol: tcp
+      - mode: ingress
+        target: 8125
+        published: "8125"
+        protocol: udp
+    restart: unless-stopped
+  nagios:
+    container_name: nagios
+    environment:
+      NAGIOSADMIN_PASS: nagiosadmin
+      NAGIOSADMIN_USER: nagiosadmin
+    image: jasonrivers/nagios:latest
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 80
+        published: "8084"
+        protocol: tcp
+    restart: unless-stopped
+  nginx:
+    container_name: monitoring_nginx
+    image: nginx:latest
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 80
+        published: "80"
+        protocol: tcp
+      - mode: ingress
+        target: 8080
+        published: "8080"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: C:\Users\Arsen\ProctoLearn\monitoring-project\nginx\nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+        bind: {}
+  nginx_exporter:
+    command:
+      - -nginx.scrape-uri=http://nginx:8080/stub_status
+    container_name: nginx_exporter
+    depends_on:
+      nginx:
+        condition: service_started
+        required: true
+    image: nginx/nginx-prometheus-exporter:latest
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 9113
+        published: "9113"
+        protocol: tcp
+    restart: unless-stopped
+  node_exporter:
+    container_name: node_exporter
+    image: prom/node-exporter:v1.8.2
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 9100
+        published: "9100"
+        protocol: tcp
+    restart: unless-stopped
+  pgadmin:
+    container_name: monitoring_pgadmin
+    depends_on:
+      zabbix_pgsql:
+        condition: service_started
+        required: true
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local.test
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    image: dpage/pgadmin4:8
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 80
+        published: "5051"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: pgadmin_data
+        target: /var/lib/pgadmin
+        volume: {}
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:latest
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 9000
+        published: "9002"
+        protocol: tcp
+      - mode: ingress
+        target: 9443
+        published: "9443"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        bind: {}
+      - type: volume
+        source: portainer_data
+        target: /data
+        volume: {}
+  postgres_exporter:
+    container_name: postgres_exporter
+    depends_on:
+      zabbix_pgsql:
+        condition: service_started
+        required: true
+    environment:
+      DATA_SOURCE_NAME: postgresql://zabbix:zabbixpass@zabbix_pgsql:5432/zabbix?sslmode=disable
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 9187
+        published: "9187"
+        protocol: tcp
+    restart: unless-stopped
+  prometheus:
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    container_name: prometheus
+    depends_on:
+      alertmanager:
+        condition: service_started
+        required: true
+      nginx_exporter:
+        condition: service_started
+        required: true
+      node_exporter:
+        condition: service_started
+        required: true
+      postgres_exporter:
+        condition: service_started
+        required: true
+    image: prom/prometheus:v2.54.1
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 9090
+        published: "9090"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: C:\Users\Arsen\ProctoLearn\monitoring-project\prometheus\prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+        read_only: true
+        bind: {}
+      - type: bind
+        source: C:\Users\Arsen\ProctoLearn\monitoring-project\prometheus\alert.rules.yml
+        target: /etc/prometheus/alert.rules.yml
+        read_only: true
+        bind: {}
+      - type: volume
+        source: prometheus_data
+        target: /prometheus
+        volume: {}
+  telegram_bot:
+    build:
+      context: C:\Users\Arsen\ProctoLearn\monitoring-project\telegram-bot
+      dockerfile: Dockerfile
+    container_name: monitoring_telegram_bot
+    depends_on:
+      prometheus:
+        condition: service_started
+        required: true
+    environment:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      PROM_URL: http://prometheus:9090
+      PYTHONIOENCODING: UTF-8
+      PYTHONUTF8: "1"
+      STATUS_INTERVAL_MINUTES: "30"
+      TELEGRAM_BOT_TOKEN: ""
+      TELEGRAM_CHAT_ID: ""
+    networks:
+      monitoring: null
+    restart: unless-stopped
+  zabbix_agent:
+    container_name: zabbix_agent
+    depends_on:
+      zabbix_server:
+        condition: service_started
+        required: true
+    environment:
+      ZBX_HOSTNAME: zabbix_agent
+      ZBX_SERVER_HOST: zabbix_server
+      ZBX_SERVER_PORT: "10051"
+    image: zabbix/zabbix-agent2:alpine-7.0-latest
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 10050
+        published: "10050"
+        protocol: tcp
+    restart: unless-stopped
+  zabbix_pgsql:
+    container_name: zabbix_pgsql
+    environment:
+      POSTGRES_DB: zabbix
+      POSTGRES_PASSWORD: zabbixpass
+      POSTGRES_USER: zabbix
+    image: postgres:16-alpine
+    networks:
+      monitoring: null
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: zabbix_pgsql_data
+        target: /var/lib/postgresql/data
+        volume: {}
+  zabbix_server:
+    container_name: zabbix_server
+    depends_on:
+      zabbix_pgsql:
+        condition: service_started
+        required: true
+    environment:
+      DB_SERVER_HOST: zabbix_pgsql
+      POSTGRES_DB: zabbix
+      POSTGRES_PASSWORD: zabbixpass
+      POSTGRES_USER: zabbix
+    image: zabbix/zabbix-server-pgsql:alpine-7.0-latest
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 10051
+        published: "10051"
+        protocol: tcp
+    restart: unless-stopped
+  zabbix_web:
+    container_name: zabbix_web
+    depends_on:
+      zabbix_pgsql:
+        condition: service_started
+        required: true
+      zabbix_server:
+        condition: service_started
+        required: true
+    environment:
+      DB_SERVER_HOST: zabbix_pgsql
+      PHP_TZ: Asia/Almaty
+      POSTGRES_DB: zabbix
+      POSTGRES_PASSWORD: zabbixpass
+      POSTGRES_USER: zabbix
+      ZBX_SERVER_HOST: zabbix_server
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest
+    networks:
+      monitoring: null
+    ports:
+      - mode: ingress
+        target: 8080
+        published: "8082"
+        protocol: tcp
+    restart: unless-stopped
+networks:
+  monitoring:
+    name: monitoring-project_monitoring
+    driver: bridge
+volumes:
+  grafana_data:
+    name: monitoring-project_grafana_data
+  pgadmin_data:
+    name: monitoring-project_pgadmin_data
+  portainer_data:
+    name: monitoring-project_portainer_data
+  prometheus_data:
+    name: monitoring-project_prometheus_data
+  zabbix_pgsql_data:
+    name: monitoring-project_zabbix_pgsql_data

@@ -1,0 +1,10 @@
+---
+- name: Configure and deploy ProctoLearn infrastructure
+  hosts: proctolearn
+  gather_facts: true
+  become: true
+
+  roles:
+    - role: docker
+    - role: security
+    - role: deploy

@@ -1,0 +1,26 @@
+﻿OPAL Users Data
+Generated at: 2026-04-22T11:15:41
+
+{
+  "proctolearn": {
+    "users": {
+      "student-1": {
+        "roles": ["STUDENT"]
+      },
+      "teacher-1": {
+        "roles": ["TEACHER"]
+      },
+      "proctor-1": {
+        "roles": ["PROCTOR"]
+      },
+      "admin-1": {
+        "roles": ["ADMIN"]
+      },
+      "multi-role-user": {
+        "roles": ["TEACHER", "PROCTOR"]
+      }
+    }
+  }
+}
+
+

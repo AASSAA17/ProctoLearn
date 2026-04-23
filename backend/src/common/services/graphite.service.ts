@@ -1,11 +1,11 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import StatsDClient, { StatsD as StatsDType } from 'hot-shots';
+import { StatsD } from 'hot-shots';
 
 @Injectable()
 export class GraphiteService implements OnModuleDestroy {
   private readonly logger = new Logger(GraphiteService.name);
   private readonly enabled: boolean;
-  private readonly client?: StatsDType;
+  private readonly client?: StatsD;
 
   constructor() {
     this.enabled = process.env.GRAPHITE_ENABLED !== 'false';
@@ -19,7 +19,7 @@ export class GraphiteService implements OnModuleDestroy {
     const port = Number(process.env.GRAPHITE_PORT || '8125');
     const prefix = process.env.GRAPHITE_PREFIX || 'proctolearn.';
 
-    this.client = new StatsDClient({
+    this.client = new StatsD({
       host,
       port,
       prefix,

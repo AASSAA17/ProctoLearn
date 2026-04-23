@@ -1,0 +1,11 @@
+﻿81bd95f fix: run Jenkins tests from built images
+c2cca20 fix: remove ansiColor option for Jenkins compatibility
+3606d39 feat: add backup guide and dev tooling stack
+60deeaa chore: sync project updates
+ed84d35 feat: free course enrollment, fix admin users page, backup scripts, certificate fonts
+586e7ed feat: add Ubuntu deploy guide, nginx config, backup script, resource limits
+e84145c feat: full platform update - enrollments, lessons, profiles, Docker setup
+6ebf642 feat: admin panel, password validation, phone +7, online monitoring, Excel export, seed data
+0d24c53 Update README with project structure and setup instructions
+ba73ae3 Update README.md
+3e9758a Create README.md

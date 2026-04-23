@@ -1,0 +1,6 @@
+﻿
+OsName                    OsVersion  OsBuildNumber
+------                    ---------  -------------
+Майкрософт Windows 11 Pro 10.0.26200 26200        
+
+

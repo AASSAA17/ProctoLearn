@@ -11,6 +11,31 @@ pipeline {
   }
 
   stages {
+    stage('IaC Validation') {
+      steps {
+        dir("${env.REPO_PATH}") {
+          sh '''#!/bin/sh
+            set -eu
+            test -f infra/terraform/main.tf
+            test -f infra/ansible/playbook.yml
+
+            if command -v terraform >/dev/null 2>&1; then
+              terraform -chdir=infra/terraform init -backend=false
+              terraform -chdir=infra/terraform validate
+            else
+              echo "Terraform not installed on Jenkins agent, skipping terraform validate"
+            fi
+
+            if command -v ansible-playbook >/dev/null 2>&1; then
+              ansible-playbook -i infra/ansible/inventory.ini infra/ansible/playbook.yml --syntax-check
+            else
+              echo "Ansible not installed on Jenkins agent, skipping ansible syntax check"
+            fi
+          '''
+        }
+      }
+    }
+
     stage('Build Docker Images') {
       steps {
         dir("${env.REPO_PATH}") {

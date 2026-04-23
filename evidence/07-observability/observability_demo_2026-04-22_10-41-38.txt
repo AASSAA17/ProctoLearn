@@ -1,0 +1,11 @@
+﻿ProctoLearn Observability Demo
+Generated at: 2026-04-22T10:41:38
+AlertName: ObservabilityDemoApiLoad
+LoadUrl: http://localhost:4000/health
+DurationSec: 5
+Concurrency: 1
+TimeoutMs: 5000
+FireTimeoutSec: 5
+ResolveTimeoutSec: 10
+
+Starting load test process.

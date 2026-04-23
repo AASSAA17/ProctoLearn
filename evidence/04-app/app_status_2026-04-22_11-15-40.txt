@@ -1,0 +1,15 @@
+﻿Application Status
+Generated at: 2026-04-22T11:15:40
+
+NAME                   IMAGE                        COMMAND                  SERVICE    CREATED      STATUS                 PORTS
+proctolearn_api_dev    proctolearn-api              "docker-entrypoint.sтАж"   api        6 days ago   Up 2 hours             0.0.0.0:4000->4000/tcp, [::]:4000->4000/tcp
+proctolearn_jenkins    proctolearn-jenkins          "/usr/bin/tini -- /uтАж"   jenkins    6 days ago   Up 2 hours             0.0.0.0:50000->50000/tcp, [::]:50000->50000/tcp, 0.0.0.0:8088->8080/tcp, [::]:8088->8080/tcp
+proctolearn_mailpit    axllent/mailpit:latest       "/mailpit"               mailpit    6 days ago   Up 2 hours (healthy)   0.0.0.0:1025->1025/tcp, [::]:1025->1025/tcp, 0.0.0.0:8025->8025/tcp, [::]:8025->8025/tcp
+proctolearn_minio      minio/minio:latest           "/usr/bin/docker-entтАж"   minio      6 days ago   Up 2 hours (healthy)   0.0.0.0:9000->9000/tcp, [::]:9000->9000/tcp, 9001/tcp
+proctolearn_n8n        n8nio/n8n:latest             "tini -- /docker-entтАж"   n8n        6 days ago   Up 2 hours             0.0.0.0:5678->5678/tcp, [::]:5678->5678/tcp
+proctolearn_opa        openpolicyagent/opa:0.68.0   "/opa run --server -тАж"   opa        6 days ago   Up 2 hours             0.0.0.0:8181->8181/tcp, [::]:8181->8181/tcp
+proctolearn_pgadmin    dpage/pgadmin4:latest        "/entrypoint.sh"         pgadmin    6 days ago   Up 2 hours             0.0.0.0:5050->80/tcp, [::]:5050->80/tcp
+proctolearn_postgres   postgres:16-alpine           "docker-entrypoint.sтАж"   postgres   6 days ago   Up 2 hours (healthy)   0.0.0.0:5433->5432/tcp, [::]:5433->5432/tcp
+proctolearn_redis      redis:7-alpine               "docker-entrypoint.sтАж"   redis      6 days ago   Up 2 hours (healthy)   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+proctolearn_web_dev    proctolearn-web              "docker-entrypoint.sтАж"   web        6 days ago   Up 2 hours             0.0.0.0:3001->3000/tcp, [::]:3001->3000/tcp
+

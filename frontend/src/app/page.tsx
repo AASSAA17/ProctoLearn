@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { API_URL } from '@/lib/api';
 import {
-  HeroSection,
   StatsBar,
   TechCategoriesSection,
   FeaturesSection,
@@ -13,6 +12,8 @@ import {
   CTABanner,
   Footer,
 } from '@/components/landing/sections';
+
+import GooeyNav from '@/components/landing/GooeyNav';
 
 interface Course {
   id: string;
@@ -106,18 +107,28 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* ─── Navbar ─── */}
+      {/* ─── Gooey Navigation ─── */}
       <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2">
             <span className="text-2xl font-extrabold text-primary-700">Procto</span>
             <span className="text-2xl font-extrabold text-gray-800">Learn</span>
           </Link>
-          <div className="hidden md:flex items-center gap-8 text-sm text-gray-600">
-            <a href="#courses" className="hover:text-primary-600 font-medium transition-colors">Курстар</a>
-            <a href="#features" className="hover:text-primary-600 font-medium transition-colors">Мүмкіндіктер</a>
-            <a href="#reviews" className="hover:text-primary-600 font-medium transition-colors">Пікірлер</a>
+          
+          <div className="flex-1 max-w-sm">
+            <GooeyNav
+              items={[
+                { label: 'Курстар', href: '#courses' },
+                { label: 'Мүмкіндіктер', href: '#features' },
+                { label: 'Пікірлер', href: '#reviews' },
+              ]}
+              initialActiveIndex={0}
+              animationTime={600}
+              particleCount={15}
+              colors={[1, 2, 3, 1, 2]}
+            />
           </div>
+
           <div className="flex items-center gap-3">
             <Link
               href="/auth/login"
@@ -133,9 +144,22 @@ export default function HomePage() {
             </Link>
           </div>
         </div>
+
       </nav>
 
-      <HeroSection />
+      <section className="bg-gradient-to-br from-primary-800 via-primary-700 to-primary-600 text-white py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
+          <h1 className="text-4xl sm:text-5xl font-extrabold mb-4">Технологияны өзінше үйрен</h1>
+          <p className="text-lg sm:text-xl text-primary-100 mb-8">Интерактивті платформада сертификат аласыз</p>
+          <Link
+            href="/auth/register"
+            className="inline-flex items-center bg-white text-primary-700 font-semibold px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            Бұл сәтті бастаңыз →
+          </Link>
+        </div>
+      </section>
+
       <StatsBar />
       <TechCategoriesSection />
 

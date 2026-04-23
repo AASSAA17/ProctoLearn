@@ -1,0 +1,13 @@
+---
+project_root: /opt/proctolearn
+repo_url: https://github.com/AASSAA17/ProctoLearn.git
+repo_branch: main
+compose_file: docker-compose.server.yml
+monitoring_compose_file: docker-compose.monitoring.yml
+ssh_port: 2222
+ufw_allowed_ports:
+  - "{{ ssh_port }}/tcp"
+  - "80/tcp"
+  - "443/tcp"
+  - "9090/tcp"
+  - "3000/tcp"

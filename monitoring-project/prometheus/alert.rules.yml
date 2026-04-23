@@ -29,7 +29,7 @@ groups:
           description: "Бос орын {{ $value | printf \"%.1f\" }}% ғана"
 
       - alert: ServiceDown
-        expr: up{job!="proctolearn_api"} == 0
+        expr: up{job=~"prometheus|node_exporter|nginx|postgres|proctolearn_api"} == 0
         for: 1m
         labels:
           severity: critical
@@ -82,3 +82,22 @@ groups:
         annotations:
           summary: "Monitoring стек іске қосылды"
           description: "Prometheus жаңа іске қосылды. Monitoring сервистері көтеріліп жатыр."
+
+      - alert: ProctoLearnApiHighLoad
+        expr: rate(process_cpu_seconds_total{job="proctolearn_api"}[1m]) > 0.08
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ProctoLearn API жүктемесі жоғары"
+          description: "API CPU rate {{ $value | printf \"%.2f\" }} (load-тест жүріп жатыр болуы мүмкін)"
+
+      - alert: ObservabilityDemoApiLoad
+        expr: rate(process_cpu_seconds_total{job="proctolearn_api"}[1m]) > 0.03
+        for: 15s
+        labels:
+          severity: warning
+          lifecycle: demo
+        annotations:
+          summary: "Observability demo alert: API жүктемесі"
+          description: "Демо үшін жасалған alert. Load-test кезінде firing, кейін resolved болуы керек."

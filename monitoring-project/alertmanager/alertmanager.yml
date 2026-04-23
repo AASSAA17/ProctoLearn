@@ -11,8 +11,8 @@ route:
 receivers:
   - name: "telegram-alerts"
     telegram_configs:
-      - bot_token: "7613071728:AAH_iDQggErNIC--BSbqupkIVbe4HnLCSE4"
-        chat_id: 6331359365
+      - bot_token: "__TELEGRAM_BOT_TOKEN__"
+        chat_id: __TELEGRAM_CHAT_ID__
         parse_mode: "HTML"
         message: |
           <b>{{ if eq .Status "firing" }}ALERT{{ else }}RESOLVED{{ end }}</b>

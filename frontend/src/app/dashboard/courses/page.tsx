@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import MagicBento from '@/components/landing/MagicBento';
 
 type CourseLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 
@@ -40,6 +41,51 @@ const COURSE_COVERS = [
   { img: 'https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=400&q=80',    overlay: 'from-orange-900/70 to-red-800/50',  emoji: '🔀' },
   { img: 'https://images.unsplash.com/photo-1605745341112-85968b19335b?w=400&q=80', overlay: 'from-sky-900/70 to-indigo-800/50',  emoji: '🐳' },
   { img: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=400&q=80',    overlay: 'from-red-900/70 to-rose-800/50',    emoji: '🔒' },
+];
+
+const COURSES_MENU_ITEMS = [
+  {
+    key: 'BEGINNER',
+    color: '#120F17',
+    title: 'Жаңадан бастаушы',
+    description: 'Іргетас және негізгі ұғымдар',
+    label: '🟢 Бастау'
+  },
+  {
+    key: 'INTERMEDIATE',
+    color: '#120F17',
+    title: 'Орта деңгей',
+    description: 'Практика, жобалар, сенімділік',
+    label: '🟡 Даму'
+  },
+  {
+    key: 'ADVANCED',
+    color: '#120F17',
+    title: 'Жоғары деңгей',
+    description: 'Күрделі кейстер және архитектура',
+    label: '🔴 Про'
+  },
+  {
+    key: 'BEGINNER_INFO',
+    color: '#120F17',
+    title: 'Негіз',
+    description: 'HTML, CSS, JS және алгоритмдер',
+    label: 'Бағыт'
+  },
+  {
+    key: 'INTERMEDIATE_INFO',
+    color: '#120F17',
+    title: 'Қолдану',
+    description: 'React, API, дерекқор интеграциясы',
+    label: 'Практика'
+  },
+  {
+    key: 'ADVANCED_INFO',
+    color: '#120F17',
+    title: 'Шеберлік',
+    description: 'Сапа, қауіпсіздік, production ойлау',
+    label: 'Кәсіби'
+  }
 ];
 
 export default function CoursesPage() {
@@ -127,6 +173,32 @@ export default function CoursesPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Курстар</h1>
       </div>
+
+      <section className="mb-8 rounded-2xl bg-gray-950 px-4 py-6 sm:px-6">
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-white">Интерактивті курс мәзірі</h2>
+          <p className="text-sm text-gray-300 mt-1">Деңгейді карта арқылы таңдаңыз</p>
+        </div>
+        <MagicBento
+          items={COURSES_MENU_ITEMS}
+          activeItemKey={activeLevel}
+          onCardClick={(item: { key?: string }) => {
+            if (item.key === 'BEGINNER' || item.key === 'INTERMEDIATE' || item.key === 'ADVANCED') {
+              setActiveLevel(item.key);
+            }
+          }}
+          textAutoHide={true}
+          enableStars={true}
+          enableSpotlight={true}
+          enableBorderGlow={true}
+          enableTilt={true}
+          enableMagnetism={true}
+          clickEffect={true}
+          spotlightRadius={260}
+          particleCount={10}
+          glowColor="56, 189, 248"
+        />
+      </section>
 
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
         {LEVEL_TABS.map(tab => (

@@ -1,0 +1,50 @@
+﻿OPAL Compose Snapshot
+Generated at: 2026-04-22T11:15:41
+
+services:
+  opa:
+    image: openpolicyagent/opa:0.68.0
+    container_name: proctolearn_opa
+    command:
+      - run
+      - --server
+      - --addr=0.0.0.0:8181
+      - --set=decision_logs.console=true
+      - /policy
+    ports:
+      - "8181:8181"
+    volumes:
+      - ./policies:/policy:ro
+
+  opal_server:
+    image: permitio/opal-server:latest
+    container_name: proctolearn_opal_server
+    environment:
+      OPAL_MASTER_TOKEN: ${OPAL_MASTER_TOKEN:-proctolearn-opal-token}
+      OPAL_POLICY_REPO_URL: https://github.com/AASSAA17/ProctoLearn
+      OPAL_POLICY_REPO_POLLING_INTERVAL: 20
+      OPAL_BROADCAST_URI: redis://opal_redis:6379
+    ports:
+      - "7002:7002"
+    depends_on:
+      - opal_redis
+
+  opal_client:
+    image: permitio/opal-client:latest
+    container_name: proctolearn_opal_client
+    environment:
+      OPAL_SERVER_URL: http://opal_server:7002
+      OPAL_CLIENT_TOKEN: ${OPAL_CLIENT_TOKEN:-proctolearn-opal-token}
+      OPAL_POLICY_STORE_URL: http://opa:8181
+      OPAL_DATA_UPDATER_ENABLED: "false"
+    depends_on:
+      - opa
+      - opal_server
+
+  opal_redis:
+    image: redis:7-alpine
+    container_name: proctolearn_opal_redis
+    ports:
+      - "6379:6379"
+
+

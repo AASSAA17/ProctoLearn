@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars and set secure values
+postgres_password    = "change_me"
+minio_root_password  = "change_me"
+network_name         = "proctolearn_iac_network"
+postgres_user        = "postgres"
+postgres_db          = "proctolearn_db"

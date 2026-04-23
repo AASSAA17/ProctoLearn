@@ -1,0 +1,46 @@
+﻿On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   .env.example
+	modified:   .gitignore
+	modified:   Jenkinsfile
+	modified:   backend/src/common/services/graphite.service.ts
+	modified:   backend/tsconfig.json
+	modified:   frontend/package-lock.json
+	modified:   frontend/package.json
+	modified:   frontend/src/app/dashboard/courses/page.tsx
+	modified:   frontend/src/app/page.tsx
+	modified:   monitoring-project/alertmanager/alertmanager.yml
+	modified:   monitoring-project/docker-compose.yml
+	modified:   monitoring-project/prometheus/alert.rules.yml
+	modified:   monitoring-project/prometheus/prometheus.yml
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	DEFENSE_CHECKLIST.md
+	DOCKER_SETUP.md
+	IMPLEMENTATION_STATUS.md
+	README.md
+	docker-compose.monitoring.yml
+	docker-compose.server.yml
+	evidence/
+	frontend/src/components/landing/AnimatedCounter.tsx
+	frontend/src/components/landing/GooeyNav.css
+	frontend/src/components/landing/GooeyNav.jsx
+	frontend/src/components/landing/LiquidEther.css
+	frontend/src/components/landing/LiquidEther.jsx
+	frontend/src/components/landing/MagicBento.css
+	frontend/src/components/landing/MagicBento.jsx
+	frontend/src/hooks/
+	frontend/src/styles/
+	infra/
+	monitoring-project/.env.example
+	scripts/collect-evidence.ps1
+	scripts/collect-evidence.sh
+	scripts/load-test.js
+	scripts/load-test.ps1
+
+no changes added to commit (use "git add" and/or "git commit -a")

@@ -1,0 +1,362 @@
+﻿name: proctolearn
+services:
+  api:
+    build:
+      context: C:\Users\Arsen\ProctoLearn\backend
+      dockerfile: Dockerfile.dev
+    command:
+      - /bin/sh
+      - -c
+      - node_modules/.bin/prisma generate && npm run start:dev
+    container_name: proctolearn_api_dev
+    depends_on:
+      minio:
+        condition: service_healthy
+        required: true
+      postgres:
+        condition: service_healthy
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+    environment:
+      API_PORT: "4000"
+      DATABASE_URL: postgresql://postgres:1234@postgres:5432/proctolearn_db
+      JENKINS_ADMIN_EMAIL: admin@proctolearn.com
+      JENKINS_ADMIN_ID: admin
+      JENKINS_ADMIN_PASSWORD: admin123
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_ACCESS_SECRET: proctolearn_access_secret_2025
+      JWT_REFRESH_EXPIRES_IN: 7d
+      JWT_REFRESH_SECRET: proctolearn_refresh_secret_2025
+      MINIO_BUCKET: proctolearn-evidence
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: "9000"
+      MINIO_ROOT_PASSWORD: minioadmin123
+      MINIO_ROOT_USER: minioadmin
+      MINIO_USE_SSL: "false"
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_PASSWORD: admin123
+      N8N_BASIC_AUTH_USER: admin
+      N8N_EXAM_SUBMIT_WEBHOOK_URL: http://host.docker.internal:5678/webhook/proctolearn/exam-submit
+      N8N_WEBHOOK_TOKEN: change_me
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      NEXT_PUBLIC_WS_URL: ws://localhost:4000
+      NODE_ENV: development
+      OPAL_CLIENT_TOKEN: proctolearn-opal-token
+      OPAL_MASTER_TOKEN: proctolearn-opal-token
+      PGADMIN_DEFAULT_EMAIL: admin@proctolearn.com
+      PGADMIN_DEFAULT_PASSWORD: "1234"
+      POSTGRES_DB: proctolearn_db
+      POSTGRES_PASSWORD: "1234"
+      POSTGRES_USER: postgres
+      PROCTOR_ALERT_EMAIL: proctor@test.local
+      REDIS_URL: redis://redis:6379
+      SMTP_FROM: no-reply@proctolearn.kz
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 4000
+        published: "4000"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: C:\Users\Arsen\ProctoLearn\backend
+        target: /app
+        bind: {}
+      - type: volume
+        target: /app/node_modules
+        volume: {}
+  jenkins:
+    build:
+      context: C:\Users\Arsen\ProctoLearn\jenkins
+      dockerfile: Dockerfile
+    container_name: proctolearn_jenkins
+    environment:
+      JENKINS_ADMIN_EMAIL: admin@proctolearn.com
+      JENKINS_ADMIN_ID: admin
+      JENKINS_ADMIN_PASSWORD: admin123
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 8080
+        published: "8088"
+        protocol: tcp
+      - mode: ingress
+        target: 50000
+        published: "50000"
+        protocol: tcp
+    restart: unless-stopped
+    user: root
+    volumes:
+      - type: volume
+        source: jenkins_home
+        target: /var/jenkins_home
+        volume: {}
+      - type: bind
+        source: C:\Users\Arsen\ProctoLearn
+        target: /var/jenkins_home/proctolearn
+        read_only: true
+        bind: {}
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        bind: {}
+  mailpit:
+    container_name: proctolearn_mailpit
+    image: axllent/mailpit:latest
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 1025
+        published: "1025"
+        protocol: tcp
+      - mode: ingress
+        target: 8025
+        published: "8025"
+        protocol: tcp
+    restart: unless-stopped
+  minio:
+    command:
+      - server
+      - /data
+      - --console-address
+      - :9001
+    container_name: proctolearn_minio
+    environment:
+      MINIO_ROOT_PASSWORD: minioadmin123
+      MINIO_ROOT_USER: minioadmin
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:9000/minio/health/live
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: minio/minio:latest
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 9000
+        published: "9000"
+        protocol: tcp
+      - mode: ingress
+        target: 9001
+        published: "9001"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: minio_data
+        target: /data
+        volume: {}
+  n8n:
+    container_name: proctolearn_n8n
+    depends_on:
+      mailpit:
+        condition: service_started
+        required: true
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_PASSWORD: admin123
+      N8N_BASIC_AUTH_USER: admin
+      N8N_ENCRYPTION_KEY: proctolearn_n8n_encryption_key
+      N8N_HOST: n8n
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: http
+      TZ: Asia/Almaty
+      WEBHOOK_URL: http://localhost:5678/
+    image: n8nio/n8n:latest
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 5678
+        published: "5678"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: n8n_data
+        target: /home/node/.n8n
+        volume: {}
+      - type: bind
+        source: C:\Users\Arsen\ProctoLearn\n8n\workflows
+        target: /data/import
+        read_only: true
+        bind: {}
+  opa:
+    command:
+      - run
+      - --server
+      - --addr=:8181
+      - --log-level=debug
+    container_name: proctolearn_opa
+    image: openpolicyagent/opa:0.68.0
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 8181
+        published: "8181"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: C:\Users\Arsen\ProctoLearn\opal\policies
+        target: /policies
+        bind: {}
+  pgadmin:
+    container_name: proctolearn_pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: true
+    environment:
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_DEFAULT_EMAIL: admin@proctolearn.com
+      PGADMIN_DEFAULT_PASSWORD: "1234"
+    image: dpage/pgadmin4:latest
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 80
+        published: "5050"
+        protocol: tcp
+    restart: unless-stopped
+  postgres:
+    container_name: proctolearn_postgres
+    environment:
+      POSTGRES_DB: proctolearn_db
+      POSTGRES_PASSWORD: "1234"
+      POSTGRES_USER: postgres
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U postgres -d proctolearn_db
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: postgres:16-alpine
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 5432
+        published: "5433"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: postgres_data
+        target: /var/lib/postgresql/data
+        volume: {}
+  redis:
+    container_name: proctolearn_redis
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: redis:7-alpine
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 6379
+        published: "6379"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: redis_data
+        target: /data
+        volume: {}
+  web:
+    build:
+      context: C:\Users\Arsen\ProctoLearn\frontend
+      dockerfile: Dockerfile.dev
+    container_name: proctolearn_web_dev
+    depends_on:
+      api:
+        condition: service_started
+        required: true
+    environment:
+      API_PORT: "4000"
+      DATABASE_URL: postgresql://postgres:1234@localhost:5432/proctolearn_db
+      JENKINS_ADMIN_EMAIL: admin@proctolearn.com
+      JENKINS_ADMIN_ID: admin
+      JENKINS_ADMIN_PASSWORD: admin123
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_ACCESS_SECRET: proctolearn_access_secret_2025
+      JWT_REFRESH_EXPIRES_IN: 7d
+      JWT_REFRESH_SECRET: proctolearn_refresh_secret_2025
+      MINIO_BUCKET: proctolearn-evidence
+      MINIO_ENDPOINT: localhost
+      MINIO_PORT: "9000"
+      MINIO_ROOT_PASSWORD: minioadmin123
+      MINIO_ROOT_USER: minioadmin
+      MINIO_USE_SSL: "false"
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_PASSWORD: admin123
+      N8N_BASIC_AUTH_USER: admin
+      N8N_EXAM_SUBMIT_WEBHOOK_URL: http://host.docker.internal:5678/webhook/proctolearn/exam-submit
+      N8N_WEBHOOK_TOKEN: change_me
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      NEXT_PUBLIC_WS_URL: ws://localhost:4000
+      NODE_ENV: development
+      OPAL_CLIENT_TOKEN: proctolearn-opal-token
+      OPAL_MASTER_TOKEN: proctolearn-opal-token
+      PGADMIN_DEFAULT_EMAIL: admin@proctolearn.com
+      PGADMIN_DEFAULT_PASSWORD: "1234"
+      POSTGRES_DB: proctolearn_db
+      POSTGRES_PASSWORD: "1234"
+      POSTGRES_USER: postgres
+      PROCTOR_ALERT_EMAIL: proctor@test.local
+      SMTP_FROM: no-reply@proctolearn.kz
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 3000
+        published: "3001"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: C:\Users\Arsen\ProctoLearn\frontend
+        target: /app
+        bind: {}
+      - type: volume
+        target: /app/node_modules
+        volume: {}
+networks:
+  default:
+    name: proctolearn_server_network
+volumes:
+  jenkins_home:
+    name: proctolearn_jenkins_home
+    driver: local
+  minio_data:
+    name: proctolearn_minio_data
+    driver: local
+  n8n_data:
+    name: proctolearn_n8n_data
+    driver: local
+  postgres_data:
+    name: proctolearn_postgres_data
+    driver: local
+  redis_data:
+    name: proctolearn_redis_data
+    driver: local

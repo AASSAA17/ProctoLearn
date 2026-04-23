@@ -1,0 +1,10 @@
+﻿
+FullName                                                           
+--------                                                           
+C:\Users\Arsen\ProctoLearn\infra\terraform\main.tf                 
+C:\Users\Arsen\ProctoLearn\infra\terraform\outputs.tf              
+C:\Users\Arsen\ProctoLearn\infra\terraform\terraform.tfvars.example
+C:\Users\Arsen\ProctoLearn\infra\terraform\variables.tf            
+C:\Users\Arsen\ProctoLearn\infra\terraform\versions.tf             
+
+

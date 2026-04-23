@@ -1,0 +1,225 @@
+﻿n8n Workflow Snapshot
+Generated at: 2026-04-22T11:15:41
+
+{
+  "name": "ProctoLearn - Exam Submit Notifications",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "proctolearn/exam-submit",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "Webhook_ExamSubmit",
+      "name": "Webhook: Exam Submit",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.headers['x-webhook-token'] || ''}}",
+              "operation": "equal",
+              "value2": "={{$env.N8N_WEBHOOK_TOKEN || 'change_me'}}"
+            }
+          ]
+        }
+      },
+      "id": "IF_VerifyToken",
+      "name": "IF: Verify Token",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@proctolearn.kz",
+        "toEmail": "={{$json.body.studentEmail || 'student@test.local'}}",
+        "subject": "ProctoLearn: Р РµР·СѓР»СЊС‚Р°С‚ СЌРєР·Р°РјРµРЅР° {{$json.body.examTitle}}",
+        "text": "Р—РґСЂР°РІСЃС‚РІСѓР№С‚Рµ, {{$json.body.studentName}}!\n\nР’Р°С€ СЌРєР·Р°РјРµРЅ: {{$json.body.examTitle}}\nР РµР·СѓР»СЊС‚Р°С‚: {{$json.body.score}}%\nРЎС‚Р°С‚СѓСЃ: {{$json.body.passed ? 'РЎР”РђРќ' : 'РќР• РЎР”РђРќ'}}\nTrust Score: {{$json.body.trustScore}}\n\nРЎРїР°СЃРёР±Рѕ,\nРљРѕРјР°РЅРґР° ProctoLearn",
+        "options": {}
+      },
+      "id": "Email_Student",
+      "name": "Email: Student Result",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        760,
+        220
+      ],
+      "credentials": {
+        "smtp": {
+          "name": "SMTP Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.body.trustScore}}",
+              "operation": "smaller",
+              "value2": 50
+            }
+          ]
+        }
+      },
+      "id": "IF_TrustLow",
+      "name": "IF: Trust Score < 50",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        760,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@proctolearn.kz",
+        "toEmail": "={{$json.body.proctorEmail || 'proctor@test.local'}}",
+        "subject": "[ALERT] РќРёР·РєРёР№ Trust Score РїРѕ РїРѕРїС‹С‚РєРµ {{$json.body.attemptId}}",
+        "text": "Р’РЅРёРјР°РЅРёРµ, РїСЂРѕРєС‚РѕСЂ!\n\nAttempt ID: {{$json.body.attemptId}}\nРЎС‚СѓРґРµРЅС‚: {{$json.body.studentName}} ({{$json.body.studentEmail}})\nР­РєР·Р°РјРµРЅ: {{$json.body.examTitle}}\nScore: {{$json.body.score}}%\nTrust Score: {{$json.body.trustScore}}\nSubmitted At: {{$json.body.submittedAt}}",
+        "options": {}
+      },
+      "id": "Email_Proctor",
+      "name": "Email: Proctor Alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1030,
+        380
+      ],
+      "credentials": {
+        "smtp": {
+          "name": "SMTP Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\": true, \"attemptId\": \"\" + ($json.body.attemptId || ''), \"message\": \"n8n flow processed\"}",
+        "options": {}
+      },
+      "id": "Respond_OK",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1250,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\": false, \"message\": \"Invalid webhook token\"}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "Respond_401",
+      "name": "Respond 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        760,
+        520
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Exam Submit": {
+      "main": [
+        [
+          {
+            "node": "IF: Verify Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Verify Token": {
+      "main": [
+        [
+          {
+            "node": "Email: Student Result",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF: Trust Score < 50",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Trust Score < 50": {
+      "main": [
+        [
+          {
+            "node": "Email: Proctor Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email: Student Result": {
+      "main": [
+        [
+          {
+            "node": "Respond 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email: Proctor Alert": {
+      "main": [
+        [
+          {
+            "node": "Respond 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1"
+}
+
+

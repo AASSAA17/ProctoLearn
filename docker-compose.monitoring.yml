@@ -1,0 +1,167 @@
+# СИСТЕМА МОНИТОРИНГА (PROMETHEUS + GRAFANA + ALERTMANAGER + EXPORTERS)
+# Запуск: docker compose -f docker-compose.monitoring.yml -p proctolearn_monitoring up -d
+# Остановка: docker compose -f docker-compose.monitoring.yml -p proctolearn_monitoring down
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: proctolearn_prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring-project/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring-project/prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - node_exporter
+      - alertmanager
+      - nginx_exporter
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana-oss:11.1.4
+    container_name: proctolearn_grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring-project/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring-project/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring
+
+  node_exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: proctolearn_node_exporter
+    restart: unless-stopped
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.rootfs=/"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - monitoring
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: proctolearn_alertmanager
+    restart: unless-stopped
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        sed -e "s|__TELEGRAM_BOT_TOKEN__|demo-token|g" -e "s|__TELEGRAM_CHAT_ID__|123456789|g" /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.yml
+        exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --cluster.listen-address=
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring-project/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - monitoring
+
+  nginx_exporter:
+    image: nginx/nginx-prometheus-exporter:0.11.0
+    container_name: proctolearn_nginx_exporter
+    restart: unless-stopped
+    ports:
+      - "9113:9113"
+    command:
+      - "-nginx.scrape-uri=http://proctolearn_nginx:8080/stub_status"
+    environment:
+      - SCRAPE_URI=http://proctolearn_nginx:8080/stub_status
+    networks:
+      - monitoring
+    depends_on:
+      - nginx
+
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: proctolearn_postgres_exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-proctolearn}?sslmode=disable"
+    ports:
+      - "9187:9187"
+    networks:
+      - monitoring
+    depends_on:
+      - postgres
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: proctolearn_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - ./monitoring-project/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - monitoring
+
+  # Telegram Bot для алертов (опционально)
+  # telegram_bot:
+  #   build:
+  #     context: ./monitoring-project/telegram-bot
+  #   container_name: proctolearn_telegram_bot
+  #   restart: unless-stopped
+  #   environment:
+  #     TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+  #     TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+  #   networks:
+  #     - monitoring
+
+  # Postgres экземпляр для экспортера метрик
+  postgres:
+    image: postgres:16-alpine
+    container_name: proctolearn_postgres_monitoring
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-proctolearn}
+    volumes:
+      - postgres_monitoring_data:/var/lib/postgresql/data
+    networks:
+      - monitoring
+    depends_on: []
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  alertmanager_data:
+    driver: local
+  postgres_monitoring_data:
+    driver: local
+
+networks:
+  monitoring:
+    name: proctolearn_monitoring_network

@@ -1,0 +1,23 @@
+﻿ProctoLearn Observability Demo
+Generated at: 2026-04-22T10:44:57
+AlertName: ObservabilityDemoApiLoad
+LoadUrl: http://localhost:4000/health
+DurationSec: 5
+Concurrency: 1
+TimeoutMs: 5000
+FireTimeoutSec: 5
+ResolveTimeoutSec: 10
+
+Starting load test process.
+Node.js is not available on this machine; load test cannot be started.
+Waiting for alert to fire...
+Alert did not fire within timeout.
+Skipping load-test process wait because Node.js is unavailable.
+Waiting for alert to resolve...
+RESOLVED detected at 2026-04-22T10:45:02
+Alertmanager logs failed: time=2026-04-22T05:25:16.860Z level=INFO source=main.go:191 msg="Starting Alertmanager" version="(version=0.31.1, branch=HEAD, revision=7a639ba087d6e877038cabfdaa645230f79001b8)"
+
+=== Jenkins Logs ===
+
+
+Demo proof saved: C:\Users\Arsen\ProctoLearn\evidence\07-observability\observability_demo_2026-04-22_10-44-57.txt

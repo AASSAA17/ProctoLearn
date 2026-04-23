@@ -1,0 +1,553 @@
+﻿ProctoLearn Observability Audit
+Generated at: 2026-04-22T10:38:21
+
+Project root: C:\Users\Arsen\ProctoLearn
+Prometheus URL: http://localhost:9090
+Alertmanager URL: http://localhost:9093
+Jenkins URL: http://localhost:8088
+
+
+=== Jenkinsfile ===
+pipeline {
+  agent any
+
+  environment {
+    REPO_PATH = '/var/jenkins_home/proctolearn'
+  }
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+  }
+
+  stages {
+    stage('IaC Validation') {
+      steps {
+        dir("${env.REPO_PATH}") {
+          sh '''#!/bin/sh
+            set -eu
+            test -f infra/terraform/main.tf
+            test -f infra/ansible/playbook.yml
+
+            if command -v terraform >/dev/null 2>&1; then
+              terraform -chdir=infra/terraform init -backend=false
+              terraform -chdir=infra/terraform validate
+            else
+              echo "Terraform not installed on Jenkins agent, skipping terraform validate"
+            fi
+
+            if command -v ansible-playbook >/dev/null 2>&1; then
+              ansible-playbook -i infra/ansible/inventory.ini infra/ansible/playbook.yml --syntax-check
+            else
+              echo "Ansible not installed on Jenkins agent, skipping ansible syntax check"
+            fi
+          '''
+        }
+      }
+    }
+
+    stage('Build Docker Images') {
+      steps {
+        dir("${env.REPO_PATH}") {
+          sh 'docker compose -f docker-compose.dev.yml build api web'
+        }
+      }
+    }
+
+    stage('Backend Tests') {
+      steps {
+        sh 'docker run --rm proctolearn-api sh -lc "npm run test --if-present"'
+      }
+    }
+
+    stage('Frontend Tests') {
+      steps {
+        sh 'docker run --rm proctolearn-web sh -lc "npm run test --if-present"'
+      }
+    }
+
+    stage('Deploy (Docker Compose)') {
+      steps {
+        dir("${env.REPO_PATH}") {
+          sh 'docker compose -f docker-compose.dev.yml up -d --build'
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      dir("${env.REPO_PATH}") {
+        sh 'docker compose -f docker-compose.dev.yml ps || true'
+      }
+    }
+    success {
+      echo 'Pipeline completed successfully.'
+    }
+    failure {
+      echo 'Pipeline failed. Check stage logs for details.'
+    }
+  }
+}
+
+
+=== Prometheus Rules ===
+groups:
+  - name: server_alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode='idle'}[5m])) * 100) > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU Р¶ТЇРєС‚РµРјРµСЃС– Р¶РѕТ“Р°СЂС‹"
+          description: "CPU РїР°Р№РґР°Р»Р°РЅСѓС‹ {{ $value | printf \"%.1f\" }}% Р¶РµС‚С‚С–"
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RAM РїР°Р№РґР°Р»Р°РЅСѓС‹ Р¶РѕТ“Р°СЂС‹"
+          description: "Р–Р°Рґ РїР°Р№РґР°Р»Р°РЅСѓС‹ {{ $value | printf \"%.1f\" }}%"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 15
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Р”РёСЃРє РѕСЂРЅС‹ Р°Р· Т›Р°Р»РґС‹"
+          description: "Р‘РѕСЃ РѕСЂС‹РЅ {{ $value | printf \"%.1f\" }}% Т“Р°РЅР°"
+
+      - alert: ServiceDown
+        expr: up{job=~"prometheus|node_exporter|nginx|postgres|proctolearn_api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "РЎРµСЂРІРёСЃ У©С€С–Рї Т›Р°Р»РґС‹: {{ $labels.instance }}"
+          description: "1 РјРёРЅСѓС‚С‚Р°РЅ Р°СЃС‚Р°Рј СѓР°Т›С‹С‚ Р±РѕР№С‹ Р±Р°Р№Р»Р°РЅС‹СЃ Р¶РѕТ›"
+
+      - alert: PostgreSQLExporterDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL exporter Т›РѕР»Р¶РµС‚С–РјСЃС–Р·"
+          description: "postgres_exporter РјРµС‚СЂРёРєР°Р»Р°СЂС‹ 1 РјРёРЅСѓС‚С‚Р°РЅ РєУ©Рї Р¶РёРЅР°Р»РјР°Р№ С‚Т±СЂ"
+
+      - alert: PostgreSQLHighConnections
+        expr: sum(pg_stat_database_numbackends{datname="zabbix"}) > 120
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL Т›РѕСЃС‹Р»С‹Рј СЃР°РЅС‹ Р¶РѕТ“Р°СЂС‹"
+          description: "zabbix Р±Р°Р·Р°СЃС‹РЅРґР° Р±РµР»СЃРµРЅРґС– Т›РѕСЃС‹Р»С‹Рј СЃР°РЅС‹ {{ $value | printf \"%.0f\" }}"
+
+      - alert: PostgreSQLHighRollbackRatio
+        expr: (sum(rate(pg_stat_database_xact_rollback{datname="zabbix"}[5m])) / clamp_min(sum(rate(pg_stat_database_xact_commit{datname="zabbix"}[5m])) + sum(rate(pg_stat_database_xact_rollback{datname="zabbix"}[5m])), 1)) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL rollback ТЇР»РµСЃС– Р¶РѕТ“Р°СЂС‹"
+          description: "РЎРѕТЈТ“С‹ 5 РјРёРЅСѓС‚С‚Р°Т“С‹ rollback ТЇР»РµСЃС– {{ $value | printf \"%.2f\" }}"
+
+      - alert: PostgreSQLDeadlocksDetected
+        expr: sum(increase(pg_stat_database_deadlocks{datname="zabbix"}[15m])) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL deadlock Р°РЅС‹Т›С‚Р°Р»РґС‹"
+          description: "РЎРѕТЈТ“С‹ 15 РјРёРЅСѓС‚С‚Р° deadlock СЃР°РЅС‹ {{ $value | printf \"%.0f\" }}"
+
+      - alert: MonitoringStackStarted
+        expr: (time() - process_start_time_seconds{job="prometheus"}) < 180
+        for: 0m
+        labels:
+          severity: info
+          lifecycle: startup
+        annotations:
+          summary: "Monitoring СЃС‚РµРє С–СЃРєРµ Т›РѕСЃС‹Р»РґС‹"
+          description: "Prometheus Р¶Р°ТЈР° С–СЃРєРµ Т›РѕСЃС‹Р»РґС‹. Monitoring СЃРµСЂРІРёСЃС‚РµСЂС– РєУ©С‚РµСЂС–Р»С–Рї Р¶Р°С‚С‹СЂ."
+
+      - alert: ProctoLearnApiHighLoad
+        expr: rate(process_cpu_seconds_total{job="proctolearn_api"}[1m]) > 0.08
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ProctoLearn API Р¶ТЇРєС‚РµРјРµСЃС– Р¶РѕТ“Р°СЂС‹"
+          description: "API CPU rate {{ $value | printf \"%.2f\" }} (load-С‚РµСЃС‚ Р¶ТЇСЂС–Рї Р¶Р°С‚С‹СЂ Р±РѕР»СѓС‹ РјТЇРјРєС–РЅ)"
+
+      - alert: ObservabilityDemoApiLoad
+        expr: rate(process_cpu_seconds_total{job="proctolearn_api"}[1m]) > 0.03
+        for: 15s
+        labels:
+          severity: warning
+          lifecycle: demo
+        annotations:
+          summary: "Observability demo alert: API Р¶ТЇРєС‚РµРјРµСЃС–"
+          description: "Р”РµРјРѕ ТЇС€С–РЅ Р¶Р°СЃР°Р»Т“Р°РЅ alert. Load-test РєРµР·С–РЅРґРµ firing, РєРµР№С–РЅ resolved Р±РѕР»СѓС‹ РєРµСЂРµРє."
+
+
+
+=== Prometheus Config ===
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+rule_files:
+  - "alert.rules.yml"
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["prometheus:9090"]
+
+  - job_name: "node_exporter"
+    static_configs:
+      - targets: ["node_exporter:9100"]
+
+  - job_name: "nginx"
+    static_configs:
+      - targets: ["nginx_exporter:9113"]
+
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres_exporter:9187"]
+
+  - job_name: "proctolearn_api"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:4000"]
+
+
+
+
+=== Alertmanager Config ===
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ["alertname", "severity"]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 30m
+  receiver: "telegram-alerts"
+
+receivers:
+  - name: "telegram-alerts"
+    telegram_configs:
+      - bot_token: "${TELEGRAM_BOT_TOKEN}"
+        chat_id: ${TELEGRAM_CHAT_ID}
+        parse_mode: "HTML"
+        message: |
+          <b>{{ if eq .Status "firing" }}ALERT{{ else }}RESOLVED{{ end }}</b>
+          <b>{{ .GroupLabels.alertname }}</b>
+
+          {{ range .Alerts }}
+          <b>Summary:</b> {{ .Annotations.summary }}
+          <b>Details:</b> {{ .Annotations.description }}
+          <b>Severity:</b> {{ .Labels.severity }}
+          <b>Time:</b> {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+
+inhibit_rules:
+  - source_matchers: ["severity=critical"]
+    target_matchers: ["severity=warning"]
+    equal: ["alertname", "instance"]
+
+
+
+=== Prometheus Active Alerts ===
+{
+    "status":  "success",
+    "data":  {
+                 "alerts":  [
+
+                            ]
+             }
+}
+
+
+=== Prometheus Rules ===
+{
+    "status":  "success",
+    "data":  {
+                 "groups":  [
+                                {
+                                    "name":  "server_alerts",
+                                    "file":  "/etc/prometheus/alert.rules.yml",
+                                    "rules":  [
+                                                  {
+                                                      "state":  "inactive",
+                                                      "name":  "HighCPUUsage",
+                                                      "query":  "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100) \u003e 85",
+                                                      "duration":  120,
+                                                      "keepFiringFor":  0,
+                                                      "labels":  {
+                                                                     "severity":  "warning"
+                                                                 },
+                                                      "annotations":  {
+                                                                          "description":  "CPU Ð¿Ð°Ð¹Ð´Ð°Ð»Ð°Ð½ÑÑ {{ $value | printf \"%.1f\" }}% Ð¶ÐµÑÑÑ",
+                                                                          "summary":  "CPU Ð¶Ò¯ÐºÑÐµÐ¼ÐµÑÑ Ð¶Ð¾ÒÐ°ÑÑ"
+                                                                      },
+                                                      "alerts":  [
+
+                                                                 ],
+                                                      "health":  "ok",
+                                                      "evaluationTime":  0.000492498,
+                                                      "lastEvaluation":  "2026-04-22T05:38:13.345458056Z",
+                                                      "type":  "alerting"
+                                                  },
+                                                  {
+                                                      "state":  "inactive",
+                                                      "name":  "HighMemoryUsage",
+                                                      "query":  "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 \u003e 80",
+                                                      "duration":  120,
+                                                      "keepFiringFor":  0,
+                                                      "labels":  {
+                                                                     "severity":  "warning"
+                                                                 },
+                                                      "annotations":  {
+                                                                          "description":  "ÐÐ°Ð´ Ð¿Ð°Ð¹Ð´Ð°Ð»Ð°Ð½ÑÑ {{ $value | printf \"%.1f\" }}%",
+                                                                          "summary":  "RAM Ð¿Ð°Ð¹Ð´Ð°Ð»Ð°Ð½ÑÑ Ð¶Ð¾ÒÐ°ÑÑ"
+                                                                      },
+                                                      "alerts":  [
+
+                                                                 ],
+                                                      "health":  "ok",
+                                                      "evaluationTime":  0.000138091,
+                                                      "lastEvaluation":  "2026-04-22T05:38:13.345954192Z",
+                                                      "type":  "alerting"
+                                                  },
+                                                  {
+                                                      "state":  "inactive",
+                                                      "name":  "DiskSpaceLow",
+                                                      "query":  "(node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}) * 100 \u003c 15",
+                                                      "duration":  300,
+                                                      "keepFiringFor":  0,
+                                                      "labels":  {
+                                                                     "severity":  "critical"
+                                                                 },
+                                                      "annotations":  {
+                                                                          "description":  "ÐÐ¾Ñ Ð¾ÑÑÐ½ {{ $value | printf \"%.1f\" }}% ÒÐ°Ð½Ð°",
+                                                                          "summary":  "ÐÐ¸ÑÐº Ð¾ÑÐ½Ñ Ð°Ð· ÒÐ°Ð»Ð´Ñ"
+                                                                      },
+                                                      "alerts":  [
+
+                                                                 ],
+                                                      "health":  "ok",
+                                                      "evaluationTime":  0.000065007,
+                                                      "lastEvaluation":  "2026-04-22T05:38:13.346097931Z",
+                                                      "type":  "alerting"
+                                                  },
+                                                  {
+                                                      "state":  "inactive",
+                                                      "name":  "ServiceDown",
+                                                      "query":  "up{job=~\"prometheus|node_exporter|nginx|postgres|proctolearn_api\"} == 0",
+                                                      "duration":  60,
+                                                      "keepFiringFor":  0,
+                                                      "labels":  {
+                                                                     "severity":  "critical"
+                                                                 },
+                                                      "annotations":  {
+                                                                          "description":  "1 Ð¼Ð¸Ð½ÑÑÑÐ°Ð½ Ð°ÑÑÐ°Ð¼ ÑÐ°ÒÑÑ Ð±Ð¾Ð¹Ñ Ð±Ð°Ð¹Ð»Ð°Ð½ÑÑ Ð¶Ð¾Ò",
+                                                                          "summary":  "Ð¡ÐµÑÐ²Ð¸Ñ Ó©ÑÑÐ¿ ÒÐ°Ð»Ð´Ñ: {{ $labels.instance }}"
+                                                                      },
+                                                      "alerts":  [
+
+                                                                 ],
+                                                      "health":  "ok",
+                                                      "evaluationTime":  0.000072233,
+                                                      "lastEvaluation":  "2026-04-22T05:38:13.346164852Z",
+                                                      "type":  "alerting"
+                                                  },
+                                                  {
+                                                      "state":  "inactive",
+                                                      "name":  "PostgreSQLExporterDown",
+                                                      "query":  "up{job=\"postgres\"} == 0",
+                                                      "duration":  60,
+                                                      "keepFiringFor":  0,
+                                                      "labels":  {
+                                                                     "severity":  "critical"
+                                                                 },
+                                                      "annotations":  {
+                                                                          "description":  "postgres_exporter Ð¼ÐµÑÑÐ¸ÐºÐ°Ð»Ð°ÑÑ 1 Ð¼Ð¸Ð½ÑÑÑÐ°Ð½ ÐºÓ©Ð¿ Ð¶Ð¸Ð½Ð°Ð»Ð¼Ð°Ð¹ ÑÒ±Ñ",
+                                                                          "summary":  "PostgreSQL exporter ÒÐ¾Ð»Ð¶ÐµÑÑÐ¼ÑÑÐ·"
+                                                                      },
+                                                      "alerts":  [
+
+                                                                 ],
+                                                      "health":  "ok",
+                                                      "evaluationTime":  0.000036883,
+                                                      "lastEvaluation":  "2026-04-22T05:38:13.346238125Z",
+                                                      "type":  "alerting"
+                                                  },
+                                                  {
+                                                      "state":  "inactive",
+                                                      "name":  "PostgreSQLHighConnections",
+                                                      "query":  "sum(pg_stat_database_numbackends{datname=\"zabbix\"}) \u003e 120",
+                                                      "duration":  180,
+                                                      "keepFiringFor":  0,
+                                                      "labels":  {
+                                                                     "severity":  "warning"
+                                                                 },
+                                                      "annotations":  {
+                                                                          "description":  "zabbix Ð±Ð°Ð·Ð°ÑÑÐ½Ð´Ð° Ð±ÐµÐ»ÑÐµÐ½Ð´Ñ ÒÐ¾ÑÑÐ»ÑÐ¼ ÑÐ°Ð½Ñ {{ $value | printf \"%.0f\" }}",
+                                                                          "summary":  "PostgreSQL ÒÐ¾ÑÑÐ»ÑÐ¼ ÑÐ°Ð½Ñ Ð¶Ð¾ÒÐ°ÑÑ"
+                                                                      },
+                                                      "alerts":  [
+
+                                                                 ],
+                                                      "health":  "ok",
+                                                      "evaluationTime":  0.000036362,
+                                                      "lastEvaluation":  "2026-04-22T05:38:13.346276067Z",
+                                                      "type":  "alerting"
+                                                  },
+                                                  {
+                                                      "state":  "inactive",
+                                                      "name":  "PostgreSQLHighRollbackRatio",
+                                                      "query":  "(sum(rate(pg_stat_database_xact_rollback{datname=\"zabbix\"}[5m])) / clamp_min(sum(rate(pg_stat_database_xact_commit{datname=\"zabbix\"}[5m])) + sum(rate(pg_stat_database_xact_rollback{datname=\"zabbix\"}[5m])), 1)) \u003e 0.1",
+                                                      "duration":  300,
+                                                      "keepFiringFor":  0,
+                                                      "labels":  {
+                                                                     "severity":  "warning"
+                                                                 },
+                                                      "annotations":  {
+                                                                          "description":  "Ð¡Ð¾Ò£ÒÑ 5 Ð¼Ð¸Ð½ÑÑÑÐ°ÒÑ rollback Ò¯Ð»ÐµÑÑ {{ $value | printf \"%.2f\" }}",
+                                                                          "summary":  "PostgreSQL rollback Ò¯Ð»ÐµÑÑ Ð¶Ð¾ÒÐ°ÑÑ"
+                                                                      },
+                                                      "alerts":  [
+
+                                                                 ],
+                                                      "health":  "ok",
+                                                      "evaluationTime":  0.000201801,
+                                                      "lastEvaluation":  "2026-04-22T05:38:13.346313353Z",
+                                                      "type":  "alerting"
+                                                  },
+                                                  {
+                                                      "state":  "inactive",
+                                                      "name":  "PostgreSQLDeadlocksDetected",
+                                                      "query":  "sum(increase(pg_stat_database_deadlocks{datname=\"zabbix\"}[15m])) \u003e 0",
+                                                      "duration":  0,
+                                                      "keepFiringFor":  0,
+                                                      "labels":  {
+                                                                     "severity":  "warning"
+                                                                 },
+                                                      "annotations":  {
+                                                                          "description":  "Ð¡Ð¾Ò£ÒÑ 15 Ð¼Ð¸Ð½ÑÑÑÐ° deadlock ÑÐ°Ð½Ñ {{ $value | printf \"%.0f\" }}",
+                                                                          "summary":  "PostgreSQL deadlock Ð°Ð½ÑÒÑÐ°Ð»Ð´Ñ"
+                                                                      },
+                                                      "alerts":  [
+
+                                                                 ],
+                                                      "health":  "ok",
+                                                      "evaluationTime":  0.000051665,
+                                                      "lastEvaluation":  "2026-04-22T05:38:13.346516898Z",
+                                                      "type":  "alerting"
+                                                  },
+                                                  {
+                                                      "state":  "inactive",
+                                                      "name":  "MonitoringStackStarted",
+                                                      "query":  "(time() - process_start_time_seconds{job=\"prometheus\"}) \u003c 180",
+                                                      "duration":  0,
+                                                      "keepFiringFor":  0,
+                                                      "labels":  {
+                                                                     "lifecycle":  "startup",
+                                                                     "severity":  "info"
+                                                                 },
+                                                      "annotations":  {
+                                                                          "description":  "Prometheus Ð¶Ð°Ò£Ð° ÑÑÐºÐµ ÒÐ¾ÑÑÐ»Ð´Ñ. Monitoring ÑÐµÑÐ²Ð¸ÑÑÐµÑÑ ÐºÓ©ÑÐµÑÑÐ»ÑÐ¿ Ð¶Ð°ÑÑÑ.",
+                                                                          "summary":  "Monitoring ÑÑÐµÐº ÑÑÐºÐµ ÒÐ¾ÑÑÐ»Ð´Ñ"
+                                                                      },
+                                                      "alerts":  [
+
+                                                                 ],
+                                                      "health":  "ok",
+                                                      "evaluationTime":  0.000063977,
+                                                      "lastEvaluation":  "2026-04-22T05:38:13.34657025Z",
+                                                      "type":  "alerting"
+                                                  },
+                                                  {
+                                                      "state":  "inactive",
+                                                      "name":  "ProctoLearnApiHighLoad",
+                                                      "query":  "rate(process_cpu_seconds_total{job=\"proctolearn_api\"}[1m]) \u003e 0.08",
+                                                      "duration":  60,
+                                                      "keepFiringFor":  0,
+                                                      "labels":  {
+                                                                     "severity":  "warning"
+                                                                 },
+                                                      "annotations":  {
+                                                                          "description":  "API CPU rate {{ $value | printf \"%.2f\" }} (load-ÑÐµÑÑ Ð¶Ò¯ÑÑÐ¿ Ð¶Ð°ÑÑÑ Ð±Ð¾Ð»ÑÑ Ð¼Ò¯Ð¼ÐºÑÐ½)",
+                                                                          "summary":  "ProctoLearn API Ð¶Ò¯ÐºÑÐµÐ¼ÐµÑÑ Ð¶Ð¾ÒÐ°ÑÑ"
+                                                                      },
+                                                      "alerts":  [
+
+                                                                 ],
+                                                      "health":  "ok",
+                                                      "evaluationTime":  0.000053796,
+                                                      "lastEvaluation":  "2026-04-22T05:38:13.346635737Z",
+                                                      "type":  "alerting"
+                                                  }
+                                              ],
+                                    "interval":  15,
+                                    "limit":  0,
+                                    "evaluationTime":  0.001270777,
+                                    "lastEvaluation":  "2026-04-22T05:38:13.345420696Z"
+                                }
+                            ]
+             }
+}
+
+
+=== Alertmanager Status ===
+{
+    "cluster":  {
+                    "name":  "01KPSQRVXRAE5E6AXX9HP26KEA",
+                    "peers":  [
+                                  {
+                                      "address":  "172.21.0.4:9094",
+                                      "name":  "01KPSQRVXRAE5E6AXX9HP26KEA"
+                                  }
+                              ],
+                    "status":  "ready"
+                },
+    "config":  {
+                   "original":  "global:\n  resolve_timeout: 5m\n  http_config:\n    follow_redirects: true\n    enable_http2: true\n  smtp_hello: localhost\n  smtp_require_tls: true\n  smtp_tls_config:\n    insecure_skip_verify: false\n  slack_app_url: https://slack.com/api/chat.postMessage\n  pagerduty_url: https://events.pagerduty.com/v2/enqueue\n  opsgenie_api_url: https://api.opsgenie.com/\n  wechat_api_url: https://qyapi.weixin.qq.com/cgi-bin/\n  victorops_api_url: https://alert.victorops.com/integrations/generic/20131114/alert/\n  telegram_api_url: https://api.telegram.org\n  webex_api_url: https://webexapis.com/v1/messages\n  rocketchat_api_url: https://open.rocket.chat/\nroute:\n  receiver: telegram-alerts\n  group_by:\n  - alertname\n  - severity\n  continue: false\n  group_wait: 10s\n  group_interval: 1m\n  repeat_interval: 30m\ninhibit_rules:\n- source_matchers:\n  - severity=\"critical\"\n  target_matchers:\n  - severity=\"warning\"\n  equal:\n  - alertname\n  - instance\nreceivers:\n- name: telegram-alerts\n  telegram_configs:\n  - send_resolved: true\n    http_config:\n      follow_redirects: true\n      enable_http2: true\n    api_url: https://api.telegram.org\n    bot_token: \u003csecret\u003e\n    chat_id: 6331359365\n    message: |\n      \u003cb\u003e{{ if eq .Status \"firing\" }}ALERT{{ else }}RESOLVED{{ end }}\u003c/b\u003e\n      \u003cb\u003e{{ .GroupLabels.alertname }}\u003c/b\u003e\n\n      {{ range .Alerts }}\n      \u003cb\u003eSummary:\u003c/b\u003e {{ .Annotations.summary }}\n      \u003cb\u003eDetails:\u003c/b\u003e {{ .Annotations.description }}\n      \u003cb\u003eSeverity:\u003c/b\u003e {{ .Labels.severity }}\n      \u003cb\u003eTime:\u003c/b\u003e {{ .StartsAt.Format \"2006-01-02 15:04:05\" }}\n      {{ end }}\n    parse_mode: HTML\ntemplates: []\n"
+               },
+    "uptime":  "2026-04-22T04:39:29.983Z",
+    "versionInfo":  {
+                        "branch":  "HEAD",
+                        "buildDate":  "20260211-21:08:35",
+                        "buildUser":  "root@d57bf8cf52ff",
+                        "goVersion":  "go1.25.7",
+                        "revision":  "7a639ba087d6e877038cabfdaa645230f79001b8",
+                        "version":  "0.31.1"
+                    }
+}
+
+
+=== Alertmanager Alerts ===
+
+
+
+=== Jenkins Logs ===
+ERROR: 2026-04-22 04:39:35.190+0000 [id=1]	INFO	winstone.Logger#logInternal: Beginning extraction from war file
+
+
+=== Alertmanager Logs ===
+ERROR: time=2026-04-22T04:39:29.708Z level=INFO source=main.go:191 msg="Starting Alertmanager" version="(version=0.31.1, branch=HEAD, revision=7a639ba087d6e877038cabfdaa645230f79001b8)"
+
