@@ -1,0 +1,118 @@
+=== SSL CERTIFICATE EVIDENCE ===
+Date: Fri Apr 24 05:47:15 PM +05 2026
+
+=== 1. Self-Signed Certificate Generation ===
+Command: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout proctolearn.key -out proctolearn.crt -subj '/C=KZ/ST=Almaty/L=Almaty/O=ProctoLearn/CN=localhost'
+
+=== 2. Certificate Details ===
+        Issuer: C = KZ, ST = Almaty, L = Almaty, O = ProctoLearn, CN = localhost
+            Not Before: Apr 24 12:47:04 2026 GMT
+            Not After : Apr 24 12:47:04 2027 GMT
+        Subject: C = KZ, ST = Almaty, L = Almaty, O = ProctoLearn, CN = localhost
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+
+=== 3. Certificate File ===
+-----BEGIN CERTIFICATE-----
+MIIDkzCCAnugAwIBAgIUJqCjMu+2rngC1ix4l74Z2dh3v3swDQYJKoZIhvcNAQEL
+BQAwWTELMAkGA1UEBhMCS1oxDzANBgNVBAgMBkFsbWF0eTEPMA0GA1UEBwwGQWxt
+YXR5MRQwEgYDVQQKDAtQcm9jdG9MZWFybjESMBAGA1UEAwwJbG9jYWxob3N0MB4X
+DTI2MDQyNDEyNDcwNFoXDTI3MDQyNDEyNDcwNFowWTELMAkGA1UEBhMCS1oxDzAN
+BgNVBAgMBkFsbWF0eTEPMA0GA1UEBwwGQWxtYXR5MRQwEgYDVQQKDAtQcm9jdG9M
+ZWFybjESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A
+MIIBCgKCAQEApRrrw8E5YgIL+mt/eC3Kpt9XC5qULzdOtaCSubWaYU/V1R/HmFos
+6Om8aSXUrrhtlG8vM2AuP2AKucRs7NnCFxZo8ywZ3/1Jb59Mqg7dUZYvTsH9LQV3
+Z5hWKRtY7F5BP5Fhq91592h7OfT/H8Gy8f3mDLSUBAu4h7sCW13HkFaAAv8f2ops
+yG39EQlRFwWzrnDXaS2CepVu8kytTqGmFBP4cgi8+GcaHc6wL+fLNcYWAYsdhbds
+gz7I5ivQWwz0kWrfv3ByUGscQgtb1a/VESveDB2pGz4r4QoDCV653ooKelNv3oLy
+nClbOEQZhbzUvJTeQRliEtOEGpjWGXCWtQIDAQABo1MwUTAdBgNVHQ4EFgQU7NIZ
+rw1Khy4Eq5VoBS5Ko7sOj38wHwYDVR0jBBgwFoAU7NIZrw1Khy4Eq5VoBS5Ko7sO
+j38wDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAAbM2FoHqFaJQ
+kerrT19z7ugv9lHlDFAt118tBZszHjiLnDuhy6yBR/vFnf7FvO08nfC1CstkZgTM
+iICBv/Lo/RyHWZnAEAz+33qPeKLG8zUOUfTGNevsjCOpkHEh3Uf930e9/+TIbQxn
+ndiVK8EpFAR34FZUYy4AAd8ADAoiIeSXALV2xkC7zvq8CXstRHhW3CvmcbMqZnWC
+tJdlHKMmxGkKbahYffxYW+Rs5kzAeF3d2edLSTyY2LIxiYKInLzmjoKmnMntogs2
+14wgffKbduXzxscrVzwu4up/eEZEdC2tGfYCBP0Qg/WZdEe7pOxP5juN7xpW0Sn9
+Y5q7Csd57g==
+-----END CERTIFICATE-----
+
+=== 4. Nginx Config ===
+# Map Upgrade header to connection upgrade value (required for WebSocket proxying)
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+# Redirect HTTP -> HTTPS
+server {
+    listen 80;
+    server_name _;
+    return 301 https://$host$request_uri;
+}
+
+# Nginx metrics endpoint for exporter (internal use)
+server {
+    listen 8080;
+    server_name _;
+
+    location /stub_status {
+        stub_status on;
+        allow 127.0.0.1;
+        allow 172.0.0.0/8;
+        deny all;
+    }
+}
+
+# HTTPS — main server block
+server {
+    listen 443 ssl;
+    server_name _;
+
+    ssl_certificate     /etc/ssl/certs/proctolearn.crt;
+    ssl_certificate_key /etc/ssl/private/proctolearn.key;
+
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+    # Frontend (Next.js)
+    location / {
+        proxy_pass         http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection 'upgrade';
+        proxy_set_header   Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Backend API
+    location /api {
+        proxy_pass         http://localhost:4000;
+        proxy_http_version 1.1;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   Host $host;
+    }
+
+    # WebSocket (proctor)
+    location /socket.io {
+        proxy_pass             http://localhost:4000;
+        proxy_http_version     1.1;
+        proxy_set_header       Upgrade $http_upgrade;
+        proxy_set_header       Connection $connection_upgrade;
+        proxy_set_header       Host $host;
+        proxy_read_timeout     3600s;
+        proxy_send_timeout     3600s;
+    }
+}
+
+=== 5. Docker nginx test ===
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+=== 6. HTTPS curl test (self-signed) ===
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+curl: (7) Failed to connect to localhost port 443 after 0 ms: Couldn't connect to server
+HTTP Status: 000
+HTTPS endpoint check done
