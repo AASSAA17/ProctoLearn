@@ -1,0 +1,174 @@
+=== MONITORING STACK EVIDENCE - 2026-04-24_17-13-27 ===
+
+=== 1. Running Containers ===
+NAME                      IMAGE                                                   COMMAND                  SERVICE             CREATED         STATUS                          PORTS
+alertmanager              prom/alertmanager:v0.27.0                               "/bin/alertmanager -…"   alertmanager        3 minutes ago   Up 3 minutes                    0.0.0.0:9093->9093/tcp, [::]:9093->9093/tcp
+blackbox_exporter         prom/blackbox-exporter:latest                           "/bin/blackbox_expor…"   blackbox_exporter   6 minutes ago   Up 5 minutes                    0.0.0.0:9115->9115/tcp, [::]:9115->9115/tcp
+cadvisor                  gcr.io/cadvisor/cadvisor:latest                         "/usr/bin/cadvisor -…"   cadvisor            6 minutes ago   Up 5 minutes (healthy)          0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp
+grafana                   grafana/grafana-oss:11.1.4                              "/run.sh"                grafana             6 minutes ago   Up 5 minutes                    0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+graphite                  graphiteapp/graphite-statsd:1.1.10-5                    "/entrypoint"            graphite            6 minutes ago   Up 5 minutes                    2004/tcp, 2013-2014/tcp, 2023-2024/tcp, 8080/tcp, 0.0.0.0:2003->2003/tcp, [::]:2003->2003/tcp, 8125-8126/tcp, 0.0.0.0:8125->8125/udp, [::]:8125->8125/udp, 0.0.0.0:8085->80/tcp, [::]:8085->80/tcp
+monitoring_nginx          nginx:latest                                            "/docker-entrypoint.…"   nginx               6 minutes ago   Up 5 minutes                    0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp
+monitoring_pgadmin        dpage/pgadmin4:8                                        "/entrypoint.sh"         pgadmin             6 minutes ago   Restarting (1) 1 second ago     
+monitoring_telegram_bot   monitoring-project-telegram_bot                         "python bot.py"          telegram_bot        6 minutes ago   Restarting (1) 57 seconds ago   
+nagios                    jasonrivers/nagios:latest                               "/usr/local/bin/star…"   nagios              6 minutes ago   Up 5 minutes                    5667/tcp, 0.0.0.0:8084->80/tcp, [::]:8084->80/tcp
+nginx_exporter            nginx/nginx-prometheus-exporter:latest                  "/usr/bin/nginx-prom…"   nginx_exporter      6 minutes ago   Up 5 minutes                    0.0.0.0:9113->9113/tcp, [::]:9113->9113/tcp
+node_exporter             prom/node-exporter:v1.8.2                               "/bin/node_exporter"     node_exporter       6 minutes ago   Up 5 minutes                    0.0.0.0:9100->9100/tcp, [::]:9100->9100/tcp
+portainer                 portainer/portainer-ce:latest                           "/portainer"             portainer           6 minutes ago   Up 5 minutes                    8000/tcp, 0.0.0.0:9443->9443/tcp, [::]:9443->9443/tcp, 0.0.0.0:9002->9000/tcp, [::]:9002->9000/tcp
+postgres_exporter         quay.io/prometheuscommunity/postgres-exporter:v0.15.0   "/bin/postgres_expor…"   postgres_exporter   6 minutes ago   Up 5 minutes                    0.0.0.0:9187->9187/tcp, [::]:9187->9187/tcp
+prometheus                prom/prometheus:v2.54.1                                 "/bin/prometheus --c…"   prometheus          6 minutes ago   Up 5 minutes                    0.0.0.0:9090->9090/tcp, [::]:9090->9090/tcp
+zabbix_agent              zabbix/zabbix-agent2:alpine-7.0-latest                  "/usr/bin/docker-ent…"   zabbix_agent        6 minutes ago   Up 5 minutes                    0.0.0.0:10050->10050/tcp, [::]:10050->10050/tcp, 31999/tcp
+zabbix_pgsql              postgres:16-alpine                                      "docker-entrypoint.s…"   zabbix_pgsql        6 minutes ago   Up 5 minutes                    5432/tcp
+zabbix_server             zabbix/zabbix-server-pgsql:alpine-7.0-latest            "/usr/bin/docker-ent…"   zabbix_server       6 minutes ago   Up 5 minutes                    0.0.0.0:10051->10051/tcp, [::]:10051->10051/tcp
+zabbix_web                zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest         "docker-entrypoint.sh"   zabbix_web          6 minutes ago   Up 5 minutes (healthy)          8443/tcp, 0.0.0.0:8082->8080/tcp, [::]:8082->8080/tcp
+
+=== 2. Prometheus Health ===
+Prometheus Server is Healthy.
+
+=== 3. Prometheus Targets ===
+                    "job": "nginx"
+                    "instance": "nginx_exporter:9113",
+                    "job": "nginx"
+                "health": "up",
+                    "job": "node_exporter"
+                    "instance": "node_exporter:9100",
+                    "job": "node_exporter"
+                "health": "up",
+                    "job": "postgres"
+                    "instance": "postgres_exporter:9187",
+                    "job": "postgres"
+                "health": "up",
+                    "job": "proctolearn_api"
+                    "instance": "host.docker.internal:4000",
+                    "job": "proctolearn_api"
+                "health": "down",
+                    "job": "prometheus"
+                    "instance": "prometheus:9090",
+                    "job": "prometheus"
+                "health": "up",
+
+=== 4. Prometheus Up Metrics ===
+{
+    "status": "success",
+    "data": {
+        "resultType": "vector",
+        "result": [
+            {
+                "metric": {
+                    "__name__": "up",
+                    "instance": "node_exporter:9100",
+                    "job": "node_exporter"
+                },
+                "value": [
+                    1777032808.269,
+                    "1"
+                ]
+            },
+            {
+                "metric": {
+                    "__name__": "up",
+                    "instance": "nginx_exporter:9113",
+                    "job": "nginx"
+                },
+                "value": [
+                    1777032808.269,
+                    "1"
+                ]
+            },
+            {
+                "metric": {
+                    "__name__": "up",
+                    "instance": "prometheus:9090",
+                    "job": "prometheus"
+                },
+                "value": [
+                    1777032808.269,
+                    "1"
+                ]
+            },
+            {
+                "metric": {
+                    "__name__": "up",
+                    "instance": "postgres_exporter:9187",
+                    "job": "postgres"
+                },
+                "value": [
+                    1777032808.269,
+                    "1"
+                ]
+            },
+            {
+                "metric": {
+                    "__name__": "up",
+                    "instance": "host.docker.internal:4000",
+                    "job": "proctolearn_api"
+                },
+                "value": [
+                    1777032808.269,
+                    "0"
+                ]
+            }
+        ]
+    }
+}
+
+=== 5. Grafana Health ===
+{
+  "commit": "13173c9874af312fe75545f52aa6539af02076ac",
+  "database": "ok",
+  "version": "11.1.4"
+}
+=== 6. Alertmanager Health ===
+OK
+=== 7. Node Exporter Metrics (sample) ===
+node_cpu_seconds_total{cpu="0",mode="idle"} 706.54
+node_cpu_seconds_total{cpu="0",mode="iowait"} 112.29
+node_cpu_seconds_total{cpu="0",mode="irq"} 0
+node_cpu_seconds_total{cpu="0",mode="nice"} 0.72
+node_cpu_seconds_total{cpu="0",mode="softirq"} 27.7
+
+=== 8. cAdvisor Health ===
+ok
+=== 9. Blackbox Exporter ===
+# HELP probe_dns_lookup_time_seconds Returns the time taken for probe dns lookup in seconds
+# TYPE probe_dns_lookup_time_seconds gauge
+probe_dns_lookup_time_seconds 0.004838769
+# HELP probe_duration_seconds Returns how long the probe took to complete in seconds
+# TYPE probe_duration_seconds gauge
+probe_duration_seconds 0.01448497
+# HELP probe_failed_due_to_regex Indicates if probe failed due to regex
+# TYPE probe_failed_due_to_regex gauge
+probe_failed_due_to_regex 0
+# HELP probe_http_content_length Length of http content response
+# TYPE probe_http_content_length gauge
+probe_http_content_length 0
+# HELP probe_http_duration_seconds Duration of http request by phase, summed over all redirects
+# TYPE probe_http_duration_seconds gauge
+probe_http_duration_seconds{phase="connect"} 0
+probe_http_duration_seconds{phase="processing"} 0
+probe_http_duration_seconds{phase="resolve"} 0.004838769
+probe_http_duration_seconds{phase="tls"} 0
+probe_http_duration_seconds{phase="transfer"} 0
+# HELP probe_http_redirects The number of redirects
+# TYPE probe_http_redirects gauge
+probe_http_redirects 0
+# HELP probe_http_ssl Indicates if SSL was used for the final redirect
+# TYPE probe_http_ssl gauge
+probe_http_ssl 0
+# HELP probe_http_status_code Response HTTP status code
+# TYPE probe_http_status_code gauge
+probe_http_status_code 0
+# HELP probe_http_uncompressed_body_length Length of uncompressed response body
+# TYPE probe_http_uncompressed_body_length gauge
+probe_http_uncompressed_body_length 0
+# HELP probe_http_version Returns the version of HTTP of the probe response
+# TYPE probe_http_version gauge
+probe_http_version 0
+# HELP probe_ip_addr_hash Specifies the hash of IP address. It's useful to detect if the IP address changes.
+# TYPE probe_ip_addr_hash gauge
+probe_ip_addr_hash 3.668918509e+09
+# HELP probe_ip_protocol Specifies whether probe ip protocol is IP4 or IP6
+# TYPE probe_ip_protocol gauge
+probe_ip_protocol 4
+# HELP probe_success Displays whether or not the probe was a success
+# TYPE probe_success gauge
+probe_success 0

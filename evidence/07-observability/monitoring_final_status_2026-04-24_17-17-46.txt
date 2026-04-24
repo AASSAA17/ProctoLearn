@@ -1,0 +1,62 @@
+=== FINAL MONITORING STATUS - 2026-04-24_17-17-46 ===
+
+=== All Monitoring Containers ===
+NAME                      IMAGE                                                   COMMAND                  SERVICE             CREATED              STATUS                    PORTS
+alertmanager              prom/alertmanager:v0.27.0                               "/bin/alertmanager -…"   alertmanager        8 minutes ago        Up 8 minutes              0.0.0.0:9093->9093/tcp, [::]:9093->9093/tcp
+blackbox_exporter         prom/blackbox-exporter:latest                           "/bin/blackbox_expor…"   blackbox_exporter   10 minutes ago       Up 10 minutes             0.0.0.0:9115->9115/tcp, [::]:9115->9115/tcp
+cadvisor                  gcr.io/cadvisor/cadvisor:latest                         "/usr/bin/cadvisor -…"   cadvisor            10 minutes ago       Up 10 minutes (healthy)   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp
+grafana                   grafana/grafana-oss:11.1.4                              "/run.sh"                grafana             10 minutes ago       Up 10 minutes             0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+graphite                  graphiteapp/graphite-statsd:1.1.10-5                    "/entrypoint"            graphite            10 minutes ago       Up 10 minutes             2004/tcp, 2013-2014/tcp, 2023-2024/tcp, 8080/tcp, 0.0.0.0:2003->2003/tcp, [::]:2003->2003/tcp, 8125-8126/tcp, 0.0.0.0:8125->8125/udp, [::]:8125->8125/udp, 0.0.0.0:8085->80/tcp, [::]:8085->80/tcp
+monitoring_nginx          nginx:latest                                            "/docker-entrypoint.…"   nginx               10 minutes ago       Up 10 minutes             0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp
+monitoring_pgadmin        dpage/pgadmin4:8                                        "/entrypoint.sh"         pgadmin             24 seconds ago       Up 22 seconds             443/tcp, 0.0.0.0:5051->80/tcp, [::]:5051->80/tcp
+monitoring_telegram_bot   monitoring-project-telegram_bot                         "python bot.py"          telegram_bot        About a minute ago   Up About a minute         0.0.0.0:5001->5001/tcp, [::]:5001->5001/tcp
+nagios                    jasonrivers/nagios:latest                               "/usr/local/bin/star…"   nagios              10 minutes ago       Up 10 minutes             5667/tcp, 0.0.0.0:8084->80/tcp, [::]:8084->80/tcp
+nginx_exporter            nginx/nginx-prometheus-exporter:latest                  "/usr/bin/nginx-prom…"   nginx_exporter      10 minutes ago       Up 10 minutes             0.0.0.0:9113->9113/tcp, [::]:9113->9113/tcp
+node_exporter             prom/node-exporter:v1.8.2                               "/bin/node_exporter"     node_exporter       10 minutes ago       Up 10 minutes             0.0.0.0:9100->9100/tcp, [::]:9100->9100/tcp
+portainer                 portainer/portainer-ce:latest                           "/portainer"             portainer           10 minutes ago       Up 10 minutes             8000/tcp, 0.0.0.0:9443->9443/tcp, [::]:9443->9443/tcp, 0.0.0.0:9002->9000/tcp, [::]:9002->9000/tcp
+postgres_exporter         quay.io/prometheuscommunity/postgres-exporter:v0.15.0   "/bin/postgres_expor…"   postgres_exporter   10 minutes ago       Up 10 minutes             0.0.0.0:9187->9187/tcp, [::]:9187->9187/tcp
+prometheus                prom/prometheus:v2.54.1                                 "/bin/prometheus --c…"   prometheus          10 minutes ago       Up 10 minutes             0.0.0.0:9090->9090/tcp, [::]:9090->9090/tcp
+zabbix_agent              zabbix/zabbix-agent2:alpine-7.0-latest                  "/usr/bin/docker-ent…"   zabbix_agent        10 minutes ago       Up 10 minutes             0.0.0.0:10050->10050/tcp, [::]:10050->10050/tcp, 31999/tcp
+zabbix_pgsql              postgres:16-alpine                                      "docker-entrypoint.s…"   zabbix_pgsql        10 minutes ago       Up 10 minutes             5432/tcp
+zabbix_server             zabbix/zabbix-server-pgsql:alpine-7.0-latest            "/usr/bin/docker-ent…"   zabbix_server       10 minutes ago       Up 10 minutes             0.0.0.0:10051->10051/tcp, [::]:10051->10051/tcp
+zabbix_web                zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest         "docker-entrypoint.sh"   zabbix_web          10 minutes ago       Up 10 minutes (healthy)   8443/tcp, 0.0.0.0:8082->8080/tcp, [::]:8082->8080/tcp
+
+=== Prometheus Health ===
+Prometheus Server is Healthy.
+
+=== Grafana Health ===
+{
+    "commit": "13173c9874af312fe75545f52aa6539af02076ac",
+    "database": "ok",
+    "version": "11.1.4"
+}
+
+=== Alertmanager Health ===
+OK
+=== Telegram Bot Health ===
+{"status":"demo","message":"Telegram bot not configured"}
+=== Alertmanager Config ===
+{
+    "cluster": {
+        "name": "01KPZPAEZZP2V5JC2JHWCPKMN3",
+        "peers": [
+            {
+                "address": "172.21.0.17:9094",
+                "name": "01KPZPAEZZP2V5JC2JHWCPKMN3"
+            }
+        ],
+        "status": "ready"
+    },
+    "config": {
+        "original": "global:\n  resolve_timeout: 5m\n  http_config:\n    follow_redirects: true\n    enable_http2: true\n  smtp_hello: localhost\n  smtp_require_tls: true\n  pagerduty_url: https://events.pagerduty.com/v2/enqueue\n  opsgenie_api_url: https://api.opsgenie.com/\n  wechat_api_url: https://qyapi.weixin.qq.com/cgi-bin/\n  victorops_api_url: https://alert.victorops.com/integrations/generic/20131114/alert/\n  telegram_api_url: https://api.telegram.org\n  webex_api_url: https://webexapis.com/v1/messages\nroute:\n  receiver: webhook-alerts\n  group_by:\n  - alertname\n  - severity\n  continue: false\n  group_wait: 10s\n  group_interval: 1m\n  repeat_interval: 30m\ninhibit_rules:\n- source_matchers:\n  - severity=\"critical\"\n  target_matchers:\n  - severity=\"warning\"\n  equal:\n  - alertname\n  - instance\nreceivers:\n- name: webhook-alerts\n  webhook_configs:\n  - send_resolved: true\n    http_config:\n      follow_redirects: true\n      enable_http2: true\n    url: <secret>\n    url_file: \"\"\n    max_alerts: 0\ntemplates: []\n"
+    },
+    "uptime": "2026-04-24T12:09:36.024Z",
+    "versionInfo": {
+        "branch": "HEAD",
+        "buildDate": "20240228-11:51:20",
+        "buildUser": "root@22cd11f671e9",
+        "goVersion": "go1.21.7",
+        "revision": "0aa3c2aad14cff039931923ab16b26b7481783b5",
+        "version": "0.27.0"
+    }
+}

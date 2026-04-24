@@ -1,0 +1,60 @@
+=== OS INFO - 2026-04-24_17-18-14 ===
+
+=== 1. OS Release ===
+PRETTY_NAME="Ubuntu 24.04.4 LTS"
+NAME="Ubuntu"
+VERSION_ID="24.04"
+VERSION="24.04.4 LTS (Noble Numbat)"
+VERSION_CODENAME=noble
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=noble
+LOGO=ubuntu-logo
+
+=== 2. uname ===
+Linux arsen-VirtualBox 6.17.0-22-generic #22~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Thu Mar 26 15:25:54 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+
+=== 3. CPU Info ===
+CPU(s):                                  6
+On-line CPU(s) list:                     0-5
+Имя модели:                              11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz
+NUMA node0 CPU(s):                       0-5
+
+=== 4. Memory ===
+               всего        занят        своб      общая  буф/врем.   доступно
+Память:        9.7Gi       6.3Gi       422Mi       141Mi       3.4Gi       3.4Gi
+Подкачка:      4.0Gi       2.6Gi       1.4Gi
+
+=== 5. Disk ===
+Файл.система   Размер Использовано  Дост Использовано% Cмонтировано в
+/dev/sda2         55G          35G   17G           68% /
+
+=== 6. Uptime ===
+ 17:18:14 up 29 min,  1 user,  load average: 7.14, 7.21, 7.62
+
+=== 7. Users ===
+arsen    seat0        2026-04-24 16:49 (login screen)
+arsen    tty2         2026-04-24 16:49 (tty2)
+Username         Port     From                                       Latest
+root                                                                **Никогда не входил в систему**
+daemon                                                              **Никогда не входил в систему**
+bin                                                                 **Никогда не входил в систему**
+sys                                                                 **Никогда не входил в систему**
+sync                                                                **Никогда не входил в систему**
+games                                                               **Никогда не входил в систему**
+man                                                                 **Никогда не входил в систему**
+lp                                                                  **Никогда не входил в систему**
+mail                                                                **Никогда не входил в систему**
+
+=== 8. Ubuntu Version ===
+Distributor ID:	Ubuntu
+Description:	Ubuntu 24.04.4 LTS
+Release:	24.04
+Codename:	noble
+
+=== 9. VirtualBox status ===
+6.17.0-22-generic

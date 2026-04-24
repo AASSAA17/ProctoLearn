@@ -1,0 +1,95 @@
+=== SSH HARDENING EVIDENCE - 2026-04-24_17-20-50 ===
+
+=== 1. SSH Hardening Config ===
+# ProctoLearn SSH Hardening Configuration
+# Applied: 2026-04-24
+# Authentication
+PasswordAuthentication no
+PubkeyAuthentication yes
+PermitRootLogin no
+AuthorizedKeysFile .ssh/authorized_keys
+# Protocol & Cipher hardening
+Protocol 2
+KexAlgorithms curve25519-sha256,diffie-hellman-group14-sha256
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com
+# Connection limits
+MaxAuthTries 3
+MaxSessions 5
+LoginGraceTime 30
+# Idle timeout (5 minutes)
+ClientAliveInterval 300
+ClientAliveCountMax 1
+# Disable unnecessary features
+X11Forwarding no
+AllowAgentForwarding no
+AllowTcpForwarding no
+PrintLastLog yes
+Banner /etc/ssh/banner.txt
+
+=== 2. SSH Service Status ===
+● ssh.service - OpenBSD Secure Shell server
+     Loaded: loaded (/usr/lib/systemd/system/ssh.service; enabled; preset: enabled)
+     Active: active (running) since Fri 2026-04-24 17:19:29 +05; 1min 21s ago
+TriggeredBy: ● ssh.socket
+       Docs: man:sshd(8)
+             man:sshd_config(5)
+    Process: 41289 ExecStartPre=/usr/sbin/sshd -t (code=exited, status=0/SUCCESS)
+   Main PID: 41290 (sshd)
+      Tasks: 1 (limit: 11830)
+     Memory: 1.7M (peak: 4.5M)
+        CPU: 64ms
+     CGroup: /system.slice/ssh.service
+             └─41290 "sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups"
+
+Apr 24 17:19:29 arsen-VirtualBox systemd[1]: Starting ssh.service - OpenBSD Secure Shell server...
+Apr 24 17:19:29 arsen-VirtualBox sshd[41290]: Server listening on 0.0.0.0 port 2222.
+Apr 24 17:19:29 arsen-VirtualBox sshd[41290]: Server listening on :: port 2222.
+Apr 24 17:19:29 arsen-VirtualBox systemd[1]: Started ssh.service - OpenBSD Secure Shell server.
+Apr 24 17:20:39 arsen-VirtualBox sshd[42490]: Accepted publickey for arsen from 127.0.0.1 port 56944 ssh2: ED25519 SHA256:4MSBbIrgPtycCYP/hw+gakErexBFWA+LiumcfxzEEX0
+Apr 24 17:20:39 arsen-VirtualBox sshd[42490]: pam_unix(sshd:session): session opened for user arsen(uid=1000) by arsen(uid=0)
+Apr 24 17:20:40 arsen-VirtualBox sshd[42490]: pam_unix(sshd:session): session closed for user arsen
+
+=== 3. SSH Key Fingerprint ===
+256 SHA256:4MSBbIrgPtycCYP/hw+gakErexBFWA+LiumcfxzEEX0 arsen@arsen-VirtualBox (ED25519)
+
+=== 4. Authorized Keys ===
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIODmEfWzh+SQ/LknSD4eRy54tkUFGiQpISbfDOdJhtEf arsen@arsen-VirtualBox
+
+=== 5. UFW Status ===
+Состояние: активен
+
+     В                          Действие    Из
+     -                          --------    --
+[ 1] 80                         ALLOW IN    Anywhere                  
+[ 2] 22                         ALLOW IN    Anywhere                  
+[ 3] 2222/tcp                   ALLOW IN    Anywhere                  
+[ 4] 4000/tcp                   ALLOW IN    Anywhere                  
+[ 5] 3001/tcp                   ALLOW IN    Anywhere                  
+[ 6] 80 (v6)                    ALLOW IN    Anywhere (v6)             
+[ 7] 22 (v6)                    ALLOW IN    Anywhere (v6)             
+[ 8] 2222/tcp (v6)              ALLOW IN    Anywhere (v6)             
+[ 9] 4000/tcp (v6)              ALLOW IN    Anywhere (v6)             
+[10] 3001/tcp (v6)              ALLOW IN    Anywhere (v6)             
+
+
+=== 6. Fail2Ban Status ===
+Status
+|- Number of jail:	1
+`- Jail list:	sshd
+Status for the jail: sshd
+|- Filter
+|  |- Currently failed:	0
+|  |- Total failed:	0
+|  `- Journal matches:	_SYSTEMD_UNIT=sshd.service + _COMM=sshd
+`- Actions
+   |- Currently banned:	0
+   |- Total banned:	0
+   `- Banned IP list:	
+
+=== 7. SSH Connection Test ===
+*************************************************************
+* AUTHORIZED ACCESS ONLY - ProctoLearn Platform            *
+* Unauthorized access is strictly prohibited.              *
+* All connections are monitored and logged.                 *
+*************************************************************
+SSH KEY-BASED AUTH: SUCCESS - user=$(whoami), host=$(hostname)

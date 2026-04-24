@@ -1,0 +1,22 @@
+=== n8n WEBHOOK TEST - 2026-04-24_17-32-44 ===
+
+=== n8n Status ===
+{"status":"ok"}
+=== Workflow Active ===
+Finished building workflow dependency index. Processed 0 draft workflows, 0 published workflows.
+Finished building workflow dependency index. Processed 0 draft workflows, 0 published workflows.
+Finished building workflow dependency index. Processed 0 draft workflows, 0 published workflows.
+Finished building workflow dependency index. Processed 1 draft workflows, 1 published workflows.
+Activated workflow "ProctoLearn - Exam Submit Notifications" (ID: 4Nes1FOm6w1f20R9)
+
+=== Webhook Test ===
+{"status":"received","examTitle":"Module 1 Test","student":"Test Student"}
+=== OPA Policy Test ===
+{"decision_id":"18cf2c21-f4a8-4812-b1f1-af433f5a659d","result":false}
+
+=== OPAL Stack ===
+NAME                      IMAGE                         COMMAND                  SERVICE       CREATED          STATUS          PORTS
+proctolearn_opa           openpolicyagent/opa:0.68.0    "/opa run --server -…"   opa           31 minutes ago   Up 31 minutes   0.0.0.0:8181->8181/tcp, [::]:8181->8181/tcp
+proctolearn_opal_client   permitio/opal-client:latest   "./start.sh"             opal_client   31 minutes ago   Up 31 minutes   7000/tcp, 8181/tcp
+proctolearn_opal_redis    redis:7-alpine                "docker-entrypoint.s…"   opal_redis    31 minutes ago   Up 31 minutes   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+proctolearn_opal_server   permitio/opal-server:latest   "./start.sh"             opal_server   31 minutes ago   Up 31 minutes   0.0.0.0:7002->7002/tcp, [::]:7002->7002/tcp

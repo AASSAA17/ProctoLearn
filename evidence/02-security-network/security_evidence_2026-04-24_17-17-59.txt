@@ -1,0 +1,316 @@
+=== SECURITY & NETWORK EVIDENCE - 2026-04-24_17-17-59 ===
+
+=== 1. UFW Status ===
+Состояние: активен
+Журналирование: on (low)
+По умолчанию: deny (входящие), allow (исходящие), deny (маршрутизированные)
+Новые профили: skip
+
+В                          Действие    Из
+-                          --------    --
+80                         ALLOW IN    Anywhere                  
+22                         ALLOW IN    Anywhere                  
+2222/tcp                   ALLOW IN    Anywhere                  
+4000/tcp                   ALLOW IN    Anywhere                  
+3001/tcp                   ALLOW IN    Anywhere                  
+80 (v6)                    ALLOW IN    Anywhere (v6)             
+22 (v6)                    ALLOW IN    Anywhere (v6)             
+2222/tcp (v6)              ALLOW IN    Anywhere (v6)             
+4000/tcp (v6)              ALLOW IN    Anywhere (v6)             
+3001/tcp (v6)              ALLOW IN    Anywhere (v6)             
+
+
+=== 2. Active Firewall Rules ===
+Chain INPUT (policy DROP)
+num  target     prot opt source               destination         
+1    ufw-before-logging-input  0    --  0.0.0.0/0            0.0.0.0/0           
+2    ufw-before-input  0    --  0.0.0.0/0            0.0.0.0/0           
+3    ufw-after-input  0    --  0.0.0.0/0            0.0.0.0/0           
+4    ufw-after-logging-input  0    --  0.0.0.0/0            0.0.0.0/0           
+5    ufw-reject-input  0    --  0.0.0.0/0            0.0.0.0/0           
+6    ufw-track-input  0    --  0.0.0.0/0            0.0.0.0/0           
+
+=== 3. SSH Config ===
+grep: /etc/ssh/sshd_config: Нет такого файла или каталога
+
+=== 4. SSH Service Status ===
+Unit ssh.service could not be found.
+
+=== 5. Fail2Ban Status ===
+Status
+|- Number of jail:	1
+`- Jail list:	sshd
+
+=== 6. Fail2Ban SSHD ===
+Status for the jail: sshd
+|- Filter
+|  |- Currently failed:	0
+|  |- Total failed:	0
+|  `- Journal matches:	_SYSTEMD_UNIT=sshd.service + _COMM=sshd
+`- Actions
+   |- Currently banned:	0
+   |- Total banned:	0
+   `- Banned IP list:	
+
+=== 7. Open Ports ===
+LISTEN 0      4096              0.0.0.0:56379      0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:8088       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:8082       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:8081       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:8080       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:8085       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:8084       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:8181       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:8025       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:55432      0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:6379       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:7002       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:5433       0.0.0.0:*                                         
+LISTEN 0      4096            127.0.0.1:631        0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:5678       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:5001       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:5051       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:5050       0.0.0.0:*                                         
+LISTEN 0      4096           127.0.0.54:53         0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:4000       0.0.0.0:*                                         
+LISTEN 0      1024            127.0.0.1:6188       0.0.0.0:*    users:(("cef_server",pid=6308,fd=81))
+LISTEN 0      4096              0.0.0.0:3001       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:3000       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:9443       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:1025       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:2003       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:10051      0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:10050      0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:59001      0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:59000      0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:80         0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:9100       0.0.0.0:*                                         
+LISTEN 0      4096        127.0.0.53%lo:53         0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:9090       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:9093       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:9115       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:9113       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:9187       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:9002       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:9001       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:9000       0.0.0.0:*                                         
+LISTEN 0      4096              0.0.0.0:50000      0.0.0.0:*                                         
+LISTEN 0      4096                 [::]:8088          [::]:*                                         
+LISTEN 0      4096                 [::]:8082          [::]:*                                         
+LISTEN 0      4096                 [::]:8081          [::]:*                                         
+LISTEN 0      4096                 [::]:8080          [::]:*                                         
+LISTEN 0      4096                 [::]:8085          [::]:*                                         
+LISTEN 0      4096                 [::]:8084          [::]:*                                         
+LISTEN 0      4096                 [::]:8181          [::]:*                                         
+LISTEN 0      4096                 [::]:8025          [::]:*                                         
+LISTEN 0      4096                 [::]:6379          [::]:*                                         
+LISTEN 0      4096                 [::]:7002          [::]:*                                         
+LISTEN 0      4096                 [::]:5433          [::]:*                                         
+LISTEN 0      4096                 [::]:5678          [::]:*                                         
+LISTEN 0      4096                 [::]:5001          [::]:*                                         
+LISTEN 0      4096                 [::]:5051          [::]:*                                         
+LISTEN 0      4096                 [::]:5050          [::]:*                                         
+LISTEN 0      511    [::ffff:127.0.0.1]:64442            *:*    users:(("idea",pid=5842,fd=307))     
+LISTEN 0      4096                 [::]:4000          [::]:*                                         
+LISTEN 0      50     [::ffff:127.0.0.1]:6189             *:*    users:(("idea",pid=5842,fd=318))     
+LISTEN 0      4096                [::1]:631           [::]:*                                         
+LISTEN 0      4096                 [::]:3001          [::]:*                                         
+LISTEN 0      4096                 [::]:3000          [::]:*                                         
+LISTEN 0      4096                 [::]:9443          [::]:*                                         
+LISTEN 0      4096                 [::]:1025          [::]:*                                         
+LISTEN 0      4096                 [::]:2003          [::]:*                                         
+LISTEN 0      4096   [::ffff:127.0.0.1]:37229            *:*    users:(("idea",pid=5842,fd=357))     
+LISTEN 0      4096                 [::]:10051         [::]:*                                         
+LISTEN 0      4096                 [::]:10050         [::]:*                                         
+LISTEN 0      4096   [::ffff:127.0.0.1]:63342            *:*    users:(("idea",pid=5842,fd=79))      
+LISTEN 0      4096                 [::]:80            [::]:*                                         
+LISTEN 0      4096                 [::]:9100          [::]:*                                         
+LISTEN 0      4096                 [::]:9090          [::]:*                                         
+LISTEN 0      4096                 [::]:9093          [::]:*                                         
+LISTEN 0      4096                 [::]:9115          [::]:*                                         
+LISTEN 0      4096                 [::]:9113          [::]:*                                         
+LISTEN 0      4096                 [::]:9187          [::]:*                                         
+LISTEN 0      4096                 [::]:9002          [::]:*                                         
+LISTEN 0      4096                 [::]:9001          [::]:*                                         
+LISTEN 0      4096                 [::]:9000          [::]:*                                         
+LISTEN 0      4096                 [::]:50000         [::]:*                                         
+
+=== 8. Network Interfaces ===
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host noprefixroute 
+       valid_lft forever preferred_lft forever
+2: enp0s3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 08:00:27:55:69:23 brd ff:ff:ff:ff:ff:ff
+    inet 10.0.2.15/24 brd 10.0.2.255 scope global dynamic noprefixroute enp0s3
+       valid_lft 84670sec preferred_lft 84670sec
+    inet6 fd17:625c:f037:2:5415:27d9:71ce:7844/64 scope global temporary dynamic 
+       valid_lft 86127sec preferred_lft 14127sec
+    inet6 fd17:625c:f037:2:a00:27ff:fe55:6923/64 scope global dynamic mngtmpaddr 
+       valid_lft 86127sec preferred_lft 14127sec
+    inet6 fe80::a00:27ff:fe55:6923/64 scope link 
+       valid_lft forever preferred_lft forever
+3: br-4baf39843f58: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 52:89:e0:24:7b:cf brd ff:ff:ff:ff:ff:ff
+    inet 172.18.0.1/16 brd 172.18.255.255 scope global br-4baf39843f58
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5089:e0ff:fe24:7bcf/64 scope link 
+       valid_lft forever preferred_lft forever
+4: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default 
+    link/ether 02:9f:94:23:47:e1 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::9f:94ff:fe23:47e1/64 scope link 
+       valid_lft forever preferred_lft forever
+5: veth89a704f@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-4baf39843f58 state UP group default 
+    link/ether 16:1f:8a:cb:42:23 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet6 fe80::141f:8aff:fecb:4223/64 scope link 
+       valid_lft forever preferred_lft forever
+6: veth043d88f@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-4baf39843f58 state UP group default 
+    link/ether 46:39:98:f3:e1:25 brd ff:ff:ff:ff:ff:ff link-netnsid 1
+    inet6 fe80::4439:98ff:fef3:e125/64 scope link 
+       valid_lft forever preferred_lft forever
+7: veth23d9350@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-4baf39843f58 state UP group default 
+    link/ether 5e:31:7e:29:fe:02 brd ff:ff:ff:ff:ff:ff link-netnsid 2
+    inet6 fe80::5c31:7eff:fe29:fe02/64 scope link 
+       valid_lft forever preferred_lft forever
+8: veth34e83f4@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-4baf39843f58 state UP group default 
+    link/ether fa:ee:a7:a1:43:13 brd ff:ff:ff:ff:ff:ff link-netnsid 3
+    inet6 fe80::f8ee:a7ff:fea1:4313/64 scope link 
+       valid_lft forever preferred_lft forever
+9: veth78faed2@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-4baf39843f58 state UP group default 
+    link/ether da:f7:34:0a:8a:80 brd ff:ff:ff:ff:ff:ff link-netnsid 4
+    inet6 fe80::d8f7:34ff:fe0a:8a80/64 scope link 
+       valid_lft forever preferred_lft forever
+10: veth76345b2@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-4baf39843f58 state UP group default 
+    link/ether a2:3a:cf:ee:77:25 brd ff:ff:ff:ff:ff:ff link-netnsid 5
+    inet6 fe80::a03a:cfff:feee:7725/64 scope link 
+       valid_lft forever preferred_lft forever
+11: veth60ae424@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-4baf39843f58 state UP group default 
+    link/ether d2:b5:36:19:a7:b1 brd ff:ff:ff:ff:ff:ff link-netnsid 6
+    inet6 fe80::d0b5:36ff:fe19:a7b1/64 scope link 
+       valid_lft forever preferred_lft forever
+12: vethbb47ce6@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-4baf39843f58 state UP group default 
+    link/ether c6:5f:5a:18:ad:23 brd ff:ff:ff:ff:ff:ff link-netnsid 7
+    inet6 fe80::c45f:5aff:fe18:ad23/64 scope link 
+       valid_lft forever preferred_lft forever
+13: br-50ac52e8b4e6: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether ea:d5:db:50:36:75 brd ff:ff:ff:ff:ff:ff
+    inet 172.19.0.1/16 brd 172.19.255.255 scope global br-50ac52e8b4e6
+       valid_lft forever preferred_lft forever
+    inet6 fe80::e8d5:dbff:fe50:3675/64 scope link 
+       valid_lft forever preferred_lft forever
+14: veth862d977@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-50ac52e8b4e6 state UP group default 
+    link/ether d6:7d:88:41:3b:0f brd ff:ff:ff:ff:ff:ff link-netnsid 8
+    inet6 fe80::d47d:88ff:fe41:3b0f/64 scope link 
+       valid_lft forever preferred_lft forever
+15: veth41dc189@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-50ac52e8b4e6 state UP group default 
+    link/ether ba:b8:17:35:1b:af brd ff:ff:ff:ff:ff:ff link-netnsid 9
+    inet6 fe80::b8b8:17ff:fe35:1baf/64 scope link 
+       valid_lft forever preferred_lft forever
+16: veth4c4a2bb@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-50ac52e8b4e6 state UP group default 
+    link/ether ce:28:f4:fe:30:e4 brd ff:ff:ff:ff:ff:ff link-netnsid 10
+    inet6 fe80::cc28:f4ff:fefe:30e4/64 scope link 
+       valid_lft forever preferred_lft forever
+17: br-ec565607e051: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 82:bc:fb:dc:0a:1c brd ff:ff:ff:ff:ff:ff
+    inet 172.20.0.1/16 brd 172.20.255.255 scope global br-ec565607e051
+       valid_lft forever preferred_lft forever
+    inet6 fe80::80bc:fbff:fedc:a1c/64 scope link 
+       valid_lft forever preferred_lft forever
+18: vethdebcd58@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-ec565607e051 state UP group default 
+    link/ether 7e:2e:9e:8a:a0:bd brd ff:ff:ff:ff:ff:ff link-netnsid 11
+    inet6 fe80::7c2e:9eff:fe8a:a0bd/64 scope link 
+       valid_lft forever preferred_lft forever
+19: veth04aba37@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-ec565607e051 state UP group default 
+    link/ether 1a:11:9e:14:06:64 brd ff:ff:ff:ff:ff:ff link-netnsid 12
+    inet6 fe80::1811:9eff:fe14:664/64 scope link 
+       valid_lft forever preferred_lft forever
+20: veth5f7264d@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-ec565607e051 state UP group default 
+    link/ether 22:c6:9b:b6:13:1b brd ff:ff:ff:ff:ff:ff link-netnsid 13
+    inet6 fe80::20c6:9bff:feb6:131b/64 scope link 
+       valid_lft forever preferred_lft forever
+21: veth9c809a8@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-ec565607e051 state UP group default 
+    link/ether 32:8a:1a:68:e7:3b brd ff:ff:ff:ff:ff:ff link-netnsid 14
+    inet6 fe80::308a:1aff:fe68:e73b/64 scope link 
+       valid_lft forever preferred_lft forever
+24: br-81e346c7032d: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether a6:e0:20:70:b8:88 brd ff:ff:ff:ff:ff:ff
+    inet 172.21.0.1/16 brd 172.21.255.255 scope global br-81e346c7032d
+       valid_lft forever preferred_lft forever
+    inet6 fe80::a4e0:20ff:fe70:b888/64 scope link 
+       valid_lft forever preferred_lft forever
+25: vethd44ac84@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether 02:1d:1e:df:10:60 brd ff:ff:ff:ff:ff:ff link-netnsid 15
+    inet6 fe80::1d:1eff:fedf:1060/64 scope link 
+       valid_lft forever preferred_lft forever
+26: veth81d4f6d@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether 46:c8:79:c4:d6:10 brd ff:ff:ff:ff:ff:ff link-netnsid 16
+    inet6 fe80::44c8:79ff:fec4:d610/64 scope link 
+       valid_lft forever preferred_lft forever
+27: vethe6a18e3@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether de:d4:c3:1e:c3:0c brd ff:ff:ff:ff:ff:ff link-netnsid 17
+    inet6 fe80::dcd4:c3ff:fe1e:c30c/64 scope link 
+       valid_lft forever preferred_lft forever
+28: vethb83143a@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether 7a:95:e8:f0:b5:3d brd ff:ff:ff:ff:ff:ff link-netnsid 18
+    inet6 fe80::7895:e8ff:fef0:b53d/64 scope link 
+       valid_lft forever preferred_lft forever
+30: veth6030a23@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether fe:56:6f:38:b5:63 brd ff:ff:ff:ff:ff:ff link-netnsid 20
+    inet6 fe80::fc56:6fff:fe38:b563/64 scope link 
+       valid_lft forever preferred_lft forever
+31: vetha84c519@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether 1a:df:b7:7a:3e:8e brd ff:ff:ff:ff:ff:ff link-netnsid 21
+    inet6 fe80::18df:b7ff:fe7a:3e8e/64 scope link 
+       valid_lft forever preferred_lft forever
+32: veth0c89866@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether 66:bb:f9:a2:59:b1 brd ff:ff:ff:ff:ff:ff link-netnsid 22
+    inet6 fe80::64bb:f9ff:fea2:59b1/64 scope link 
+       valid_lft forever preferred_lft forever
+33: veth1178c08@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether 52:37:68:b7:bb:24 brd ff:ff:ff:ff:ff:ff link-netnsid 23
+    inet6 fe80::5037:68ff:feb7:bb24/64 scope link 
+       valid_lft forever preferred_lft forever
+35: vethe593ab1@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether 4e:56:08:89:32:9d brd ff:ff:ff:ff:ff:ff link-netnsid 25
+    inet6 fe80::4c56:8ff:fe89:329d/64 scope link 
+       valid_lft forever preferred_lft forever
+36: veth3ea5530@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether 1e:b6:a1:de:db:a2 brd ff:ff:ff:ff:ff:ff link-netnsid 26
+    inet6 fe80::1cb6:a1ff:fede:dba2/64 scope link 
+       valid_lft forever preferred_lft forever
+37: vetheaa20c2@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether 62:1f:33:18:4d:e4 brd ff:ff:ff:ff:ff:ff link-netnsid 27
+    inet6 fe80::601f:33ff:fe18:4de4/64 scope link 
+       valid_lft forever preferred_lft forever
+38: vethbe92fde@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether ba:d9:f7:50:38:de brd ff:ff:ff:ff:ff:ff link-netnsid 28
+    inet6 fe80::b8d9:f7ff:fe50:38de/64 scope link 
+       valid_lft forever preferred_lft forever
+40: veth352ec12@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether ca:10:0f:db:cf:c3 brd ff:ff:ff:ff:ff:ff link-netnsid 29
+    inet6 fe80::c810:fff:fedb:cfc3/64 scope link 
+       valid_lft forever preferred_lft forever
+43: veth7ff6c09@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether 52:cd:40:4c:c1:8f brd ff:ff:ff:ff:ff:ff link-netnsid 24
+    inet6 fe80::50cd:40ff:fe4c:c18f/64 scope link 
+       valid_lft forever preferred_lft forever
+45: veth9d12ea3@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether 5a:f3:6c:58:b1:e6 brd ff:ff:ff:ff:ff:ff link-netnsid 31
+    inet6 fe80::58f3:6cff:fe58:b1e6/64 scope link 
+       valid_lft forever preferred_lft forever
+114: veth264499a@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether ea:c3:27:34:e6:f7 brd ff:ff:ff:ff:ff:ff link-netnsid 30
+    inet6 fe80::e8c3:27ff:fe34:e6f7/64 scope link 
+       valid_lft forever preferred_lft forever
+165: vethb188621@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether 0e:26:e2:64:18:61 brd ff:ff:ff:ff:ff:ff link-netnsid 19
+    inet6 fe80::c26:e2ff:fe64:1861/64 scope link 
+       valid_lft forever preferred_lft forever
+182: veth1a47f5e@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-81e346c7032d state UP group default 
+    link/ether ea:73:b0:44:58:5c brd ff:ff:ff:ff:ff:ff link-netnsid 32
+    inet6 fe80::e873:b0ff:fe44:585c/64 scope link 
+       valid_lft forever preferred_lft forever
