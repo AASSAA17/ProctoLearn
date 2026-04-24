@@ -1,0 +1,21 @@
+===================================================
+  Ansible Playbook Run - Local Mode with sudo
+  Date: Thu Apr 23 09:00:01 PM +05 2026
+===================================================
+
+
+PLAY [Configure and deploy ProctoLearn infrastructure] *************************
+
+TASK [Gathering Facts] *********************************************************
+[WARNING]: Host '127.0.0.1' is using the discovered Python interpreter at '/usr/bin/python3.12', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+[ERROR]: Task failed: Duplicate become password prompt encountered waiting for become success.
+>>> Standard Error
+[sudo via ansible, key=unflajklxheyhqtwclbpwqzffoktmrtg] password:
+Sorry, try again.
+[sudo via ansible, key=unflajklxheyhqtwclbpwqzffoktmrtg] password:
+
+fatal: [127.0.0.1]: FAILED! => {"changed": false, "msg": "Task failed: Duplicate become password prompt encountered waiting for become success.\n>>> Standard Error\n[sudo via ansible, key=unflajklxheyhqtwclbpwqzffoktmrtg] password:\nSorry, try again.\n[sudo via ansible, key=unflajklxheyhqtwclbpwqzffoktmrtg] password:"}
+
+PLAY RECAP *********************************************************************
+127.0.0.1                  : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+

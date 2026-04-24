@@ -1,0 +1,74 @@
+=== git log --oneline (last 30) ===
+672042d Prepare defense-ready infrastructure
+81bd95f fix: run Jenkins tests from built images
+c2cca20 fix: remove ansiColor option for Jenkins compatibility
+3606d39 feat: add backup guide and dev tooling stack
+60deeaa chore: sync project updates
+ed84d35 feat: free course enrollment, fix admin users page, backup scripts, certificate fonts
+586e7ed feat: add Ubuntu deploy guide, nginx config, backup script, resource limits
+e84145c feat: full platform update - enrollments, lessons, profiles, Docker setup
+6ebf642 feat: admin panel, password validation, phone +7, online monitoring, Excel export, seed data
+0d24c53 Update README with project structure and setup instructions
+ba73ae3 Update README.md
+3e9758a Create README.md
+
+=== git status ===
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	new file:   DEFENSE_SETUP_GUIDE.md
+	new file:   evidence/03-database/README.md
+	new file:   scripts/collect-db-evidence.sh
+	new file:   scripts/collect-iac-evidence.sh
+	new file:   scripts/install-docker.sh
+	new file:   scripts/install-tools.sh
+	new file:   scripts/setup-and-collect-evidence.sh
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   DEFENSE_SETUP_GUIDE.md
+	modified:   evidence/03-database/README.md
+	modified:   infra/ansible/inventory.ini
+	modified:   monitoring-project/alertmanager/alertmanager.yml
+	modified:   scripts/app-ai-audit.sh
+	modified:   scripts/backup.sh
+	modified:   scripts/collect-db-evidence.sh
+	modified:   scripts/collect-evidence.sh
+	modified:   scripts/collect-iac-evidence.sh
+	modified:   scripts/install-docker.sh
+	modified:   scripts/install-tools.sh
+	modified:   scripts/observability-audit.sh
+	modified:   scripts/observability-demo.sh
+	modified:   scripts/security-audit.sh
+	modified:   scripts/setup-and-collect-evidence.sh
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	.idea/
+	ProctoLearn.iml
+	evidence/01-os/os_info.txt
+	evidence/01-os/os_info_2026-04-23_19-55-58.txt
+	evidence/02-security-network/ANSIBLE_COMMAND.txt
+	evidence/02-security-network/security_audit_2026-04-23_19-55-58.txt
+	evidence/03-database/STATUS.txt
+	evidence/04-app/app_status_2026-04-23_19-55-58.txt
+	evidence/05-containerization/docker_status_2026-04-23_19-55-58.txt
+	evidence/06-vcs/git_log_2026-04-23_19-55-58.txt
+	evidence/setup_log_2026-04-23_19-55-58.txt
+
+
+=== git branch ===
+* main
+  remotes/origin/HEAD -> origin/main
+  remotes/origin/codex/create-backend-folder
+  remotes/origin/main
+
+=== git remote ===
+origin	https://github.com/AASSAA17/ProctoLearn.git (fetch)
+origin	https://github.com/AASSAA17/ProctoLearn.git (push)
+
+=== commit count ===
+12

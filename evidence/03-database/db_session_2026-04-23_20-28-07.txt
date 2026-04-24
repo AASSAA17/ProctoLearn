@@ -1,0 +1,103 @@
+                                         version                                          
+------------------------------------------------------------------------------------------
+ PostgreSQL 16.13 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+(1 row)
+
+ current_database | current_user | inet_server_addr | inet_server_port 
+------------------+--------------+------------------+------------------
+ proctolearn_db   | proctolearn  |                  |                 
+(1 row)
+
+                  List of relations
+ Schema |         Name          | Type  |    Owner    
+--------+-----------------------+-------+-------------
+ public | answers               | table | proctolearn
+ public | attempts              | table | proctolearn
+ public | certificates          | table | proctolearn
+ public | course_modules        | table | proctolearn
+ public | courses               | table | proctolearn
+ public | enrollments           | table | proctolearn
+ public | evidence_files        | table | proctolearn
+ public | exams                 | table | proctolearn
+ public | lesson_progress       | table | proctolearn
+ public | lessons               | table | proctolearn
+ public | password_reset_tokens | table | proctolearn
+ public | proctor_events        | table | proctolearn
+ public | questions             | table | proctolearn
+ public | steps                 | table | proctolearn
+ public | submissions           | table | proctolearn
+ public | users                 | table | proctolearn
+(16 rows)
+
+ users_count 
+-------------
+        1110
+(1 row)
+
+ courses_count 
+---------------
+           137
+(1 row)
+
+ exams_count 
+-------------
+         137
+(1 row)
+
+ questions_count 
+-----------------
+             685
+(1 row)
+
+ enrollments_count 
+-------------------
+                 0
+(1 row)
+
+ attempts_count 
+----------------
+              0
+(1 row)
+
+ submissions_count 
+-------------------
+                 0
+(1 row)
+
+                  id                  |                 email                 |  role   |        createdAt        
+--------------------------------------+---------------------------------------+---------+-------------------------
+ f108f97a-c611-4ce7-b0ee-60681de280f6 | erik.zhaqsylyqov@proctolearn.kz       | STUDENT | 2025-10-22 23:01:50.657
+ 53fe59e1-23b6-4c42-9394-7e862a7edbbc | quanysh.zeynolla@proctolearn.kz       | STUDENT | 2025-09-18 04:56:42.185
+ df4392f1-8450-4728-8848-d725a9b3bdc9 | aygul.mustafin@proctolearn.kz         | STUDENT | 2025-09-05 19:14:36.548
+ 21d274e2-9f0b-49f9-9788-52503c4097a1 | fatima.baytursynov@proctolearn.kz     | STUDENT | 2025-12-27 23:35:17.879
+ 9215a835-cdcd-4d1f-bd41-00dacbf16d90 | zhanibek.zharylqasynov@proctolearn.kz | STUDENT | 2025-11-02 16:35:20.366
+(5 rows)
+
+ERROR:  column "isPublished" does not exist
+LINE 1: SELECT id, title, "isPublished", "createdAt" FROM "courses" ...
+                          ^
+      table_name       |  size  
+-----------------------+--------
+ questions             | 480 kB
+ users                 | 480 kB
+ courses               | 80 kB
+ exams                 | 80 kB
+ answers               | 24 kB
+ certificates          | 24 kB
+ lesson_progress       | 24 kB
+ enrollments           | 24 kB
+ submissions           | 24 kB
+ proctor_events        | 24 kB
+ password_reset_tokens | 24 kB
+ attempts              | 24 kB
+ course_modules        | 16 kB
+ lessons               | 16 kB
+ evidence_files        | 16 kB
+ steps                 | 16 kB
+(16 rows)
+
+               hba_file               
+--------------------------------------
+ /var/lib/postgresql/data/pg_hba.conf
+(1 row)
+

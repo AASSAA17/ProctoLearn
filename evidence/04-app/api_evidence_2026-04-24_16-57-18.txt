@@ -1,0 +1,48 @@
+=== МОДУЛЬ 4: API Evidence ===
+Дата: Fri Apr 24 04:57:18 PM +05 2026
+
+--- Health endpoint ---
+{"status":"ok"}
+
+--- Swagger доступен ---
+HTTP Status: 200
+
+--- API Courses (список курсов) ---
+Total courses: 137
+{
+  "data": [
+    {
+      "id": "3765e81f-54a7-4a49-be7e-26cb587bf835",
+      "title": "TypeScript: компиляторный API и метапрограммирование",
+      "description": "TypeScript: компиляторный API и метапрограммирование course",
+      "teacherId": "f22cd2e3-d9eb-479f-9ec1-0dea7e8c60f5",
+      "level": "BEGINNER",
+      "createdAt": "2026-04-23T15:13:27.314Z",
+      "teacher": {
+        "id": "f22cd2e3-d9eb-479f-9ec1-0dea7e8c60f5",
+        "name": "Рүстем Науанов"
+      },
+      "_count": {
+        "lessons": 0,
+        "exams": 1
+      }
+    },
+    {
+      "id": "d668135a-e87e-4851-987a-b6b4ec3b5e35",
+      "title": "Основы UI/UX для разработчиков",
+      "description": "Основы UI/UX для разработчиков course",
+      "teacherId": "f22cd2e3-d9eb-479f-9ec1-0dea7e8c60f5",
+      "level": "BEGINNE
+
+
+--- Frontend работает ---
+Frontend HTTP Status: 200
+
+--- pgAdmin работает ---
+pgAdmin HTTP Status: 302
+
+--- n8n работает ---
+n8n HTTP Status: 200
+
+--- Jenkins работает ---
+Jenkins HTTP Status: 403

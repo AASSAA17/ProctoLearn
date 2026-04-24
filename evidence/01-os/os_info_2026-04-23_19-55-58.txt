@@ -1,0 +1,37 @@
+=== uname -a ===
+Linux arsen-VirtualBox 6.17.0-19-generic #19~24.04.2-Ubuntu SMP PREEMPT_DYNAMIC Fri Mar  6 23:08:46 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+
+=== lsb_release -a ===
+Distributor ID:	Ubuntu
+Description:	Ubuntu 24.04.4 LTS
+Release:	24.04
+Codename:	noble
+
+=== df -h ===
+Filesystem      Size  Used Avail Use% Mounted on
+tmpfs           594M  1.7M  592M   1% /run
+/dev/sda2        55G   15G   37G  29% /
+tmpfs           2.9G   28M  2.9G   1% /dev/shm
+tmpfs           5.0M  8.0K  5.0M   1% /run/lock
+tmpfs           594M  152K  593M   1% /run/user/1000
+
+=== free -h ===
+               total        used        free      shared  buff/cache   available
+Mem:           5.8Gi       4.2Gi       124Mi        66Mi       1.7Gi       1.6Gi
+Swap:          4.0Gi       1.6Gi       2.4Gi
+
+=== uptime ===
+ 19:55:59 up  2:58,  1 user,  load average: 1.61, 0.39, 0.14
+
+=== hostname ===
+arsen-VirtualBox
+
+=== ip addr brief ===
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+enp0s3           UP             10.0.2.15/24 fd17:625c:f037:2:7a21:d338:daa1:1db5/64 fd17:625c:f037:2:a00:27ff:fe55:6923/64 fe80::a00:27ff:fe55:6923/64 
+
+=== cpu info ===
+Architecture:                            x86_64
+CPU(s):                                  6
+Model name:                              11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz
+Virtualization type:                     full

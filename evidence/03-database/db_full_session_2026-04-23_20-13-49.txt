@@ -1,0 +1,53 @@
+                                         version                                          
+------------------------------------------------------------------------------------------
+ PostgreSQL 16.13 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+(1 row)
+
+                  List of relations
+ Schema |         Name          | Type  |    Owner    
+--------+-----------------------+-------+-------------
+ public | answers               | table | proctolearn
+ public | attempts              | table | proctolearn
+ public | certificates          | table | proctolearn
+ public | course_modules        | table | proctolearn
+ public | courses               | table | proctolearn
+ public | enrollments           | table | proctolearn
+ public | evidence_files        | table | proctolearn
+ public | exams                 | table | proctolearn
+ public | lesson_progress       | table | proctolearn
+ public | lessons               | table | proctolearn
+ public | password_reset_tokens | table | proctolearn
+ public | proctor_events        | table | proctolearn
+ public | questions             | table | proctolearn
+ public | steps                 | table | proctolearn
+ public | submissions           | table | proctolearn
+ public | users                 | table | proctolearn
+(16 rows)
+
+ table_name | count 
+------------+-------
+ users      |  1110
+ courses    |   137
+ exams      |   137
+ questions  |   685
+ lessons    |     0
+(5 rows)
+
+                  id                  |                 email                 |  role   
+--------------------------------------+---------------------------------------+---------
+ f108f97a-c611-4ce7-b0ee-60681de280f6 | erik.zhaqsylyqov@proctolearn.kz       | STUDENT
+ 53fe59e1-23b6-4c42-9394-7e862a7edbbc | quanysh.zeynolla@proctolearn.kz       | STUDENT
+ df4392f1-8450-4728-8848-d725a9b3bdc9 | aygul.mustafin@proctolearn.kz         | STUDENT
+ 21d274e2-9f0b-49f9-9788-52503c4097a1 | fatima.baytursynov@proctolearn.kz     | STUDENT
+ 9215a835-cdcd-4d1f-bd41-00dacbf16d90 | zhanibek.zharylqasynov@proctolearn.kz | STUDENT
+(5 rows)
+
+                  id                  |            title            |  level   
+--------------------------------------+-----------------------------+----------
+ 7d4d0ccf-59be-4bcd-a71b-e8016143643b | AWS Cloud негіздері         | BEGINNER
+ 120097fb-b251-4bc3-a72b-8c943639bb95 | Advanced React Native       | BEGINNER
+ a54a11ed-d3d5-40f6-8f1f-f3333dc0e7ac | Advanced SQL оптимизация    | BEGINNER
+ 42713076-2b5e-4fb3-9b2f-2fd0a0ae4469 | Blockchain программирование | BEGINNER
+ a09b412e-7c37-411c-8aee-7e44c26f5ecd | C# және .NET негіздері      | BEGINNER
+(5 rows)
+

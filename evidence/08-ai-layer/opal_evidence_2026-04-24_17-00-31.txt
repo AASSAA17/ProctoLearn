@@ -1,0 +1,59 @@
+=== OPAL Evidence ===
+Дата: Fri Apr 24 05:00:32 PM +05 2026
+
+--- OPAL compose status ---
+NAME      IMAGE     COMMAND   SERVICE   CREATED   STATUS    PORTS
+
+--- OPAL файлы ---
+итого 20
+drwxrwxr-x  4 arsen arsen 4096 Apr 23 17:11 .
+drwxrwxr-x 17 arsen arsen 4096 Apr 23 21:08 ..
+drwxrwxr-x  2 arsen arsen 4096 Apr 23 17:11 data
+-rw-rw-r--  1 arsen arsen 1188 Apr 23 17:11 docker-compose.opal.yml
+drwxrwxr-x  2 arsen arsen 4096 Apr 23 17:11 policies
+
+services:
+  opa:
+    image: openpolicyagent/opa:0.68.0
+    container_name: proctolearn_opa
+    command:
+      - run
+      - --server
+      - --addr=0.0.0.0:8181
+      - --set=decision_logs.console=true
+      - /policy
+    ports:
+      - "8181:8181"
+    volumes:
+      - ./policies:/policy:ro
+
+  opal_server:
+    image: permitio/opal-server:latest
+    container_name: proctolearn_opal_server
+    environment:
+      OPAL_MASTER_TOKEN: ${OPAL_MASTER_TOKEN:-proctolearn-opal-token}
+      OPAL_POLICY_REPO_URL: https://github.com/AASSAA17/ProctoLearn
+      OPAL_POLICY_REPO_POLLING_INTERVAL: 20
+      OPAL_BROADCAST_URI: redis://opal_redis:6379
+    ports:
+      - "7002:7002"
+    depends_on:
+      - opal_redis
+
+  opal_client:
+    image: permitio/opal-client:latest
+    container_name: proctolearn_opal_client
+    environment:
+      OPAL_SERVER_URL: http://opal_server:7002
+      OPAL_CLIENT_TOKEN: ${OPAL_CLIENT_TOKEN:-proctolearn-opal-token}
+      OPAL_POLICY_STORE_URL: http://opa:8181
+      OPAL_DATA_UPDATER_ENABLED: "false"
+    depends_on:
+      - opa
+      - opal_server
+
+  opal_redis:
+    image: redis:7-alpine
+    container_name: proctolearn_opal_redis
+    ports:
+      - "6379:6379"

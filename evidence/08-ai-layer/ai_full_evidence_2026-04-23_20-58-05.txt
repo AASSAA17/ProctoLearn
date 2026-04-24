@@ -1,0 +1,38 @@
+===================================================
+  ProctoLearn AI Layer Evidence
+  Date: Thu Apr 23 08:58:05 PM +05 2026
+===================================================
+
+--- n8n Running Containers ---
+proctolearn_opal_client: Up 15 minutes
+proctolearn_opal_server: Up 15 minutes
+proctolearn_n8n: Up 15 minutes
+proctolearn_opal_redis: Up 16 minutes
+proctolearn_opa: Up 16 minutes
+
+--- n8n Health Check ---
+n8n (port 5678) HTTP Status: 200
+
+--- n8n API Health ---
+{"status":"ok"}
+--- OPA Health Check ---
+{}
+
+--- OPA Version ---
+{"decision_id":"79666b4d-0a7f-4313-a953-fe7251462036","result":{"proctolearn":{"authz":{"allow":false}}}}
+
+--- OPAL Server (port 7002) ---
+OPAL Server HTTP Status: 200
+
+--- n8n Workflow file ---
+exam-submit-notify.json
+
+--- OPAL Policies ---
+proctolearn.rego
+
+--- Docker containers for AI stack ---
+proctolearn_opal_client   permitio/opal-client:latest   Up 15 minutes
+proctolearn_opal_server   permitio/opal-server:latest   Up 16 minutes
+proctolearn_n8n           n8nio/n8n:latest              Up 16 minutes
+proctolearn_opal_redis    redis:7-alpine                Up 16 minutes
+proctolearn_opa           openpolicyagent/opa:0.68.0    Up 16 minutes

@@ -1,0 +1,41 @@
+=== Ansible Evidence ===
+Дата: Fri Apr 24 04:58:18 PM +05 2026
+
+--- ansible version ---
+ansible [core 2.20.5]
+  config file = None
+  configured module search path = ['/home/arsen/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
+  ansible python module location = /usr/local/lib/python3.12/dist-packages/ansible
+  ansible collection location = /home/arsen/.ansible/collections:/usr/share/ansible/collections
+  executable location = /usr/local/bin/ansible
+  python version = 3.12.3 (main, Mar 23 2026, 19:04:32) [GCC 13.3.0] (/usr/bin/python3)
+  jinja version = 3.1.2
+  pyyaml version = 6.0.1 (with libyaml v0.2.5)
+
+--- Ansible playbook в local режиме (check) ---
+No config file found; using defaults
+
+PLAY [Configure and deploy ProctoLearn infrastructure] *************************
+
+TASK [Gathering Facts] *********************************************************
+[WARNING]: Host '127.0.0.1' is using the discovered Python interpreter at '/usr/bin/python3.12', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [127.0.0.1]
+
+TASK [docker : Install Docker prerequisites] ***********************************
+ok: [127.0.0.1] => {"cache_update_time": 1776956327, "cache_updated": true, "changed": false}
+
+TASK [docker : Install Docker engine and compose plugin] ***********************
+[ERROR]: Task failed: Module failed: '/usr/bin/apt-get -y -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" -o DPkg::Lock::Timeout=60      --simulate install 'docker.io=29.1.3-0ubuntu3~24.04.1'' failed: E: Error, pkgProblemResolver::Resolve generated breaks, this may be caused by held packages.
+
+Origin: /home/arsen/IdeaProjects/ProctoLearn/infra/ansible/roles/docker/tasks/main.yml:13:3
+
+11   become: true
+12
+13 - name: Install Docker engine and compose plugin
+     ^ column 3
+
+fatal: [127.0.0.1]: FAILED! => {"cache_update_time": 1776956327, "cache_updated": true, "changed": false, "msg": "'/usr/bin/apt-get -y -o \"Dpkg::Options::=--force-confdef\" -o \"Dpkg::Options::=--force-confold\" -o DPkg::Lock::Timeout=60      --simulate install 'docker.io=29.1.3-0ubuntu3~24.04.1'' failed: E: Error, pkgProblemResolver::Resolve generated breaks, this may be caused by held packages.\n", "rc": 100, "stderr": "E: Error, pkgProblemResolver::Resolve generated breaks, this may be caused by held packages.\n", "stderr_lines": ["E: Error, pkgProblemResolver::Resolve generated breaks, this may be caused by held packages."], "stdout": "Reading package lists...\nBuilding dependency tree...\nReading state information...\nSome packages could not be installed. This may mean that you have\nrequested an impossible situation or if you are using the unstable\ndistribution that some required packages have not yet been created\nor been moved out of Incoming.\nThe following information may help to resolve the situation:\n\nThe following packages have unmet dependencies:\n containerd.io : Conflicts: containerd\n", "stdout_lines": ["Reading package lists...", "Building dependency tree...", "Reading state information...", "Some packages could not be installed. This may mean that you have", "requested an impossible situation or if you are using the unstable", "distribution that some required packages have not yet been created", "or been moved out of Incoming.", "The following information may help to resolve the situation:", "", "The following packages have unmet dependencies:", " containerd.io : Conflicts: containerd"]}
+
+PLAY RECAP *********************************************************************
+127.0.0.1                  : ok=2    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+

@@ -1,0 +1,3 @@
+# Run Ansible security role against VM:
+ansible-playbook -i infra/ansible/inventory.ini infra/ansible/playbook.yml \
+  --tags security 2>&1 | tee evidence/02-security-network/ansible_security_run.txt

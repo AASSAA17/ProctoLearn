@@ -10,6 +10,12 @@
     update_cache: true
   become: true
 
+- name: Check if Docker is already installed
+  ansible.builtin.command: docker --version
+  register: docker_check
+  changed_when: false
+  failed_when: false
+
 - name: Install Docker engine and compose plugin
   ansible.builtin.apt:
     name:
@@ -18,6 +24,7 @@
     state: present
     update_cache: true
   become: true
+  when: docker_check.rc != 0
 
 - name: Ensure Docker service is enabled and running
   ansible.builtin.service:

@@ -1,0 +1,54 @@
+===================================================
+  Ansible IaC Evidence
+  Date: Thu Apr 23 08:59:26 PM +05 2026
+===================================================
+
+--- Ansible Version ---
+ansible [core 2.20.5]
+  config file = None
+  configured module search path = ['/home/arsen/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
+  ansible python module location = /usr/local/lib/python3.12/dist-packages/ansible
+  ansible collection location = /home/arsen/.ansible/collections:/usr/share/ansible/collections
+  executable location = /usr/local/bin/ansible
+  python version = 3.12.3 (main, Mar 23 2026, 19:04:32) [GCC 13.3.0] (/usr/bin/python3)
+  jinja version = 3.1.2
+  pyyaml version = 6.0.1 (with libyaml v0.2.5)
+
+--- Ansible Playbook Structure ---
+---
+- name: Configure and deploy ProctoLearn infrastructure
+  hosts: proctolearn
+  gather_facts: true
+  become: true
+
+  roles:
+    - role: docker
+    - role: security
+    - role: deploy
+
+--- Ansible Roles ---
+deploy
+docker
+security
+
+--- Ansible Inventory ---
+[proctolearn]
+192.168.1.100 ansible_user=ubuntu ansible_port=2222 ansible_ssh_private_key_file=~/.ssh/id_ed25519
+
+# For running Ansible directly on this machine (local mode):
+# [proctolearn]
+# 127.0.0.1 ansible_user=arsen ansible_connection=local
+
+
+--- Ansible Syntax Check (dry-run) ---
+
+playbook: infra/ansible/playbook.yml
+
+--- Ansible CHECK mode (local) ---
+[WARNING]: Could not match supplied host pattern, ignoring: proctolearn
+
+PLAY [Configure and deploy ProctoLearn infrastructure] *************************
+skipping: no hosts matched
+
+PLAY RECAP *********************************************************************
+

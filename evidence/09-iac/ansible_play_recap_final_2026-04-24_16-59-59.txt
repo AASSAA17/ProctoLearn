@@ -1,0 +1,114 @@
+=== Ansible Local Playbook Run ===
+Дата: Fri Apr 24 04:59:59 PM +05 2026
+
+
+PLAY [Configure and deploy ProctoLearn infrastructure (local mode)] ************
+
+TASK [Gathering Facts] *********************************************************
+[WARNING]: Host '127.0.0.1' is using the discovered Python interpreter at '/usr/bin/python3.12', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [127.0.0.1]
+
+TASK [Gather system facts] *****************************************************
+ok: [127.0.0.1]
+
+TASK [Show OS information] *****************************************************
+[WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+[DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /home/arsen/IdeaProjects/ProctoLearn/infra/ansible/playbook-local.yml:22:14
+
+20     - name: Show OS information
+21       ansible.builtin.debug:
+22         msg: |
+                ^ column 14
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+ok: [127.0.0.1] => {
+    "msg": "OS: Ubuntu 24.04\nKernel: 6.17.0-22-generic\nArchitecture: x86_64\nHostname: arsen-VirtualBox\nCPU: 1 cores\nRAM: 9.7 GB\n"
+}
+
+TASK [Check Docker is installed] ***********************************************
+ok: [127.0.0.1]
+
+TASK [Show Docker version] *****************************************************
+ok: [127.0.0.1] => {
+    "msg": "Docker: Docker version 29.4.1, build 055a478"
+}
+
+TASK [Check Docker Compose is available] ***************************************
+ok: [127.0.0.1]
+
+TASK [Show Docker Compose version] *********************************************
+ok: [127.0.0.1] => {
+    "msg": "Docker Compose: Docker Compose version v5.1.3"
+}
+
+TASK [Check running containers] ************************************************
+ok: [127.0.0.1]
+
+TASK [Show running containers] *************************************************
+ok: [127.0.0.1] => {
+    "msg": [
+        "NAMES                      STATUS",
+        "proctolearn_iac_postgres   Up 2 minutes",
+        "proctolearn_iac_redis      Up 2 minutes",
+        "proctolearn_iac_minio      Up 2 minutes",
+        "proctolearn_web_dev        Up 10 minutes",
+        "proctolearn_n8n            Up 10 minutes",
+        "proctolearn_jenkins        Up 10 minutes",
+        "proctolearn_api_dev        Up 10 minutes",
+        "proctolearn_mailpit        Up 10 minutes (healthy)",
+        "proctolearn_pgadmin        Up 10 minutes",
+        "proctolearn_postgres       Up 10 minutes (healthy)",
+        "proctolearn_minio          Up 10 minutes (healthy)"
+    ]
+}
+
+TASK [Check Terraform is installed] ********************************************
+ok: [127.0.0.1]
+
+TASK [Show Terraform version] **************************************************
+ok: [127.0.0.1] => {
+    "msg": "Terraform: Terraform v1.14.9"
+}
+
+TASK [Verify project directory exists] *****************************************
+ok: [127.0.0.1]
+
+TASK [Show project status] *****************************************************
+ok: [127.0.0.1] => {
+    "msg": "ProctoLearn project directory exists: True"
+}
+
+TASK [Check UFW status] ********************************************************
+ok: [127.0.0.1]
+
+TASK [Show UFW status] *********************************************************
+ok: [127.0.0.1] => {
+    "msg": "UFW: ['Состояние: активен', '', 'В                          Действие    Из', '-                          --------    --', '80                         ALLOW       Anywhere                  ', '22                         ALLOW       Anywhere                  ', '80 (v6)                    ALLOW       Anywhere (v6)             ', '22 (v6)                    ALLOW       Anywhere (v6)             ']"
+}
+
+TASK [Check Fail2Ban status] ***************************************************
+ok: [127.0.0.1]
+
+TASK [Show Fail2Ban status] ****************************************************
+ok: [127.0.0.1] => {
+    "msg": "Fail2Ban: []"
+}
+
+TASK [Write infrastructure audit report] ***************************************
+[DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /home/arsen/IdeaProjects/ProctoLearn/infra/ansible/playbook-local.yml:102:18
+
+100         dest: /tmp/proctolearn-infra-audit.txt
+101         mode: '0644'
+102         content: |
+                     ^ column 18
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+changed: [127.0.0.1]
+
+PLAY RECAP *********************************************************************
+127.0.0.1                  : ok=18   changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+

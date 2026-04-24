@@ -1,0 +1,30 @@
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/stats, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/courses/stats, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/users, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/users/online, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/users/:id/progress, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/users/:id/reset-password, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/export/users, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/export/courses, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mModulesController {/}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/courses/:courseId/modules, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/courses/:courseId/modules, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/modules/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/modules/reorder, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/modules/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/modules/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mStepsController {/}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lessons/:lessonId/steps, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/lessons/:lessonId/steps, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/steps/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/steps/:id, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/steps/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/steps/:id/submit, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mSubmissionsController {/}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/submissions/step/:stepId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/submissions/lesson/:lessonId/progress, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/submissions/course/:courseId/progress, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[MinioService] [39m[32mMinIO: Bucket "proctolearn-evidence" already exists[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +5ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[Bootstrap] [39m[32m🚀 ProctoLearn API is running on: http://localhost:4000[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[Bootstrap] [39m[32m📚 Swagger docs: http://localhost:4000/api/docs[39m

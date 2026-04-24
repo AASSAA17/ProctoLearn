@@ -1,0 +1,19 @@
+=== Terraform files ===
+/home/arsen/IdeaProjects/ProctoLearn/infra/terraform/main.tf
+/home/arsen/IdeaProjects/ProctoLearn/infra/terraform/outputs.tf
+/home/arsen/IdeaProjects/ProctoLearn/infra/terraform/terraform.tfvars
+/home/arsen/IdeaProjects/ProctoLearn/infra/terraform/terraform.tfvars.example
+/home/arsen/IdeaProjects/ProctoLearn/infra/terraform/variables.tf
+/home/arsen/IdeaProjects/ProctoLearn/infra/terraform/versions.tf
+
+=== Ansible files ===
+/home/arsen/IdeaProjects/ProctoLearn/infra/ansible/ansible.cfg
+/home/arsen/IdeaProjects/ProctoLearn/infra/ansible/group_vars/all.yml
+/home/arsen/IdeaProjects/ProctoLearn/infra/ansible/inventory.ini
+/home/arsen/IdeaProjects/ProctoLearn/infra/ansible/playbook.yml
+/home/arsen/IdeaProjects/ProctoLearn/infra/ansible/requirements.yml
+/home/arsen/IdeaProjects/ProctoLearn/infra/ansible/roles/deploy/tasks/main.yml
+/home/arsen/IdeaProjects/ProctoLearn/infra/ansible/roles/docker/tasks/main.yml
+/home/arsen/IdeaProjects/ProctoLearn/infra/ansible/roles/security/tasks/main.yml
+/home/arsen/IdeaProjects/ProctoLearn/infra/ansible/roles/security/templates/jail.local.j2
+/home/arsen/IdeaProjects/ProctoLearn/infra/ansible/roles/security/templates/sshd-hardening.conf.j2

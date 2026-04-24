@@ -1,0 +1,289 @@
+=== Terraform APPLY Evidence ===
+Дата: Fri Apr 24 04:57:58 PM +05 2026
+
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # docker_container.minio will be created
+  + resource "docker_container" "minio" {
+      + attach                                      = false
+      + bridge                                      = (known after apply)
+      + command                                     = [
+          + "server",
+          + "/data",
+          + "--console-address",
+          + ":9001",
+        ]
+      + container_logs                              = (known after apply)
+      + container_read_refresh_timeout_milliseconds = 15000
+      + entrypoint                                  = (known after apply)
+      + env                                         = (sensitive value)
+      + exit_code                                   = (known after apply)
+      + hostname                                    = (known after apply)
+      + id                                          = (known after apply)
+      + image                                       = (known after apply)
+      + init                                        = (known after apply)
+      + ipc_mode                                    = (known after apply)
+      + log_driver                                  = (known after apply)
+      + logs                                        = false
+      + memory_reservation                          = 0
+      + must_run                                    = true
+      + name                                        = "proctolearn_iac_minio"
+      + network_data                                = (known after apply)
+      + network_mode                                = "bridge"
+      + read_only                                   = false
+      + remove_volumes                              = true
+      + restart                                     = "unless-stopped"
+      + rm                                          = false
+      + runtime                                     = (known after apply)
+      + security_opts                               = (known after apply)
+      + shm_size                                    = (known after apply)
+      + start                                       = true
+      + stdin_open                                  = false
+      + stop_signal                                 = (known after apply)
+      + stop_timeout                                = (known after apply)
+      + tty                                         = false
+      + wait                                        = false
+      + wait_timeout                                = 60
+
+      + healthcheck (known after apply)
+
+      + labels (known after apply)
+
+      + networks_advanced {
+          + aliases      = []
+          + name         = "proctolearn_iac_network"
+            # (3 unchanged attributes hidden)
+        }
+
+      + ports {
+          + external = 59000
+          + internal = 9000
+          + ip       = "0.0.0.0"
+          + protocol = "tcp"
+        }
+      + ports {
+          + external = 59001
+          + internal = 9001
+          + ip       = "0.0.0.0"
+          + protocol = "tcp"
+        }
+
+      + volumes {
+          + container_path = "/data"
+          + volume_name    = "proctolearn_iac_minio_data"
+            # (2 unchanged attributes hidden)
+        }
+    }
+
+  # docker_container.postgres will be created
+  + resource "docker_container" "postgres" {
+      + attach                                      = false
+      + bridge                                      = (known after apply)
+      + command                                     = (known after apply)
+      + container_logs                              = (known after apply)
+      + container_read_refresh_timeout_milliseconds = 15000
+      + entrypoint                                  = (known after apply)
+      + env                                         = (sensitive value)
+      + exit_code                                   = (known after apply)
+      + hostname                                    = (known after apply)
+      + id                                          = (known after apply)
+      + image                                       = (known after apply)
+      + init                                        = (known after apply)
+      + ipc_mode                                    = (known after apply)
+      + log_driver                                  = (known after apply)
+      + logs                                        = false
+      + memory_reservation                          = 0
+      + must_run                                    = true
+      + name                                        = "proctolearn_iac_postgres"
+      + network_data                                = (known after apply)
+      + network_mode                                = "bridge"
+      + read_only                                   = false
+      + remove_volumes                              = true
+      + restart                                     = "unless-stopped"
+      + rm                                          = false
+      + runtime                                     = (known after apply)
+      + security_opts                               = (known after apply)
+      + shm_size                                    = (known after apply)
+      + start                                       = true
+      + stdin_open                                  = false
+      + stop_signal                                 = (known after apply)
+      + stop_timeout                                = (known after apply)
+      + tty                                         = false
+      + wait                                        = false
+      + wait_timeout                                = 60
+
+      + healthcheck (known after apply)
+
+      + labels (known after apply)
+
+      + networks_advanced {
+          + aliases      = []
+          + name         = "proctolearn_iac_network"
+            # (3 unchanged attributes hidden)
+        }
+
+      + ports {
+          + external = 55432
+          + internal = 5432
+          + ip       = "0.0.0.0"
+          + protocol = "tcp"
+        }
+
+      + volumes {
+          + container_path = "/var/lib/postgresql/data"
+          + volume_name    = "proctolearn_iac_postgres_data"
+            # (2 unchanged attributes hidden)
+        }
+    }
+
+  # docker_container.redis will be created
+  + resource "docker_container" "redis" {
+      + attach                                      = false
+      + bridge                                      = (known after apply)
+      + command                                     = (known after apply)
+      + container_logs                              = (known after apply)
+      + container_read_refresh_timeout_milliseconds = 15000
+      + entrypoint                                  = (known after apply)
+      + env                                         = (known after apply)
+      + exit_code                                   = (known after apply)
+      + hostname                                    = (known after apply)
+      + id                                          = (known after apply)
+      + image                                       = (known after apply)
+      + init                                        = (known after apply)
+      + ipc_mode                                    = (known after apply)
+      + log_driver                                  = (known after apply)
+      + logs                                        = false
+      + memory_reservation                          = 0
+      + must_run                                    = true
+      + name                                        = "proctolearn_iac_redis"
+      + network_data                                = (known after apply)
+      + network_mode                                = "bridge"
+      + read_only                                   = false
+      + remove_volumes                              = true
+      + restart                                     = "unless-stopped"
+      + rm                                          = false
+      + runtime                                     = (known after apply)
+      + security_opts                               = (known after apply)
+      + shm_size                                    = (known after apply)
+      + start                                       = true
+      + stdin_open                                  = false
+      + stop_signal                                 = (known after apply)
+      + stop_timeout                                = (known after apply)
+      + tty                                         = false
+      + wait                                        = false
+      + wait_timeout                                = 60
+
+      + healthcheck (known after apply)
+
+      + labels (known after apply)
+
+      + networks_advanced {
+          + aliases      = []
+          + name         = "proctolearn_iac_network"
+            # (3 unchanged attributes hidden)
+        }
+
+      + ports {
+          + external = 56379
+          + internal = 6379
+          + ip       = "0.0.0.0"
+          + protocol = "tcp"
+        }
+    }
+
+  # docker_image.minio will be created
+  + resource "docker_image" "minio" {
+      + id          = (known after apply)
+      + image_id    = (known after apply)
+      + name        = "minio/minio:latest"
+      + repo_digest = (known after apply)
+    }
+
+  # docker_image.postgres will be created
+  + resource "docker_image" "postgres" {
+      + id          = (known after apply)
+      + image_id    = (known after apply)
+      + name        = "postgres:16-alpine"
+      + repo_digest = (known after apply)
+    }
+
+  # docker_image.redis will be created
+  + resource "docker_image" "redis" {
+      + id          = (known after apply)
+      + image_id    = (known after apply)
+      + name        = "redis:7-alpine"
+      + repo_digest = (known after apply)
+    }
+
+  # docker_network.proctolearn will be created
+  + resource "docker_network" "proctolearn" {
+      + driver      = (known after apply)
+      + id          = (known after apply)
+      + internal    = (known after apply)
+      + ipam_driver = "default"
+      + name        = "proctolearn_iac_network"
+      + options     = (known after apply)
+      + scope       = (known after apply)
+
+      + ipam_config (known after apply)
+    }
+
+  # docker_volume.minio_data will be created
+  + resource "docker_volume" "minio_data" {
+      + driver     = (known after apply)
+      + id         = (known after apply)
+      + mountpoint = (known after apply)
+      + name       = "proctolearn_iac_minio_data"
+    }
+
+  # docker_volume.postgres_data will be created
+  + resource "docker_volume" "postgres_data" {
+      + driver     = (known after apply)
+      + id         = (known after apply)
+      + mountpoint = (known after apply)
+      + name       = "proctolearn_iac_postgres_data"
+    }
+
+Plan: 9 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  + minio_endpoints     = {
+      + api     = "http://localhost:59000"
+      + console = "http://localhost:59001"
+    }
+  + postgres_connection = "postgresql://postgres:***@localhost:55432/proctolearn_db"
+  + redis_endpoint      = "localhost:56379"
+docker_volume.postgres_data: Creating...
+docker_network.proctolearn: Creating...
+docker_volume.minio_data: Creating...
+docker_image.minio: Creating...
+docker_image.redis: Creating...
+docker_image.postgres: Creating...
+docker_volume.postgres_data: Creation complete after 1s [id=proctolearn_iac_postgres_data]
+docker_volume.minio_data: Creation complete after 1s [id=proctolearn_iac_minio_data]
+docker_image.minio: Creation complete after 2s [id=sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936eminio/minio:latest]
+docker_image.postgres: Creation complete after 2s [id=sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50postgres:16-alpine]
+docker_image.redis: Creation complete after 2s [id=sha256:7aec734b2bb298a1d769fd8729f13b8514a41bf90fcdd1f38ec52267fbaa8ee6redis:7-alpine]
+docker_network.proctolearn: Creation complete after 3s [id=50ac52e8b4e64726ab2c0cd2c04d2f25f89d201db5d58489ef3373c6840198f8]
+docker_container.postgres: Creating...
+docker_container.redis: Creating...
+docker_container.minio: Creating...
+docker_container.postgres: Creation complete after 3s [id=d9a899e320662512ea7dd70fda7ba9845bf45f077f5fa69de87b5ecad3a38384]
+docker_container.minio: Creation complete after 3s [id=fd52d0a506481781ea78bce720c593dc87151f9ae4e95fe45aee9e65a769124c]
+docker_container.redis: Creation complete after 4s [id=0f7d443300dd0dc8d019e9db3067a15189e534a646d6a56778a8fcc598ac85ff]
+
+Apply complete! Resources: 9 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+minio_endpoints = {
+  "api" = "http://localhost:59000"
+  "console" = "http://localhost:59001"
+}
+postgres_connection = "postgresql://postgres:***@localhost:55432/proctolearn_db"
+redis_endpoint = "localhost:56379"

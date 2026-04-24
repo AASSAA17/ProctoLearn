@@ -1,0 +1,8 @@
+               hba_file               
+--------------------------------------
+ /var/lib/postgresql/data/pg_hba.conf
+(1 row)
+
+ERROR:  column "user" does not exist
+LINE 1: SELECT type, database, "user", address, method 
+                               ^

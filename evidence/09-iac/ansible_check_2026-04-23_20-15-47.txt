@@ -1,0 +1,43 @@
+=== ansible version ===
+ansible [core 2.20.5]
+  config file = None
+  configured module search path = ['/home/arsen/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
+  ansible python module location = /usr/local/lib/python3.12/dist-packages/ansible
+  ansible collection location = /home/arsen/.ansible/collections:/usr/share/ansible/collections
+  executable location = /usr/local/bin/ansible
+  python version = 3.12.3 (main, Mar 23 2026, 19:04:32) [GCC 13.3.0] (/usr/bin/python3)
+  jinja version = 3.1.2
+  pyyaml version = 6.0.1 (with libyaml v0.2.5)
+
+=== ansible syntax check ===
+
+playbook: infra/ansible/playbook.yml
+
+=== ansible-lint check ===
+[2mWARNING  Listing 6 violation(s) that are fatal[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/no-changed-when/\no-changed-when]8;;\[0m[2m:[0m [31mCommands should not change things if nothing needs doing.[0m
+[35minfra/ansible/roles/deploy/tasks/main.yml[0m:42 [2mTask/Handler: Start application stack[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/no-changed-when/\no-changed-when]8;;\[0m[2m:[0m [31mCommands should not change things if nothing needs doing.[0m
+[35minfra/ansible/roles/deploy/tasks/main.yml[0m:48 [2mTask/Handler: Start monitoring stack[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/var-naming/\var-naming[no-role-prefix]]8;;\[0m[2m:[0m [31mVariables names from within roles should use security_ as a prefix. (register: ssh_audit)[0m
+[35minfra/ansible/roles/security/tasks/main.yml[0m:70:13 [2mTask/Handler: Collect SSH effective settings for audit[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/var-naming/\var-naming[no-role-prefix]]8;;\[0m[2m:[0m [31mVariables names from within roles should use security_ as a prefix. (register: ufw_audit)[0m
+[35minfra/ansible/roles/security/tasks/main.yml[0m:80:13 [2mTask/Handler: Collect UFW status for audit[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/var-naming/\var-naming[no-role-prefix]]8;;\[0m[2m:[0m [31mVariables names from within roles should use security_ as a prefix. (register: fail2ban_summary)[0m
+[35minfra/ansible/roles/security/tasks/main.yml[0m:86:13 [2mTask/Handler: Collect Fail2Ban summary for audit[0m
+[0m
+[31m[34m]8;;https://docs.ansible.com/projects/lint/rules/var-naming/\var-naming[no-role-prefix]]8;;\[0m[2m:[0m [31mVariables names from within roles should use security_ as a prefix. (register: fail2ban_sshd)[0m
+[35minfra/ansible/roles/security/tasks/main.yml[0m:92:13 [2mTask/Handler: Collect Fail2Ban SSH jail status for audit[0m
+[0m
+Read [34m]8;;https://docs.ansible.com/projects/lint/configuring/#ignoring-rules-for-entire-files\documentation]8;;\[0m for instructions on how to ignore specific rule violations.
+
+# Rule Violation Summary
+
+  4 [34m]8;;https://docs.ansible.com/projects/lint/rules/\var-naming]8;;\[0m [2mprofile:basic tags:idiom[0m
+  2 [34m]8;;https://docs.ansible.com/projects/lint/rules/\no-changed-when]8;;\[0m [2mprofile:basic tags:command-shell,idempotency[0m
+
+[31m[1mFailed[0m[0m: 6 failure(s), 0 warning(s) in 4 files processed of 4 encountered. Last profile that met the validation criteria was 'min'.

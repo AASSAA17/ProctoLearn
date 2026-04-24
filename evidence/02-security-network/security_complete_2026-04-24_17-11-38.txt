@@ -1,0 +1,52 @@
+=== Security Complete Evidence ===
+Дата: Fri Apr 24 05:11:41 PM +05 2026
+
+--- SSH hardening config (Port 2222, no root, key-based) ---
+# ProctoLearn SSH Hardening Configuration
+# Added by Ansible role: security (playbook-local.yml)
+Port 2222
+PermitRootLogin no
+PubkeyAuthentication yes
+MaxAuthTries 3
+ClientAliveInterval 300
+ClientAliveCountMax 2
+X11Forwarding no
+
+--- UFW status verbose ---
+Состояние: активен
+Журналирование: on (low)
+По умолчанию: deny (входящие), allow (исходящие), deny (маршрутизированные)
+Новые профили: skip
+
+В                          Действие    Из
+-                          --------    --
+80                         ALLOW IN    Anywhere                  
+22                         ALLOW IN    Anywhere                  
+2222/tcp                   ALLOW IN    Anywhere                  
+4000/tcp                   ALLOW IN    Anywhere                  
+3001/tcp                   ALLOW IN    Anywhere                  
+80 (v6)                    ALLOW IN    Anywhere (v6)             
+22 (v6)                    ALLOW IN    Anywhere (v6)             
+2222/tcp (v6)              ALLOW IN    Anywhere (v6)             
+4000/tcp (v6)              ALLOW IN    Anywhere (v6)             
+3001/tcp (v6)              ALLOW IN    Anywhere (v6)             
+
+
+--- Fail2Ban status ---
+Status
+|- Number of jail:	1
+`- Jail list:	sshd
+
+--- Fail2Ban sshd jail ---
+Status for the jail: sshd
+|- Filter
+|  |- Currently failed:	0
+|  |- Total failed:	0
+|  `- Journal matches:	_SYSTEMD_UNIT=sshd.service + _COMM=sshd
+`- Actions
+   |- Currently banned:	0
+   |- Total banned:	0
+   `- Banned IP list:	
+
+--- SSH service ---
+inactive

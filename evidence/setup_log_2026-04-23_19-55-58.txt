@@ -1,0 +1,48 @@
+================================================
+ ProctoLearn Evidence Collection — 2026-04-23_19-55-58
+================================================
+
+[1/9] OS
+[0;32m✅  Module 1 — OS info captured → evidence/01-os/os_info_2026-04-23_19-55-58.txt[0m
+
+[2/9] Security / Network
+[0;32m✅  Module 2 — Security audit captured[0m
+[0;32m✅  Module 2 — Ansible command hint saved[0m
+
+[3/9] Database
+[1;33m⚠️   Module 3 — postgres container not running; start with: docker compose -f docker-compose.dev.yml up -d[0m
+
+[4/9] Application
+[0;32m✅  Module 4 — App status captured[0m
+
+[5/9] Docker
+[0;32m✅  Module 5 — Docker status captured[0m
+
+[6/9] Git
+[0;32m✅  Module 6 — Git history captured[0m
+
+[7/9] Observability
+[0;32m✅  Module 7 — Observability status captured[0m
+[0;32m✅  Module 7 — Alert configs copied[0m
+
+[8/9] AI Layer
+[0;32m✅  Module 8 — AI layer status captured[0m
+
+[9/9] IaC
+[1;33m⚠️   Module 9 — terraform not installed. Install with: scripts/install-tools.sh[0m
+[1;33m⚠️   Module 9 — ansible not installed. Install with: pip install ansible[0m
+[0;32m✅  Module 9 — IaC file inventory captured[0m
+
+================================================
+ Evidence collection complete!
+ Saved to: /home/arsen/IdeaProjects/ProctoLearn/evidence
+================================================
+
+Next steps:
+  1. Install Docker:       bash scripts/install-docker.sh
+  2. Start dev stack:      docker compose -f docker-compose.dev.yml up -d
+  3. Run DB evidence:      bash scripts/collect-db-evidence.sh
+  4. Set Telegram token:   edit monitoring-project/.env → TELEGRAM_BOT_TOKEN
+  5. Start monitoring:     cd monitoring-project && docker compose up -d
+  6. Install Terraform:    bash scripts/install-tools.sh
+  7. Commit all changes:   git add -A && git commit -m 'feat: add evidence and fix configs'

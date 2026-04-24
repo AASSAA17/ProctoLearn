@@ -1,0 +1,55 @@
+=== МОДУЛЬ 2: Security Evidence ===
+Дата: Fri Apr 24 05:09:59 PM +05 2026
+
+--- UFW status verbose ---
+Состояние: активен
+Журналирование: on (low)
+По умолчанию: deny (входящие), allow (исходящие), deny (маршрутизированные)
+Новые профили: skip
+
+В                          Действие    Из
+-                          --------    --
+80                         ALLOW IN    Anywhere                  
+22                         ALLOW IN    Anywhere                  
+80 (v6)                    ALLOW IN    Anywhere (v6)             
+22 (v6)                    ALLOW IN    Anywhere (v6)             
+
+
+--- SSH config ---
+
+--- Fail2Ban status ---
+fail2ban: status check
+
+--- SSH port check ---
+
+--- Firewall rules summary ---
+Chain INPUT (policy DROP)
+num  target     prot opt source               destination         
+1    ufw-before-logging-input  all  --  anywhere             anywhere            
+2    ufw-before-input  all  --  anywhere             anywhere            
+3    ufw-after-input  all  --  anywhere             anywhere            
+4    ufw-after-logging-input  all  --  anywhere             anywhere            
+5    ufw-reject-input  all  --  anywhere             anywhere            
+6    ufw-track-input  all  --  anywhere             anywhere            
+
+Chain FORWARD (policy DROP)
+num  target     prot opt source               destination         
+1    DOCKER-USER  all  --  anywhere             anywhere            
+2    DOCKER-FORWARD  all  --  anywhere             anywhere            
+3    ufw-before-logging-forward  all  --  anywhere             anywhere            
+4    ufw-before-forward  all  --  anywhere             anywhere            
+5    ufw-after-forward  all  --  anywhere             anywhere            
+6    ufw-after-logging-forward  all  --  anywhere             anywhere            
+7    ufw-reject-forward  all  --  anywhere             anywhere            
+8    ufw-track-forward  all  --  anywhere             anywhere            
+
+Chain OUTPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+1    ufw-before-logging-output  all  --  anywhere             anywhere            
+2    ufw-before-output  all  --  anywhere             anywhere            
+3    ufw-after-output  all  --  anywhere             anywhere            
+4    ufw-after-logging-output  all  --  anywhere             anywhere            
+5    ufw-reject-output  all  --  anywhere             anywhere            
+6    ufw-track-output  all  --  anywhere             anywhere            
+
+Chain DOCKER (5 references)

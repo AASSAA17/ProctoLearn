@@ -1,0 +1,80 @@
+=== SSH service status ===
+SSH not running
+
+=== SSH effective settings ===
+Cannot read sshd -T (need sudo)
+
+=== UFW status ===
+Status: active
+Logging: on (low)
+Default: deny (incoming), allow (outgoing), disabled (routed)
+New profiles: skip
+
+To                         Action      From
+--                         ------      ----
+80                         ALLOW IN    Anywhere                  
+22                         ALLOW IN    Anywhere                  
+80 (v6)                    ALLOW IN    Anywhere (v6)             
+22 (v6)                    ALLOW IN    Anywhere (v6)             
+
+
+=== Fail2Ban status ===
+Fail2Ban not installed
+
+=== Fail2Ban sshd jail ===
+Fail2Ban sshd not configured
+
+=== Listening ports ===
+State  Recv-Q Send-Q      Local Address:Port  Peer Address:PortProcess                                
+LISTEN 0      1024            127.0.0.1:6188       0.0.0.0:*    users:(("cef_server",pid=11993,fd=82))
+LISTEN 0      4096           127.0.0.54:53         0.0.0.0:*                                          
+LISTEN 0      4096            127.0.0.1:631        0.0.0.0:*                                          
+LISTEN 0      4096        127.0.0.53%lo:53         0.0.0.0:*                                          
+LISTEN 0      4096   [::ffff:127.0.0.1]:40459            *:*    users:(("idea",pid=11814,fd=344))     
+LISTEN 0      511    [::ffff:127.0.0.1]:64442            *:*    users:(("idea",pid=11814,fd=347))     
+LISTEN 0      50     [::ffff:127.0.0.1]:6189             *:*    users:(("idea",pid=11814,fd=293))     
+LISTEN 0      4096   [::ffff:127.0.0.1]:63342            *:*    users:(("idea",pid=11814,fd=81))      
+LISTEN 0      4096                [::1]:631           [::]:*                                          
+
+=== Firewall rules (iptables) ===
+Chain INPUT (policy DROP)
+num  target     prot opt source               destination         
+1    ufw-before-logging-input  0    --  0.0.0.0/0            0.0.0.0/0           
+2    ufw-before-input  0    --  0.0.0.0/0            0.0.0.0/0           
+3    ufw-after-input  0    --  0.0.0.0/0            0.0.0.0/0           
+4    ufw-after-logging-input  0    --  0.0.0.0/0            0.0.0.0/0           
+5    ufw-reject-input  0    --  0.0.0.0/0            0.0.0.0/0           
+6    ufw-track-input  0    --  0.0.0.0/0            0.0.0.0/0           
+
+Chain FORWARD (policy DROP)
+num  target     prot opt source               destination         
+1    ufw-before-logging-forward  0    --  0.0.0.0/0            0.0.0.0/0           
+2    ufw-before-forward  0    --  0.0.0.0/0            0.0.0.0/0           
+3    ufw-after-forward  0    --  0.0.0.0/0            0.0.0.0/0           
+4    ufw-after-logging-forward  0    --  0.0.0.0/0            0.0.0.0/0           
+5    ufw-reject-forward  0    --  0.0.0.0/0            0.0.0.0/0           
+6    ufw-track-forward  0    --  0.0.0.0/0            0.0.0.0/0           
+
+Chain OUTPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+1    ufw-before-logging-output  0    --  0.0.0.0/0            0.0.0.0/0           
+2    ufw-before-output  0    --  0.0.0.0/0            0.0.0.0/0           
+3    ufw-after-output  0    --  0.0.0.0/0            0.0.0.0/0           
+4    ufw-after-logging-output  0    --  0.0.0.0/0            0.0.0.0/0           
+5    ufw-reject-output  0    --  0.0.0.0/0            0.0.0.0/0           
+6    ufw-track-output  0    --  0.0.0.0/0            0.0.0.0/0           
+
+Chain ufw-after-forward (1 references)
+num  target     prot opt source               destination         
+
+Chain ufw-after-input (1 references)
+num  target     prot opt source               destination         
+1    ufw-skip-to-policy-input  17   --  0.0.0.0/0            0.0.0.0/0            udp dpt:137
+2    ufw-skip-to-policy-input  17   --  0.0.0.0/0            0.0.0.0/0            udp dpt:138
+3    ufw-skip-to-policy-input  6    --  0.0.0.0/0            0.0.0.0/0            tcp dpt:139
+4    ufw-skip-to-policy-input  6    --  0.0.0.0/0            0.0.0.0/0            tcp dpt:445
+5    ufw-skip-to-policy-input  17   --  0.0.0.0/0            0.0.0.0/0            udp dpt:67
+6    ufw-skip-to-policy-input  17   --  0.0.0.0/0            0.0.0.0/0            udp dpt:68
+7    ufw-skip-to-policy-input  0    --  0.0.0.0/0            0.0.0.0/0            ADDRTYPE match dst-type BROADCAST
+
+Cannot read iptables

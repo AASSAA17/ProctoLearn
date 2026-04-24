@@ -1,0 +1,13 @@
+=== ProctoLearn App Health Check ===
+Date: Thu Apr 23 08:56:37 PM +05 2026
+
+--- Frontend (port 3001) ---
+HTTP Status: 200
+
+--- Backend API (port 4000) ---
+{"message":"Cannot GET /api/health","error":"Not Found","statusCode":404}
+--- API Swagger ---
+Swagger HTTP Status: 404
+
+--- Courses endpoint ---
+HTTP Status: 404

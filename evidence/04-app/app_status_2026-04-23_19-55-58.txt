@@ -1,0 +1,8 @@
+=== API health check ===
+API not reachable at localhost:4000
+
+=== Swagger/OpenAPI spec ping ===
+Swagger not reachable
+
+=== Frontend ping ===
+Frontend not reachable

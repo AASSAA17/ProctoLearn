@@ -1,0 +1,33 @@
+=== Monitoring Stack Evidence ===
+Дата: Fri Apr 24 05:07:51 PM +05 2026
+
+--- Статус контейнеров monitoring ---
+NAME                      IMAGE                                                   COMMAND                  SERVICE             CREATED          STATUS                             PORTS
+alertmanager              prom/alertmanager:latest                                "/bin/alertmanager -…"   alertmanager        34 seconds ago   Up 2 seconds                       0.0.0.0:9093->9093/tcp, [::]:9093->9093/tcp
+blackbox_exporter         prom/blackbox-exporter:latest                           "/bin/blackbox_expor…"   blackbox_exporter   34 seconds ago   Up 23 seconds                      0.0.0.0:9115->9115/tcp, [::]:9115->9115/tcp
+cadvisor                  gcr.io/cadvisor/cadvisor:latest                         "/usr/bin/cadvisor -…"   cadvisor            34 seconds ago   Up 23 seconds (health: starting)   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp
+grafana                   grafana/grafana-oss:11.1.4                              "/run.sh"                grafana             30 seconds ago   Up 10 seconds                      0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+graphite                  graphiteapp/graphite-statsd:1.1.10-5                    "/entrypoint"            graphite            34 seconds ago   Up 23 seconds                      2004/tcp, 2013-2014/tcp, 2023-2024/tcp, 8080/tcp, 0.0.0.0:2003->2003/tcp, [::]:2003->2003/tcp, 8125-8126/tcp, 0.0.0.0:8125->8125/udp, [::]:8125->8125/udp, 0.0.0.0:8085->80/tcp, [::]:8085->80/tcp
+monitoring_nginx          nginx:latest                                            "/docker-entrypoint.…"   nginx               34 seconds ago   Up 23 seconds                      0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp
+monitoring_pgadmin        dpage/pgadmin4:8                                        "/entrypoint.sh"         pgadmin             31 seconds ago   Restarting (1) 3 seconds ago       
+monitoring_telegram_bot   monitoring-project-telegram_bot                         "python bot.py"          telegram_bot        30 seconds ago   Up 10 seconds                      
+nagios                    jasonrivers/nagios:latest                               "/usr/local/bin/star…"   nagios              34 seconds ago   Up 23 seconds                      5667/tcp, 0.0.0.0:8084->80/tcp, [::]:8084->80/tcp
+nginx_exporter            nginx/nginx-prometheus-exporter:latest                  "/usr/bin/nginx-prom…"   nginx_exporter      31 seconds ago   Up 19 seconds                      0.0.0.0:9113->9113/tcp, [::]:9113->9113/tcp
+node_exporter             prom/node-exporter:v1.8.2                               "/bin/node_exporter"     node_exporter       34 seconds ago   Up 23 seconds                      0.0.0.0:9100->9100/tcp, [::]:9100->9100/tcp
+portainer                 portainer/portainer-ce:latest                           "/portainer"             portainer           34 seconds ago   Up 23 seconds                      8000/tcp, 0.0.0.0:9443->9443/tcp, [::]:9443->9443/tcp, 0.0.0.0:9002->9000/tcp, [::]:9002->9000/tcp
+postgres_exporter         quay.io/prometheuscommunity/postgres-exporter:v0.15.0   "/bin/postgres_expor…"   postgres_exporter   31 seconds ago   Up 22 seconds                      0.0.0.0:9187->9187/tcp, [::]:9187->9187/tcp
+prometheus                prom/prometheus:v2.54.1                                 "/bin/prometheus --c…"   prometheus          30 seconds ago   Up 13 seconds                      0.0.0.0:9090->9090/tcp, [::]:9090->9090/tcp
+zabbix_agent              zabbix/zabbix-agent2:alpine-7.0-latest                  "/usr/bin/docker-ent…"   zabbix_agent        30 seconds ago   Up 18 seconds                      0.0.0.0:10050->10050/tcp, [::]:10050->10050/tcp, 31999/tcp
+zabbix_pgsql              postgres:16-alpine                                      "docker-entrypoint.s…"   zabbix_pgsql        34 seconds ago   Up 23 seconds                      5432/tcp
+zabbix_server             zabbix/zabbix-server-pgsql:alpine-7.0-latest            "/usr/bin/docker-ent…"   zabbix_server       31 seconds ago   Up 22 seconds                      0.0.0.0:10051->10051/tcp, [::]:10051->10051/tcp
+zabbix_web                zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest         "docker-entrypoint.sh"   zabbix_web          30 seconds ago   Up 18 seconds (health: starting)   8443/tcp, 0.0.0.0:8082->8080/tcp, [::]:8082->8080/tcp
+
+--- Prometheus health ---
+Prometheus Server is Healthy.
+
+
+--- Grafana health ---
+Grafana недоступна - проверяю порты
+
+--- Alertmanager health ---
+Alertmanager недоступен

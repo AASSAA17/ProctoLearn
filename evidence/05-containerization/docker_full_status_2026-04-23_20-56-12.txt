@@ -1,0 +1,34 @@
+=== ProctoLearn Docker Status ===
+Date: Thu Apr 23 08:56:12 PM +05 2026
+
+--- All Running Containers ---
+NAMES                     IMAGE                         STATUS                    PORTS
+proctolearn_web_dev       proctolearn-web               Up 14 minutes             0.0.0.0:3001->3000/tcp, [::]:3001->3000/tcp
+proctolearn_opal_client   permitio/opal-client:latest   Up 14 minutes             7000/tcp, 8181/tcp
+proctolearn_opal_server   permitio/opal-server:latest   Up 14 minutes             0.0.0.0:7002->7002/tcp, [::]:7002->7002/tcp
+proctolearn_n8n           n8nio/n8n:latest              Up 14 minutes             0.0.0.0:5678->5678/tcp, [::]:5678->5678/tcp
+proctolearn_opal_redis    redis:7-alpine                Up 14 minutes             0.0.0.0:6380->6379/tcp, [::]:6380->6379/tcp
+proctolearn_jenkins       proctolearn-jenkins           Up 14 minutes             0.0.0.0:50000->50000/tcp, [::]:50000->50000/tcp, 0.0.0.0:8088->8080/tcp, [::]:8088->8080/tcp
+proctolearn_api_dev       proctolearn-api               Up 14 minutes             0.0.0.0:4000->4000/tcp, [::]:4000->4000/tcp
+proctolearn_mailpit       axllent/mailpit:latest        Up 14 minutes (healthy)   0.0.0.0:1025->1025/tcp, [::]:1025->1025/tcp, 0.0.0.0:8025->8025/tcp, [::]:8025->8025/tcp, 1110/tcp
+proctolearn_opa           openpolicyagent/opa:0.68.0    Up 14 minutes             0.0.0.0:8181->8181/tcp, [::]:8181->8181/tcp
+proctolearn_pgadmin       dpage/pgadmin4:latest         Up 53 minutes             443/tcp, 0.0.0.0:5050->80/tcp, [::]:5050->80/tcp
+proctolearn_postgres      postgres:16-alpine            Up 54 minutes (healthy)   0.0.0.0:5433->5432/tcp, [::]:5433->5432/tcp
+proctolearn_minio         minio/minio:latest            Up 54 minutes (healthy)   0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp
+
+--- Container Health Details ---
+proctolearn_web_dev: Up 14 minutes
+proctolearn_opal_client: Up 14 minutes
+proctolearn_opal_server: Up 14 minutes
+proctolearn_n8n: Up 14 minutes
+proctolearn_opal_redis: Up 14 minutes
+proctolearn_jenkins: Up 14 minutes
+proctolearn_api_dev: Up 14 minutes
+proctolearn_mailpit: Up 14 minutes (healthy)
+proctolearn_opa: Up 14 minutes
+proctolearn_pgadmin: Up 53 minutes
+proctolearn_postgres: Up 54 minutes (healthy)
+proctolearn_minio: Up 54 minutes (healthy)
+
+--- Networks ---
+4baf39843f58   proctolearn_default   bridge    local

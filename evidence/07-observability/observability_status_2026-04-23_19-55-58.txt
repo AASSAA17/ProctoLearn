@@ -1,0 +1,14 @@
+=== Monitoring stack compose config ===
+Cannot read compose config
+
+=== Prometheus health ===
+Prometheus not running
+
+=== Alertmanager health ===
+Alertmanager not running
+
+=== Grafana health ===
+Grafana not running
+
+=== Node Exporter metrics (sample) ===
+Node Exporter not running

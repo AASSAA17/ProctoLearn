@@ -1,0 +1,26 @@
+                  List of relations
+ Schema |         Name          | Type  |    Owner    
+--------+-----------------------+-------+-------------
+ public | answers               | table | proctolearn
+ public | attempts              | table | proctolearn
+ public | certificates          | table | proctolearn
+ public | course_modules        | table | proctolearn
+ public | courses               | table | proctolearn
+ public | enrollments           | table | proctolearn
+ public | evidence_files        | table | proctolearn
+ public | exams                 | table | proctolearn
+ public | lesson_progress       | table | proctolearn
+ public | lessons               | table | proctolearn
+ public | password_reset_tokens | table | proctolearn
+ public | proctor_events        | table | proctolearn
+ public | questions             | table | proctolearn
+ public | steps                 | table | proctolearn
+ public | submissions           | table | proctolearn
+ public | users                 | table | proctolearn
+(16 rows)
+
+ total_tables 
+--------------
+           16
+(1 row)
+

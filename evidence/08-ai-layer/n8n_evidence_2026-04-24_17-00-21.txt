@@ -1,0 +1,19 @@
+=== n8n Workflow Evidence ===
+Дата: Fri Apr 24 05:00:21 PM +05 2026
+
+--- n8n доступен ---
+HTTP Status: 200
+
+--- n8n health ---
+{"status":"ok"}
+--- n8n API check ---
+{"message":"'X-N8N-API-KEY' header required"}
+--- Workflow файлы ---
+итого 16
+drwxrwxr-x 2 arsen arsen 4096 Apr 23 17:11 .
+drwxrwxr-x 3 arsen arsen 4096 Apr 23 17:11 ..
+-rw-rw-r-- 1 arsen arsen 5434 Apr 23 17:11 exam-submit-notify.json
+
+Workflow name: ProctoLearn - Exam Submit Notifications
+Nodes: 7
+Node types: ['n8n-nodes-base.webhook', 'n8n-nodes-base.if', 'n8n-nodes-base.emailSend', 'n8n-nodes-base.if', 'n8n-nodes-base.emailSend', 'n8n-nodes-base.respondToWebhook', 'n8n-nodes-base.respondToWebhook']

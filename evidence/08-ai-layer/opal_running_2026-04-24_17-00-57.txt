@@ -1,0 +1,22 @@
+=== OPAL/OPA Running Evidence ===
+Дата: Fri Apr 24 05:01:11 PM +05 2026
+
+--- docker compose ps ---
+NAME                      IMAGE                         COMMAND                  SERVICE       CREATED          STATUS         PORTS
+proctolearn_opa           openpolicyagent/opa:0.68.0    "/opa run --server -…"   opa           11 seconds ago   Up 9 seconds   0.0.0.0:8181->8181/tcp, [::]:8181->8181/tcp
+proctolearn_opal_client   permitio/opal-client:latest   "./start.sh"             opal_client   10 seconds ago   Up 8 seconds   7000/tcp, 8181/tcp
+proctolearn_opal_redis    redis:7-alpine                "docker-entrypoint.s…"   opal_redis    11 seconds ago   Up 9 seconds   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+proctolearn_opal_server   permitio/opal-server:latest   "./start.sh"             opal_server   10 seconds ago   Up 9 seconds   0.0.0.0:7002->7002/tcp, [::]:7002->7002/tcp
+
+--- OPA health ---
+{}
+
+
+--- OPA версия ---
+Version: 0.68.0
+Build Commit: db53d77c482676fadd53bc67a10cf75b3d0ce00b
+Build Timestamp: 2024-08-29T15:23:19Z
+Build Hostname: 500d7a9b7492
+Go Version: go1.22.5
+Platform: linux/amd64
+WebAssembly: available

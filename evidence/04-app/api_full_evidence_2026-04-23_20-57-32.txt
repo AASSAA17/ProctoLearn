@@ -1,0 +1,32 @@
+===================================================
+  ProctoLearn Application Evidence
+  Date: Thu Apr 23 08:57:32 PM +05 2026
+===================================================
+
+--- Health Check (GET /health) ---
+{"status":"ok"}
+
+--- Courses API (GET /courses) - returns 137 courses ---
+Total courses: 137, Pages: 46
+  - TypeScript: компиляторный API и метапрограммирование (BEGINNER)
+  - Основы UI/UX для разработчиков (BEGINNER)
+  - Ата-ана мектебі (BEGINNER)
+
+--- Users count from database ---
+  role   | count 
+---------+-------
+ STUDENT |  1000
+ TEACHER |    50
+ PROCTOR |    50
+ ADMIN   |    10
+(4 rows)
+
+
+--- Exams endpoint ---
+GET /exams HTTP Status: 404
+
+--- Frontend accessible ---
+Frontend (port 3001) HTTP Status: 200
+
+--- pgAdmin accessible ---
+pgAdmin (port 5050) HTTP Status: 302

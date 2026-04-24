@@ -75,14 +75,10 @@ services:
       - monitoring
 
   alertmanager:
-    image: prom/alertmanager:latest
+    image: prom/alertmanager:v0.27.0
     container_name: alertmanager
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
-      - "--config.expand-env"
-    environment:
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-0}
     ports:
       - "9093:9093"
     volumes:

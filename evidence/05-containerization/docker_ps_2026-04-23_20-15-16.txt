@@ -1,0 +1,4 @@
+NAMES                  STATUS                    PORTS
+proctolearn_pgadmin    Up 13 minutes             443/tcp, 0.0.0.0:5050->80/tcp, [::]:5050->80/tcp
+proctolearn_postgres   Up 13 minutes (healthy)   0.0.0.0:5433->5432/tcp, [::]:5433->5432/tcp
+proctolearn_minio      Up 13 minutes (healthy)   0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp

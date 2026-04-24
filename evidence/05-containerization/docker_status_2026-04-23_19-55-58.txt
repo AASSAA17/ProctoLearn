@@ -1,0 +1,14 @@
+=== docker version ===
+Docker not installed
+
+=== docker ps ===
+Docker not running
+
+=== docker compose ps (dev stack) ===
+Dev stack not up
+
+=== docker compose ps (main stack) ===
+Main stack not up
+
+=== API container logs (last 20) ===
+API container not running
