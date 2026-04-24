@@ -135,9 +135,23 @@ export class LessonsService {
     }
 
     const normalize = (s: string) =>
-      s.trim().toLowerCase().replace(/\s+/g, ' ').replace(/[;"']/g, '');
+      s.trim().toLowerCase().replace(/\s+/g, ' ').replace(/[;"'.,!?]/g, '');
 
-    const correct = normalize(userAnswer) === normalize(lesson.assignmentAnswer);
+    const normalizedAnswer = normalize(userAnswer);
+    const expectedRaw = lesson.assignmentAnswer;
+
+    // Support pipe-separated keywords: "python|питон|пайтон"
+    // Also support "any" keyword — accept any non-empty answer (open-ended)
+    let correct = false;
+    if (expectedRaw.trim().toLowerCase() === 'any' || expectedRaw.trim().toLowerCase() === 'кез келген') {
+      correct = normalizedAnswer.length >= 10; // at least 10 chars for open-ended
+    } else if (expectedRaw.includes('|')) {
+      const keywords = expectedRaw.split('|').map(k => normalize(k));
+      correct = keywords.some(kw => normalizedAnswer.includes(kw));
+    } else {
+      // Contains check: user answer must contain the expected keyword/phrase
+      correct = normalizedAnswer.includes(normalize(expectedRaw));
+    }
 
     // If correct: mark lesson as completed
     if (correct && lesson.courseId) {
