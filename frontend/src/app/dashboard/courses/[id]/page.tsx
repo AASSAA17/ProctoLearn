@@ -83,22 +83,37 @@ export default function CourseDetailPage() {
   const completedIds = new Set(progress.filter((l) => l.completed).map((l) => l.id));
   const allLessonsCompleted = course.lessons.length > 0 && course.lessons.every((l) => completedIds.has(l.id));
   const completedCount = completedIds.size;
-
-  // Does this course have modules with steps?
   const hasModules = (course.modules ?? []).length > 0;
-  const totalSteps = (course.modules ?? []).reduce(
-    (sum, m) => sum + m.lessons.reduce((ls, l) => ls + l.steps.length, 0),
-    0,
-  );
-  const firstStepId = hasModules
-    ? (course.modules[0]?.lessons[0]?.steps[0]?.id ?? null)
-    : null;
+  // Total lessons across all modules
+  const totalModuleLessons = (course.modules ?? []).reduce((sum, m) => sum + m.lessons.length, 0);
+  // First lesson in first module
+  const firstModuleLesson = hasModules ? (course.modules[0]?.lessons[0] ?? null) : null;
 
-  // A lesson is accessible if it's first OR the previous lesson is completed
+  // All lessons from modules for progress tracking
+  const allModuleLessonIds = (course.modules ?? []).flatMap((m) => m.lessons.map((l) => l.id));
+  const moduleLessonsCompleted = allModuleLessonIds.filter((id) => completedIds.has(id)).length;
+  const allModuleLessonsDone = totalModuleLessons > 0 && moduleLessonsCompleted >= totalModuleLessons;
+
+  // A lesson is accessible: order=1 is always open, others need prev completed
   const isAccessible = (lesson: { id: string; order: number }) => {
     if (lesson.order === 1) return true;
     const prev = course.lessons.find((l) => l.order === lesson.order - 1);
     return prev ? completedIds.has(prev.id) : false;
+  };
+
+  // Module lesson accessible: first lesson of module always open; others sequential
+  const isModuleLessonAccessible = (modIdx: number, lessonIdx: number): boolean => {
+    if (modIdx === 0 && lessonIdx === 0) return true;
+    const mods = course.modules ?? [];
+    // get previous lesson id
+    let prevId: string | null = null;
+    if (lessonIdx > 0) {
+      prevId = mods[modIdx]?.lessons[lessonIdx - 1]?.id ?? null;
+    } else if (modIdx > 0) {
+      const prevMod = mods[modIdx - 1];
+      prevId = prevMod?.lessons[prevMod.lessons.length - 1]?.id ?? null;
+    }
+    return prevId ? completedIds.has(prevId) : false;
   };
 
   return (
@@ -114,97 +129,118 @@ export default function CourseDetailPage() {
         {course.description && <p className="text-gray-600 mb-4">{course.description}</p>}
         <p className="text-sm text-gray-400">Мұғалім: {course.teacher.name}</p>
 
-        {/* Step-based progress for module courses */}
-        {hasModules && stepProgress && stepProgress.total > 0 && (
-          <div className="mt-4">
-            <div className="flex justify-between text-sm text-gray-500 mb-1">
-              <span>Қадам прогресі</span>
-              <span>{stepProgress.completed}/{stepProgress.total} қадам ({stepProgress.percent}%)</span>
-            </div>
-            <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary-500 rounded-full transition-all duration-500"
-                style={{ width: `${stepProgress.percent}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Lesson-based progress for flat courses */}
-        {!hasModules && course.lessons.length > 0 && (
+        {/* Progress bar — works for both module and flat courses */}
+        {(hasModules ? totalModuleLessons : course.lessons.length) > 0 && (
           <div className="mt-4">
             <div className="flex justify-between text-sm text-gray-500 mb-1">
               <span>Прогресс</span>
-              <span>{completedCount}/{course.lessons.length} сабақ</span>
+              <span>
+                {hasModules ? moduleLessonsCompleted : completedCount}/
+                {hasModules ? totalModuleLessons : course.lessons.length} сабақ
+              </span>
             </div>
             <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden">
               <div
                 className="h-full bg-green-500 rounded-full transition-all duration-500"
-                style={{ width: `${(completedCount / course.lessons.length) * 100}%` }}
+                style={{
+                  width: `${hasModules
+                    ? (totalModuleLessons > 0 ? (moduleLessonsCompleted / totalModuleLessons) * 100 : 0)
+                    : (course.lessons.length > 0 ? (completedCount / course.lessons.length) * 100 : 0)
+                  }%`
+                }}
               />
             </div>
           </div>
         )}
       </div>
 
-      {/* Module-based course content */}
+      {/* Module-based course content — lessons with direct links */}
       {hasModules && (
         <div className="card mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Курс бағдарламасы ({totalSteps} қадам)</h2>
-            {firstStepId && (
+            <h2 className="text-xl font-semibold">
+              Курс бағдарламасы
+              <span className="ml-2 text-sm font-normal text-gray-500">
+                ({totalModuleLessons} сабақ · {(course.modules ?? []).length} модуль)
+              </span>
+            </h2>
+            {firstModuleLesson && (
               <Link
-                href={`/dashboard/courses/${course.id}/learn${firstStepId ? `?step=${firstStepId}` : ''}`}
+                href={`/dashboard/courses/${course.id}/lessons/${firstModuleLesson.id}`}
                 className="btn-primary text-sm px-4 py-2"
               >
-                {stepProgress && stepProgress.completed > 0 ? '▶ Жалғастыру' : '🎓 Оқуды бастау'}
+                {moduleLessonsCompleted > 0 ? '▶ Жалғастыру' : '🎓 Оқуды бастау'}
               </Link>
             )}
           </div>
           <div className="space-y-3">
-            {(course.modules ?? []).map((mod) => (
-              <details key={mod.id} className="bg-gray-50 rounded-xl border border-gray-100" open>
-                <summary className="px-4 py-3 cursor-pointer font-medium text-gray-800 flex items-center gap-2">
-                  <span className="text-primary-600">📦</span>
-                  {mod.order}. {mod.title}
-                  <span className="ml-auto text-xs text-gray-400">{mod.lessons.length} сабақ</span>
-                </summary>
-                <div className="px-4 pb-3 space-y-2">
-                  {mod.lessons.map((lesson) => (
-                    <div key={lesson.id} className="pl-4 border-l-2 border-gray-200 py-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium text-gray-700">📖 {lesson.title}</span>
-                        <span className="text-xs text-gray-400 ml-auto">{lesson.steps.length} қадам</span>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {lesson.steps.map((step) => (
-                          <Link
-                            key={step.id}
-                            href={`/dashboard/courses/${course.id}/learn?step=${step.id}`}
-                            className="text-xs px-2 py-1 bg-white border border-gray-200 rounded-lg hover:border-primary-400 hover:text-primary-600 transition"
-                          >
-                            {step.type === 'VIDEO' ? '▶️' : step.type === 'TASK' ? '✏️' : '📝'} {step.order}-қадам
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </details>
-            ))}
+            {(course.modules ?? []).map((mod, modIdx) => {
+              const modCompletedCount = mod.lessons.filter((l) => completedIds.has(l.id)).length;
+              const modDone = modCompletedCount === mod.lessons.length && mod.lessons.length > 0;
+              return (
+                <details key={mod.id} className="bg-gray-50 rounded-xl border border-gray-100" open={modIdx === 0}>
+                  <summary className="px-4 py-3 cursor-pointer font-medium text-gray-800 flex items-center gap-2 select-none">
+                    <span>{modDone ? '✅' : '📦'}</span>
+                    <span>{mod.order}. {mod.title}</span>
+                    <span className="ml-auto text-xs text-gray-400">
+                      {modCompletedCount}/{mod.lessons.length} сабақ
+                    </span>
+                  </summary>
+                  <div className="px-4 pb-3 space-y-1.5">
+                    {mod.lessons.map((lesson, lessonIdx) => {
+                      const done = completedIds.has(lesson.id);
+                      const accessible = isModuleLessonAccessible(modIdx, lessonIdx);
+                      const isTest = lesson.title.toLowerCase().includes('тест') ||
+                                     lesson.title.toLowerCase().includes('test') ||
+                                     lesson.title.toLowerCase().includes('модуль тест') ||
+                                     (lessonIdx + 1) % 5 === 0;
+                      if (!accessible) {
+                        return (
+                          <div key={lesson.id} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 opacity-50 cursor-not-allowed">
+                            <span className="w-6 h-6 flex-shrink-0 rounded-full border-2 border-gray-200 flex items-center justify-center text-xs">🔒</span>
+                            <span className="truncate">{lesson.title}</span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <Link
+                          key={lesson.id}
+                          href={`/dashboard/courses/${course.id}/lessons/${lesson.id}`}
+                          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                            done
+                              ? 'bg-green-50 border border-green-200 text-green-800 hover:bg-green-100'
+                              : isTest
+                              ? 'bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100'
+                              : 'bg-white border border-gray-200 text-gray-700 hover:border-primary-300 hover:text-primary-700'
+                          }`}
+                        >
+                          <span className={`w-6 h-6 flex-shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${
+                            done ? 'bg-green-500 text-white' : isTest ? 'bg-amber-400 text-white' : 'bg-primary-100 text-primary-700'
+                          }`}>
+                            {done ? '✓' : isTest ? '🧪' : lesson.order}
+                          </span>
+                          <span className="truncate flex-1">{lesson.title}</span>
+                          {isTest && !done && <span className="text-xs text-amber-600 flex-shrink-0">Мини-тест</span>}
+                          {done && <span className="text-xs text-green-600 flex-shrink-0">✓ Орындалды</span>}
+                          {!done && !isTest && <span className="text-xs text-primary-500 flex-shrink-0">→</span>}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </details>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* All steps/lessons done → take exam banner */}
-      {((hasModules && stepProgress && stepProgress.percent >= 100) || (!hasModules && allLessonsCompleted)) && course.exams.length > 0 && (
+      {/* All lessons done → take exam banner */}
+      {((hasModules && allModuleLessonsDone) || (!hasModules && allLessonsCompleted)) && course.exams.length > 0 && (
         <div className="mb-6 p-5 bg-green-50 border border-green-200 rounded-xl flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="text-3xl">🎉</span>
             <div>
-              <p className="font-semibold text-green-800">
-                {hasModules ? 'Барлық қадамдарды аяқтадыңыз!' : 'Барлық сабақтарды аяқтадыңыз!'}
-              </p>
+              <p className="font-semibold text-green-800">Барлық сабақтарды аяқтадыңыз!</p>
               <p className="text-sm text-green-600">Енді емтиханды тапсыра аласыз</p>
             </div>
           </div>
@@ -275,7 +311,7 @@ export default function CourseDetailPage() {
             <ul className="space-y-3">
               {course.exams.map((exam) => {
                 const canTakeExam = hasModules
-                  ? (stepProgress?.percent ?? 0) >= 100
+                  ? allModuleLessonsDone
                   : allLessonsCompleted;
                 return (
                   <li key={exam.id} className="p-3 bg-gray-50 rounded-lg">
