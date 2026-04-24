@@ -1,0 +1,30 @@
+=== МОДУЛЬ 6: GIT HISTORY ===
+Дата: Fri Apr 24 07:42:20 PM +05 2026
+
+* d8175c8 evidence: Module 1-9 complete final evidence collection - Module 1 (OS): Updated os_info.txt with live system data - Module 2 (Security): SSH port 2222 + UFW + Fail2Ban evidence - Module 3 (DB): 16 tables, 1110 users, 137 courses, 685 questions - Module 4 (App): 61 API endpoints, health=ok, swagger=200 - Module 5 (Docker): 33 containers running (healthy) - Module 7 (Observability): Prometheus 5 targets, Grafana ok, 1 active alert - Module 8 (AI): n8n=200, OPAL+OPA running, webhook test - Module 9 (IaC): Terraform no-changes (9 resources), Ansible ok=18 failed=0 - Ansible inventory fixed: local mode (127.0.0.1)
+* a217ad7 feat: add evidence files, n8n workflows, pgadmin config and backups
+* 6dc0e21 docs(evidence): add SCREENSHOTS_TODO.md - checklist for remaining manual screenshots - Module 1: VirtualBox VM screenshot - Module 2: SSH connection, UFW/Fail2Ban - Module 3: pgAdmin screenshot - Module 4: Frontend, Swagger, Dashboard, Network tab - Module 7: Grafana, Alertmanager, Jenkins, Telegram bot - Module 8: n8n workflow active
+* 3d9555d evidence(iac): add terraform plan output - no changes, 9 resources match config - docker_container.postgres refreshed - docker_container.minio refreshed - docker_container.redis refreshed - docker_network.proctolearn refreshed - 2 volumes + 3 images confirmed - No drift detected
+* 8ff567c evidence(docker): add docker full status - 33 containers running including monitoring stack - ProctoLearn core: api, web, postgres(healthy), minio(healthy), pgadmin, n8n, jenkins - OPAL/OPA: opal_server, opal_client, opa running - IaC containers: iac_postgres, iac_redis, iac_minio - Monitoring: prometheus, grafana, alertmanager, node_exporter, cadvisor(healthy)
+* 09abb9f evidence(app): add complete API evidence - 61 endpoints, Swagger at /api/docs - API health: {status: ok} - Swagger UI: http://localhost:4000/api/docs (200) - Frontend: http://localhost:3001 (200) - 61 REST endpoints documented (auth, users, courses, exams, attempts, admin) - All ProctoLearn containers running
+* 28d2924 evidence(security): add backup.sh execution proof - sql dump + uploads archived - scripts/backup.sh executed successfully - db_2026-04-24_17-47-23.sql.gz created - uploads_2026-04-24_17-47-23.tar.gz created - env_2026-04-24_17-47-23.bak created
+* 9b44ff7 evidence(security): add SSL certificate evidence - self-signed cert for localhost - Generated RSA 2048-bit self-signed cert (valid 1 year) - Subject: C=KZ, O=ProctoLearn, CN=localhost - nginx config included - Docker nginx -t validation
+* 46fb19f evidence(db): add complete database stats - users=1110, courses=137, exams=137, questions=685 - All 16 tables documented with \dt - Count queries for all major tables - Sample data from exams and users tables - Database: proctolearn_db on proctolearn_postgres
+* 088da77 feat(alertmanager): wire alertmanager to telegram bot webhook receiver - Change receiver URL to use container name (monitoring_telegram_bot:5001) - Telegram bot demo mode receives and logs alerts - Ready for real token: uncomment telegram_configs section
+* fa67fb6 docs(evidence): add security, monitoring and AI layer evidence files - evidence/01-os: Ubuntu 24.04 VirtualBox system info - evidence/02-security: UFW rules, Fail2Ban sshd jail, SSH hardening - evidence/07-observability: Prometheus/Grafana/Alertmanager health checks - evidence/08-ai-layer: n8n workflow active + webhook test, OPAL/OPA stack
+* 08150b5 feat(security): SSH hardening config - key-only auth, no root login - PasswordAuthentication no (key-only SSH auth configured) - PermitRootLogin no - MaxAuthTries 3, LoginGraceTime 30 - X11/TCP forwarding disabled - Security banner added - SSH running on port 2222 - Fail2Ban protecting SSH with sshd jail - UFW active: allow 22,2222,80,4000,3001
+* 19f62f4 fix(monitoring): telegram bot demo mode, fix pgAdmin email, prometheus host ip - Add demo mode to telegram bot (runs as HTTP server when token not set) - Expose port 5001 for telegram bot health checks - Fix pgAdmin email to valid format (admin@example.com) - Fix prometheus target for proctolearn_api to use 172.21.0.1:4000 - All 18 monitoring containers up and running
+* 687d625 evidence: collect fresh evidence for all modules (DB 1110 users, OS Ubuntu 24.04, Security UFW+F2B, Docker 11 containers, IaC Terraform apply 9 resources, Ansible ok=18)
+* 672042d Prepare defense-ready infrastructure
+* 81bd95f fix: run Jenkins tests from built images
+* c2cca20 fix: remove ansiColor option for Jenkins compatibility
+* 3606d39 feat: add backup guide and dev tooling stack
+* 60deeaa chore: sync project updates
+* ed84d35 feat: free course enrollment, fix admin users page, backup scripts, certificate fonts
+
+=== Статистика ===
+Всего коммитов: 26
+    18	Arsen
+     4	AASSAA17
+     3	Arsen Aitkazinov
+     1	Arsen ProctoLearn
