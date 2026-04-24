@@ -1,0 +1,76 @@
+=== DOCKER EVIDENCE - 2026-04-24_17-34-29 ===
+
+=== 1. All Running Containers ===
+NAMES                      STATUS                    PORTS
+monitoring_pgadmin         Up 17 minutes             443/tcp, 0.0.0.0:5051->80/tcp, [::]:5051->80/tcp
+monitoring_telegram_bot    Up 17 minutes             0.0.0.0:5001->5001/tcp, [::]:5001->5001/tcp
+alertmanager               Up 24 minutes             0.0.0.0:9093->9093/tcp, [::]:9093->9093/tcp
+grafana                    Up 26 minutes             0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+zabbix_agent               Up 26 minutes             0.0.0.0:10050->10050/tcp, [::]:10050->10050/tcp, 31999/tcp
+zabbix_web                 Up 26 minutes (healthy)   8443/tcp, 0.0.0.0:8082->8080/tcp, [::]:8082->8080/tcp
+prometheus                 Up 26 minutes             0.0.0.0:9090->9090/tcp, [::]:9090->9090/tcp
+zabbix_server              Up 27 minutes             0.0.0.0:10051->10051/tcp, [::]:10051->10051/tcp
+postgres_exporter          Up 27 minutes             0.0.0.0:9187->9187/tcp, [::]:9187->9187/tcp
+nginx_exporter             Up 26 minutes             0.0.0.0:9113->9113/tcp, [::]:9113->9113/tcp
+zabbix_pgsql               Up 27 minutes             5432/tcp
+monitoring_nginx           Up 27 minutes             0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp
+portainer                  Up 27 minutes             8000/tcp, 0.0.0.0:9443->9443/tcp, [::]:9443->9443/tcp, 0.0.0.0:9002->9000/tcp, [::]:9002->9000/tcp
+graphite                   Up 27 minutes             2004/tcp, 2013-2014/tcp, 2023-2024/tcp, 8080/tcp, 0.0.0.0:2003->2003/tcp, [::]:2003->2003/tcp, 8125-8126/tcp, 0.0.0.0:8125->8125/udp, [::]:8125->8125/udp, 0.0.0.0:8085->80/tcp, [::]:8085->80/tcp
+cadvisor                   Up 27 minutes (healthy)   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp
+blackbox_exporter          Up 27 minutes             0.0.0.0:9115->9115/tcp, [::]:9115->9115/tcp
+node_exporter              Up 27 minutes             0.0.0.0:9100->9100/tcp, [::]:9100->9100/tcp
+nagios                     Up 27 minutes             5667/tcp, 0.0.0.0:8084->80/tcp, [::]:8084->80/tcp
+proctolearn_opal_client    Up 33 minutes             7000/tcp, 8181/tcp
+proctolearn_opal_server    Up 33 minutes             0.0.0.0:7002->7002/tcp, [::]:7002->7002/tcp
+proctolearn_opal_redis     Up 33 minutes             0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+proctolearn_opa            Up 33 minutes             0.0.0.0:8181->8181/tcp, [::]:8181->8181/tcp
+proctolearn_iac_postgres   Up 36 minutes             0.0.0.0:55432->5432/tcp
+proctolearn_iac_redis      Up 36 minutes             0.0.0.0:56379->6379/tcp
+proctolearn_iac_minio      Up 36 minutes             0.0.0.0:59000->9000/tcp, 0.0.0.0:59001->9001/tcp
+proctolearn_web_dev        Up 45 minutes             0.0.0.0:3001->3000/tcp, [::]:3001->3000/tcp
+proctolearn_n8n            Up 2 minutes              0.0.0.0:5678->5678/tcp, [::]:5678->5678/tcp
+proctolearn_jenkins        Up 45 minutes             0.0.0.0:50000->50000/tcp, [::]:50000->50000/tcp, 0.0.0.0:8088->8080/tcp, [::]:8088->8080/tcp
+proctolearn_api_dev        Up 45 minutes             0.0.0.0:4000->4000/tcp, [::]:4000->4000/tcp
+proctolearn_mailpit        Up 45 minutes (healthy)   0.0.0.0:1025->1025/tcp, [::]:1025->1025/tcp, 0.0.0.0:8025->8025/tcp, [::]:8025->8025/tcp, 1110/tcp
+proctolearn_pgadmin        Up 45 minutes             443/tcp, 0.0.0.0:5050->80/tcp, [::]:5050->80/tcp
+proctolearn_postgres       Up 45 minutes (healthy)   0.0.0.0:5433->5432/tcp, [::]:5433->5432/tcp
+proctolearn_minio          Up 45 minutes (healthy)   0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp
+
+=== 2. Docker Info ===
+ Containers: 33
+ Images: 32
+ CPUs: 6
+ Total Memory: 9.708GiB
+ Docker Root Dir: /var/lib/docker
+
+=== 3. Dev Stack Containers ===
+NAME                   IMAGE                    COMMAND                  SERVICE    CREATED        STATUS                    PORTS
+proctolearn_api_dev    proctolearn-api          "docker-entrypoint.s…"   api        21 hours ago   Up 45 minutes             0.0.0.0:4000->4000/tcp, [::]:4000->4000/tcp
+proctolearn_jenkins    proctolearn-jenkins      "/usr/bin/tini -- /u…"   jenkins    21 hours ago   Up 45 minutes             0.0.0.0:50000->50000/tcp, [::]:50000->50000/tcp, 0.0.0.0:8088->8080/tcp, [::]:8088->8080/tcp
+proctolearn_mailpit    axllent/mailpit:latest   "/mailpit"               mailpit    21 hours ago   Up 45 minutes (healthy)   0.0.0.0:1025->1025/tcp, [::]:1025->1025/tcp, 0.0.0.0:8025->8025/tcp, [::]:8025->8025/tcp, 1110/tcp
+proctolearn_minio      minio/minio:latest       "/usr/bin/docker-ent…"   minio      22 hours ago   Up 45 minutes (healthy)   0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp
+proctolearn_n8n        n8nio/n8n:latest         "tini -- /docker-ent…"   n8n        21 hours ago   Up 2 minutes              0.0.0.0:5678->5678/tcp, [::]:5678->5678/tcp
+proctolearn_pgadmin    dpage/pgadmin4:latest    "/entrypoint.sh"         pgadmin    22 hours ago   Up 45 minutes             443/tcp, 0.0.0.0:5050->80/tcp, [::]:5050->80/tcp
+proctolearn_postgres   postgres:16-alpine       "docker-entrypoint.s…"   postgres   22 hours ago   Up 45 minutes (healthy)   0.0.0.0:5433->5432/tcp, [::]:5433->5432/tcp
+proctolearn_web_dev    proctolearn-web          "docker-entrypoint.s…"   web        21 hours ago   Up 45 minutes             0.0.0.0:3001->3000/tcp, [::]:3001->3000/tcp
+
+=== 4. Container Health Checks ===
+            "Health": {
+                "Status": "healthy",
+                "FailingStreak": 0,
+                "Log": [
+                    {
+                        "Start": "2026-04-24T17:33:42.667462214+05:00",
+
+=== 5. API Health ===
+{"status":"ok"}
+=== 6. Docker Networks ===
+NETWORK ID     NAME                            DRIVER    SCOPE
+
+=== 7. Docker Volumes ===
+local     proctolearn_iac_minio_data
+local     proctolearn_iac_postgres_data
+local     proctolearn_jenkins_home
+local     proctolearn_minio_data
+local     proctolearn_n8n_data
+local     proctolearn_postgres_data

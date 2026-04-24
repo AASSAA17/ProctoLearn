@@ -1,0 +1,182 @@
+{
+  "name": "ProctoLearn - Advanced Exam Automation Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "proctolearn/exam-submit",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node_webhook",
+      "name": "🎯 Webhook: Exam Submit",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [100, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate and enrich incoming exam data\nconst body = $input.first().json.body || $input.first().json;\n\nconst required = ['studentEmail', 'examTitle', 'score', 'attemptId'];\nconst missing = required.filter(f => !body[f]);\n\nif (missing.length > 0) {\n  throw new Error('Missing required fields: ' + missing.join(', '));\n}\n\nconst score = parseFloat(body.score) || 0;\nconst trustScore = parseFloat(body.trustScore) || 100;\nconst passed = score >= 60;\n\nreturn [{\n  json: {\n    ...body,\n    score,\n    trustScore,\n    passed,\n    grade: score >= 90 ? 'A' : score >= 80 ? 'B' : score >= 70 ? 'C' : score >= 60 ? 'D' : 'F',\n    riskLevel: trustScore < 30 ? 'HIGH' : trustScore < 60 ? 'MEDIUM' : 'LOW',\n    processedAt: new Date().toISOString(),\n    notificationId: 'notif_' + Date.now()\n  }\n}];"
+      },
+      "id": "node_validate",
+      "name": "⚙️ Code: Validate & Enrich Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.trustScore}}",
+              "operation": "smaller",
+              "value2": 30
+            }
+          ]
+        }
+      },
+      "id": "node_if_highrisk",
+      "name": "🚨 IF: High Risk (TrustScore < 30)?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [540, 400]
+    },
+    {
+      "parameters": {
+        "url": "http://proctolearn_api_dev:4000/health",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "node_api_check",
+      "name": "🌐 HTTP: Check ProctoLearn API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [760, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log high-risk attempt\nconst data = $input.first().json;\nconsole.log('[ALERT] HIGH RISK ATTEMPT DETECTED');\nconsole.log('Student:', data.studentEmail);\nconsole.log('Exam:', data.examTitle);\nconsole.log('Trust Score:', data.trustScore);\nconsole.log('Risk Level:', data.riskLevel);\n\nreturn [{\n  json: {\n    ...data,\n    alertSent: true,\n    alertTime: new Date().toISOString(),\n    message: `[HIGH RISK] Student ${data.studentEmail} - TrustScore: ${data.trustScore}%`\n  }\n}];"
+      },
+      "id": "node_log_alert",
+      "name": "📋 Code: Log Security Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 540]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.passed}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "node_if_passed",
+      "name": "✅ IF: Exam Passed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [980, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate certificate data\nconst data = $input.first().json;\nconst certCode = 'CERT-' + data.examTitle.substring(0,3).toUpperCase() + '-' + Date.now().toString(36).toUpperCase();\n\nreturn [{\n  json: {\n    ...data,\n    certificateCode: certCode,\n    certificateUrl: `http://localhost:3001/certificates/verify/${certCode}`,\n    issuedAt: new Date().toISOString(),\n    emailSubject: `🎓 Поздравляем! Сертификат: ${data.examTitle}`,\n    emailBody: `Здравствуйте, ${data.studentName || data.studentEmail}!\\n\\n✅ Вы успешно сдали экзамен: ${data.examTitle}\\n📊 Результат: ${data.score}% (Оценка: ${data.grade})\\n🛡️ Trust Score: ${data.trustScore}%\\n🏆 Сертификат: ${certCode}\\n🔗 Проверить: http://localhost:3001/certificates/verify/${certCode}\\n\\nСпасибо,\\nКоманда ProctoLearn`\n  }\n}];"
+      },
+      "id": "node_certificate",
+      "name": "🏆 Code: Generate Certificate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 160]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate failure notification\nconst data = $input.first().json;\n\nreturn [{\n  json: {\n    ...data,\n    emailSubject: `❌ Результат экзамена: ${data.examTitle}`,\n    emailBody: `Здравствуйте, ${data.studentName || data.studentEmail}!\\n\\nК сожалению, вы не сдали экзамен.\\n\\n📚 Экзамен: ${data.examTitle}\\n📊 Результат: ${data.score}% (нужно минимум 60%)\\n📉 Оценка: ${data.grade}\\n\\nНе расстраивайтесь! Вы можете попробовать ещё раз.\\n\\nСпасибо,\\nКоманда ProctoLearn`,\n    retryAllowed: true\n  }\n}];"
+      },
+      "id": "node_fail_msg",
+      "name": "📧 Code: Prepare Fail Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all data and create final audit log\nconst data = $input.first().json;\n\nconst auditLog = {\n  timestamp: new Date().toISOString(),\n  notificationId: data.notificationId,\n  attemptId: data.attemptId,\n  student: data.studentEmail,\n  exam: data.examTitle,\n  score: data.score,\n  grade: data.grade,\n  passed: data.passed,\n  trustScore: data.trustScore,\n  riskLevel: data.riskLevel,\n  alertSent: data.alertSent || false,\n  certificateCode: data.certificateCode || null,\n  status: 'PROCESSED'\n};\n\nconsole.log('AUDIT LOG:', JSON.stringify(auditLog, null, 2));\n\nreturn [{ json: { ...data, auditLog, finalStatus: 'SUCCESS' } }];"
+      },
+      "id": "node_audit",
+      "name": "📝 Code: Audit Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1420, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  JSON.stringify({\n    ok: true,\n    notificationId: $json.notificationId,\n    attemptId: $json.attemptId,\n    passed: $json.passed,\n    grade: $json.grade,\n    riskLevel: $json.riskLevel,\n    certificateCode: $json.certificateCode || null,\n    processedAt: $json.processedAt,\n    message: 'ProctoLearn automation pipeline completed'\n  })\n}}",
+        "options": {}
+      },
+      "id": "node_respond_ok",
+      "name": "✅ Respond: 200 OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1640, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\": false, \"error\": \"Validation failed\", \"message\": \"Missing required fields\"}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "node_respond_err",
+      "name": "❌ Respond: 400 Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [540, 620]
+    }
+  ],
+  "connections": {
+    "🎯 Webhook: Exam Submit": {
+      "main": [[{"node": "⚙️ Code: Validate & Enrich Data", "type": "main", "index": 0}]]
+    },
+    "⚙️ Code: Validate & Enrich Data": {
+      "main": [[{"node": "🚨 IF: High Risk (TrustScore < 30)?", "type": "main", "index": 0}]]
+    },
+    "🚨 IF: High Risk (TrustScore < 30)?": {
+      "main": [
+        [{"node": "📋 Code: Log Security Alert", "type": "main", "index": 0}],
+        [{"node": "🌐 HTTP: Check ProctoLearn API", "type": "main", "index": 0}]
+      ]
+    },
+    "📋 Code: Log Security Alert": {
+      "main": [[{"node": "🌐 HTTP: Check ProctoLearn API", "type": "main", "index": 0}]]
+    },
+    "🌐 HTTP: Check ProctoLearn API": {
+      "main": [[{"node": "✅ IF: Exam Passed?", "type": "main", "index": 0}]]
+    },
+    "✅ IF: Exam Passed?": {
+      "main": [
+        [{"node": "🏆 Code: Generate Certificate", "type": "main", "index": 0}],
+        [{"node": "📧 Code: Prepare Fail Message", "type": "main", "index": 0}]
+      ]
+    },
+    "🏆 Code: Generate Certificate": {
+      "main": [[{"node": "📝 Code: Audit Log", "type": "main", "index": 0}]]
+    },
+    "📧 Code: Prepare Fail Message": {
+      "main": [[{"node": "📝 Code: Audit Log", "type": "main", "index": 0}]]
+    },
+    "📝 Code: Audit Log": {
+      "main": [[{"node": "✅ Respond: 200 OK", "type": "main", "index": 0}]]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+

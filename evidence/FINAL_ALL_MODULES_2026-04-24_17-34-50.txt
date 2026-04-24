@@ -1,0 +1,95 @@
+=== PROCTOLEARN - FINAL ALL-MODULES STATUS ===
+=== Generated: 2026-04-24_17-34-50 ===
+
+Module 1 - OS: Ubuntu 24.04.4 LTS (arsen-VirtualBox)
+Linux arsen-VirtualBox 6.17.0-22-generic #22~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Thu Mar 26 15:25:54 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+
+Module 2 - Security:
+  SSH: active on port 2222, key-only auth
+  UFW: 
+  Fail2Ban: 	sshd
+
+Module 3 - Database:
+
+Module 4 - Application:
+{"status":"ok"}
+  Frontend(3001): 200
+  Swagger: 200
+
+Module 5 - Docker:
+  Total containers running: 33
+alertmanager - Up 25 minutes
+blackbox_exporter - Up 27 minutes
+cadvisor - Up 27 minutes (healthy)
+grafana - Up 27 minutes
+graphite - Up 27 minutes
+monitoring_nginx - Up 27 minutes
+monitoring_pgadmin - Up 17 minutes
+monitoring_telegram_bot - Up 18 minutes
+nagios - Up 27 minutes
+nginx_exporter - Up 27 minutes
+node_exporter - Up 27 minutes
+portainer - Up 27 minutes
+postgres_exporter - Up 27 minutes
+proctolearn_api_dev - Up 45 minutes
+proctolearn_iac_minio - Up 36 minutes
+proctolearn_iac_postgres - Up 36 minutes
+proctolearn_iac_redis - Up 36 minutes
+proctolearn_jenkins - Up 45 minutes
+proctolearn_mailpit - Up 45 minutes (healthy)
+proctolearn_minio - Up 45 minutes (healthy)
+proctolearn_n8n - Up 2 minutes
+proctolearn_opal_client - Up 33 minutes
+proctolearn_opal_redis - Up 33 minutes
+proctolearn_opal_server - Up 33 minutes
+proctolearn_opa - Up 33 minutes
+proctolearn_pgadmin - Up 45 minutes
+proctolearn_postgres - Up 45 minutes (healthy)
+proctolearn_web_dev - Up 45 minutes
+prometheus - Up 27 minutes
+zabbix_agent - Up 27 minutes
+zabbix_pgsql - Up 27 minutes
+zabbix_server - Up 27 minutes
+zabbix_web - Up 27 minutes (healthy)
+
+Module 6 - Git:
+088da77 feat(alertmanager): wire alertmanager to telegram bot webhook receiver - Change receiver URL to use container name (monitoring_telegram_bot:5001) - Telegram bot demo mode receives and logs alerts - Ready for real token: uncomment telegram_configs section
+fa67fb6 docs(evidence): add security, monitoring and AI layer evidence files - evidence/01-os: Ubuntu 24.04 VirtualBox system info - evidence/02-security: UFW rules, Fail2Ban sshd jail, SSH hardening - evidence/07-observability: Prometheus/Grafana/Alertmanager health checks - evidence/08-ai-layer: n8n workflow active + webhook test, OPAL/OPA stack
+08150b5 feat(security): SSH hardening config - key-only auth, no root login - PasswordAuthentication no (key-only SSH auth configured) - PermitRootLogin no - MaxAuthTries 3, LoginGraceTime 30 - X11/TCP forwarding disabled - Security banner added - SSH running on port 2222 - Fail2Ban protecting SSH with sshd jail - UFW active: allow 22,2222,80,4000,3001
+19f62f4 fix(monitoring): telegram bot demo mode, fix pgAdmin email, prometheus host ip - Add demo mode to telegram bot (runs as HTTP server when token not set) - Expose port 5001 for telegram bot health checks - Fix pgAdmin email to valid format (admin@example.com) - Fix prometheus target for proctolearn_api to use 172.21.0.1:4000 - All 18 monitoring containers up and running
+687d625 evidence: collect fresh evidence for all modules (DB 1110 users, OS Ubuntu 24.04, Security UFW+F2B, Docker 11 containers, IaC Terraform apply 9 resources, Ansible ok=18)
+
+Module 7 - Observability:
+  Prometheus: Prometheus Server is Healthy.
+  Grafana: 
+  Alertmanager: OK
+  TelegramBot: {"status":"demo","message":"Telegram bot not configured"}
+
+Module 8 - AI Layer:
+  n8n: {"status":"ok"}
+  OPA: {}
+  n8n webhook test: {"status":"received","examTitle":"","student":""}
+
+Module 9 - IaC:
+Terraform:
+resource "docker_container" "minio" {
+resource "docker_container" "postgres" {
+resource "docker_container" "redis" {
+resource "docker_image" "minio" {
+resource "docker_image" "postgres" {
+resource "docker_image" "redis" {
+resource "docker_network" "proctolearn" {
+resource "docker_volume" "minio_data" {
+resource "docker_volume" "postgres_data" {
+
+Ansible (last run):
+итого 140
+drwxrwxr-x  2 arsen arsen  4096 Apr 24 16:59 .
+drwxrwxr-x 11 arsen arsen  4096 Apr 24 17:34 ..
+-rw-rw-r--  1 arsen arsen  3284 Apr 23 20:15 ansible_check_2026-04-23_20-15-47.txt
+-rw-rw-r--  1 arsen arsen  1284 Apr 23 17:11 ansible_files_2026-04-22_10-14-31.txt
+-rw-rw-r--  1 arsen arsen  1654 Apr 23 20:59 ansible_full_2026-04-23_20-59-26.txt
+-rw-rw-r--  1 arsen arsen  3829 Apr 24 16:58 ansible_local_check_2026-04-24_16-58-17.txt
+-rw-rw-r--  1 arsen arsen  1271 Apr 23 20:59 ansible_local_run_2026-04-23_20-59-48.txt
+-rw-rw-r--  1 arsen arsen    45 Apr 23 19:56 ansible_not_installed.txt
+-rw-rw-r--  1 arsen arsen   264 Apr 23 20:16 ansible_play_recap_2026-04-23_20-16-07.txt
