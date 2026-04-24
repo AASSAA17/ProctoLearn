@@ -174,31 +174,6 @@ export default function CoursesPage() {
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Курстар</h1>
       </div>
 
-      <section className="mb-8 rounded-2xl bg-gray-950 px-4 py-6 sm:px-6">
-        <div className="mb-4">
-          <h2 className="text-xl font-bold text-white">Интерактивті курс мәзірі</h2>
-          <p className="text-sm text-gray-300 mt-1">Деңгейді карта арқылы таңдаңыз</p>
-        </div>
-        <MagicBento
-          items={COURSES_MENU_ITEMS}
-          activeItemKey={activeLevel}
-          onCardClick={(item: { key?: string }) => {
-            if (item.key === 'BEGINNER' || item.key === 'INTERMEDIATE' || item.key === 'ADVANCED') {
-              setActiveLevel(item.key);
-            }
-          }}
-          textAutoHide={true}
-          enableStars={true}
-          enableSpotlight={true}
-          enableBorderGlow={true}
-          enableTilt={true}
-          enableMagnetism={true}
-          clickEffect={true}
-          spotlightRadius={260}
-          particleCount={10}
-          glowColor="56, 189, 248"
-        />
-      </section>
 
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
         {LEVEL_TABS.map(tab => (

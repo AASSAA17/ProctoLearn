@@ -49,7 +49,7 @@ check_service() {
     local name="$1"
     local url="$2"
     local expected="$3"
-    local code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 "$url" 2>/dev/null)
+    local code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$url" 2>/dev/null)
     if [ "$code" = "$expected" ] || [ "$code" = "200" ] || [ "$code" = "302" ] || [ "$code" = "301" ] || [ "$code" = "307" ] || [ "$code" = "403" ]; then
         echo -e "  ${GREEN}✓${NC} ${name} — ${GREEN}РАБОТАЕТ${NC} (HTTP $code) → $url"
     else

@@ -1,4 +1,4 @@
-# 📝 ШПАРГАЛКА — ProctoLearn Defense Notes
+#  ШПАРГАЛКА — ProctoLearn Defense Notes
 > Печатай / держи на телефоне во время защиты
 
 ---
@@ -10,7 +10,7 @@ bash scripts/demo-start.sh
 
 ---
 
-## 🔑 ЛОГИНЫ
+##  ЛОГИНЫ
 | Кто | Логин | Пароль |
 |-----|-------|--------|
 | Admin (app) | admin@proctolearn.kz | Admin@12 |
@@ -23,7 +23,7 @@ bash scripts/demo-start.sh
 
 ---
 
-## 🌐 ССЫЛКИ
+##  ССЫЛКИ
 ```
 http://localhost:3001        ← Frontend
 http://localhost:4000/api/docs ← Swagger (61 эндпоинт)
@@ -39,7 +39,7 @@ http://localhost:8181/health ← OPA
 
 ---
 
-## 📦 М1 — ОС (5 б.)
+##  М1 — ОС (5 б.)
 ```bash
 uname -a          # Ubuntu 24.04 LTS, arsen-VirtualBox
 lsb_release -a
@@ -48,7 +48,7 @@ lsb_release -a
 
 ---
 
-## 🔒 М2 — Безопасность (10 б.)
+##  М2 — Безопасность (10 б.)
 ```bash
 sudo ufw status verbose
 sudo fail2ban-client status sshd
@@ -59,7 +59,7 @@ ls backups/
 
 ---
 
-## 🗄 М3 — БД (20 б.)
+##  М3 — БД (20 б.)
 ```sql
 -- в pgAdmin localhost:5050
 SELECT COUNT(*) FROM users;    -- 1110
@@ -70,7 +70,7 @@ SELECT role, COUNT(*) FROM users GROUP BY role;
 
 ---
 
-## 💻 М4 — Приложение (25 б.)
+##  М4 — Приложение (25 б.)
 1. `localhost:3001` → войти как student → показать курсы
 2. `localhost:3001` → войти как teacher → показать создание курса
 3. `localhost:4000/api/docs` → 61 эндпоинт
@@ -80,7 +80,7 @@ SELECT role, COUNT(*) FROM users GROUP BY role;
 
 ---
 
-## 🐳 М5 — Docker (9 б.)
+##  М5 — Docker (9 б.)
 ```bash
 docker ps | wc -l              # 33+
 docker ps --format "table {{.Names}}\t{{.Status}}"
@@ -89,7 +89,7 @@ docker ps --format "table {{.Names}}\t{{.Status}}"
 
 ---
 
-## 🔀 М6 — Git (6 б.)
+##  М6 — Git (6 б.)
 ```bash
 git log --oneline | wc -l      # 29 коммитов
 git log --oneline | head -10
@@ -99,7 +99,7 @@ git remote -v
 
 ---
 
-## 📊 М7 — Мониторинг (11 б.)
+##  М7 — Мониторинг (11 б.)
 1. `localhost:9090` → Status → Targets → все UP
 2. `localhost:3000` → дашборды Grafana
 3. `localhost:9093` → Alertmanager → алерты
@@ -109,7 +109,7 @@ git remote -v
 
 ---
 
-## 🤖 М8 — AI Layer (9 б.)
+##  М8 — AI Layer (9 б.)
 ```bash
 curl http://localhost:8181/health
 # {"status":"ok"}
@@ -133,7 +133,7 @@ ansible-playbook ... --syntax-check
 
 ---
 
-## 💬 КРАТКО НА ВОПРОСЫ
+##  КРАТКО НА ВОПРОСЫ
 | Вопрос | Ответ |
 |--------|-------|
 | Почему NestJS? | Модули, DI, Guards, Interceptors — масштабируемо |
@@ -146,12 +146,11 @@ ansible-playbook ... --syntax-check
 
 ---
 
-## 📊 ЦИФРЫ (для уверенности)
+##  ЦИФРЫ (для уверенности)
 ```
 16 таблиц  · 61 API эндпоинт  · 33 контейнера
 29 коммитов · 9 Terraform ресурсов · 2 n8n workflows
 4 роли · 4 compose-файла · 5 систем мониторинга
 1110 users · 137 courses
 ```
-
 

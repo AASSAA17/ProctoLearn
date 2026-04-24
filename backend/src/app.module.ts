@@ -55,6 +55,7 @@ import { GraphiteService } from './common/services/graphite.service';
     CourseModulesModule,
     StepsModule,
     StepSubmissionsModule,
+    AiModule,
   ],
   providers: [
     GraphiteService,
