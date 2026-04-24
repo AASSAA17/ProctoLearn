@@ -1,0 +1,24 @@
+=== МОДУЛЬ 8: AI LAYER EVIDENCE ===
+Дата: Fri Apr 24 07:37:33 PM +05 2026
+
+=== n8n статус ===
+n8n HTTP: 200
+=== OPAL containers ===
+proctolearn_opal_client    Up 3 hours
+proctolearn_opal_server    Up 3 hours
+proctolearn_opal_redis     Up 3 hours
+proctolearn_opa            Up 3 hours
+
+=== OPA health ===
+{}
+
+=== n8n workflows ===
+итого 28
+drwxrwxr-x 2 arsen arsen 4096 Apr 24 18:41 .
+drwxrwxr-x 3 arsen arsen 4096 Apr 23 17:11 ..
+-rw-rw-r-- 1 arsen arsen 5434 Apr 23 17:11 exam-submit-notify.json
+-rw-rw-r-- 1 arsen arsen 8828 Apr 24 18:41 proctolearn-advanced-automation.json
+
+=== Webhook test ===
+{"code":404,"message":"The requested webhook \"POST exam-submit\" is not registered.","hint":"The workflow must be active for a production URL to run successfully. You can activate the workflow using the toggle in the top-right of the editor. Note that unlike test URL calls, production URL calls aren't shown on the canvas (only in the executions list)"}
+HTTP Status: 404

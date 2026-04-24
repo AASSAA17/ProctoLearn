@@ -1,0 +1,53 @@
+=== МОДУЛЬ 2: SECURITY EVIDENCE ===
+Дата: Fri Apr 24 07:35:50 PM +05 2026
+
+=== SSH Hardening (Port 2222, No Root Login, Key Auth) ===
+Файл: /etc/ssh/sshd_config.d/99-proctolearn-hardening.conf
+Port 2222
+PermitRootLogin no
+PubkeyAuthentication yes
+PasswordAuthentication no
+MaxAuthTries 3
+
+=== UFW Status Verbose ===
+Состояние: активен
+Журналирование: on (low)
+По умолчанию: deny (входящие), allow (исходящие), deny (маршрутизированные)
+Новые профили: skip
+
+В                          Действие    Из
+-                          --------    --
+80                         ALLOW IN    Anywhere                  
+22                         ALLOW IN    Anywhere                  
+2222/tcp                   ALLOW IN    Anywhere                  
+4000/tcp                   ALLOW IN    Anywhere                  
+3001/tcp                   ALLOW IN    Anywhere                  
+80 (v6)                    ALLOW IN    Anywhere (v6)             
+22 (v6)                    ALLOW IN    Anywhere (v6)             
+2222/tcp (v6)              ALLOW IN    Anywhere (v6)             
+4000/tcp (v6)              ALLOW IN    Anywhere (v6)             
+3001/tcp (v6)              ALLOW IN    Anywhere (v6)             
+
+
+=== Fail2Ban Status ===
+Status
+|- Number of jail:	1
+`- Jail list:	sshd
+
+=== Fail2Ban SSHD Status ===
+Status for the jail: sshd
+|- Filter
+|  |- Currently failed:	0
+|  |- Total failed:	0
+|  `- Journal matches:	_SYSTEMD_UNIT=sshd.service + _COMM=sshd
+`- Actions
+   |- Currently banned:	0
+   |- Total banned:	0
+   `- Banned IP list:	
+
+=== SSH Key Authentication Test ===
+SSH KEY AUTH SUCCESS: $(whoami)@$(hostname)
+
+=== SSL Certificate ===
+Self-signed cert in /etc/ssl/proctolearn/
+SSL cert configured via Docker nginx

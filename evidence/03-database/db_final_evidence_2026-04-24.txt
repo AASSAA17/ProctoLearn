@@ -1,0 +1,74 @@
+=== МОДУЛЬ 3: DATABASE EVIDENCE ===
+Дата: Fri Apr 24 07:36:31 PM +05 2026
+
+=== Список таблиц (\dt) ===
+                  List of relations
+ Schema |         Name          | Type  |    Owner    
+--------+-----------------------+-------+-------------
+ public | answers               | table | proctolearn
+ public | attempts              | table | proctolearn
+ public | certificates          | table | proctolearn
+ public | course_modules        | table | proctolearn
+ public | courses               | table | proctolearn
+ public | enrollments           | table | proctolearn
+ public | evidence_files        | table | proctolearn
+ public | exams                 | table | proctolearn
+ public | lesson_progress       | table | proctolearn
+ public | lessons               | table | proctolearn
+ public | password_reset_tokens | table | proctolearn
+ public | proctor_events        | table | proctolearn
+ public | questions             | table | proctolearn
+ public | steps                 | table | proctolearn
+ public | submissions           | table | proctolearn
+ public | users                 | table | proctolearn
+(16 rows)
+
+
+=== Количество пользователей ===
+ users_count 
+-------------
+        1110
+(1 row)
+
+
+=== Количество курсов ===
+ courses_count 
+---------------
+           137
+(1 row)
+
+
+=== Количество экзаменов ===
+ exams_count 
+-------------
+         137
+(1 row)
+
+
+=== Количество вопросов ===
+ questions_count 
+-----------------
+             685
+(1 row)
+
+
+=== Пример данных пользователей (без паролей) ===
+                  id                  |                 email                 |  role   |        createdAt        
+--------------------------------------+---------------------------------------+---------+-------------------------
+ f108f97a-c611-4ce7-b0ee-60681de280f6 | erik.zhaqsylyqov@proctolearn.kz       | STUDENT | 2025-10-22 23:01:50.657
+ 53fe59e1-23b6-4c42-9394-7e862a7edbbc | quanysh.zeynolla@proctolearn.kz       | STUDENT | 2025-09-18 04:56:42.185
+ df4392f1-8450-4728-8848-d725a9b3bdc9 | aygul.mustafin@proctolearn.kz         | STUDENT | 2025-09-05 19:14:36.548
+ 21d274e2-9f0b-49f9-9788-52503c4097a1 | fatima.baytursynov@proctolearn.kz     | STUDENT | 2025-12-27 23:35:17.879
+ 9215a835-cdcd-4d1f-bd41-00dacbf16d90 | zhanibek.zharylqasynov@proctolearn.kz | STUDENT | 2025-11-02 16:35:20.366
+(5 rows)
+
+
+=== pg_hba.conf ===
+local   all             all                                     trust
+host    all             all             127.0.0.1/32            trust
+host    all             all             ::1/128                 trust
+local   replication     all                                     trust
+host    replication     all             127.0.0.1/32            trust
+host    replication     all             ::1/128                 trust
+host all all 172.16.0.0/12 trust
+host all all all scram-sha-256

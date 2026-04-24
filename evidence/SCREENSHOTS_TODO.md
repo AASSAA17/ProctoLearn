@@ -1,4 +1,4 @@
-# 📸 СКРИНШОТЫ — ЧТО НУЖНО СДЕЛАТЬ ВРУЧНУЮ
+#  СКРИНШОТЫ — ЧТО НУЖНО СДЕЛАТЬ ВРУЧНУЮ
 
 > Все текстовые доказательства уже собраны. Остались только скриншоты.
 
@@ -90,4 +90,3 @@
 | 07-Observability | monitoring_final_status (Prometheus+Grafana+Alertmanager healthy) |
 | 08-AI Layer | ai_layer_evidence (n8n+OPAL+OPA running, webhook test) |
 | 09-IaC | terraform_plan_final (no changes, 9 resources), ansible_play_recap (ok=18, failed=0) |
-

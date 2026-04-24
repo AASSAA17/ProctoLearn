@@ -1,0 +1,36 @@
+=== МОДУЛЬ 7: OBSERVABILITY EVIDENCE ===
+Дата: Fri Apr 24 07:37:09 PM +05 2026
+
+=== Prometheus ===
+Prometheus Server is Healthy.
+ - HEALTHY
+Active targets: 5
+  - nginx: up
+  - node_exporter: up
+  - postgres: up
+  - proctolearn_api: down
+  - prometheus: up
+
+=== Grafana ===
+{
+    "commit": "13173c9874af312fe75545f52aa6539af02076ac",
+    "database": "ok",
+    "version": "11.1.4"
+}
+
+=== Alertmanager ===
+OK - HEALTHY
+Active alerts: 1
+
+=== Node Exporter ===
+# HELP node_cpu_seconds_total Seconds the CPUs spent in each mode.
+# TYPE node_cpu_seconds_total counter
+node_cpu_seconds_total{cpu="0",mode="idle"} 5995.67
+
+=== Cadvisor ===
+ok - HEALTHY
+
+=== Jenkins ===
+Jenkins HTTP: 403
+=== Alert Rules ===
+  Rule group: server_alerts (11 rules)

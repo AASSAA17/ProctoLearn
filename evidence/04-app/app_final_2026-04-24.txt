@@ -1,0 +1,47 @@
+=== МОДУЛЬ 4: APP EVIDENCE ===
+Дата: Fri Apr 24 07:40:20 PM +05 2026
+
+=== API Health ===
+{
+    "status": "ok"
+}
+
+=== Frontend ===
+Frontend HTTP: 200
+=== Swagger UI ===
+Swagger HTTP: 200
+=== API Endpoints Sample ===
+Total endpoints: 61
+Sample endpoints:
+  /auth/register
+  /auth/login
+  /auth/refresh
+  /auth/logout
+  /auth/me
+  /auth/change-password
+  /auth/forgot-password
+  /auth/reset-password
+  /users
+  /users/me
+  /users/me/profile
+  /users/{id}
+  /users/{id}/role
+  /courses
+  /courses/{id}
+
+=== Courses API ===
+{
+  "data": [
+    {
+      "id": "3765e81f-54a7-4a49-be7e-26cb587bf835",
+      "title": "TypeScript: компиляторный API и метапрограммирование",
+      "description": "TypeScript: компиляторный API и метапрограммирование course",
+      "teacherId": "f22cd2e3-d9eb-479f-9ec1-0dea7e8c60f5",
+      "level": "BEGINNER",
+      "createdAt": "2026-04-23T15:13:27.314Z",
+      "teacher": {
+        "id": "f22cd2e3-d9eb-479f-9ec1-0dea7e8c60f5",
+        "name": "Рүстем Науанов"
+      },
+      "_count": {
+       

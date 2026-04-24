@@ -1,0 +1,60 @@
+=== МОДУЛЬ 9: IaC EVIDENCE ===
+Дата: Fri Apr 24 07:38:07 PM +05 2026
+
+=== Terraform ===
+/usr/bin/terraform
+Terraform v1.14.9
+on linux_amd64
+
+=== Terraform plan (cached) ===
+[0m[1mdocker_volume.minio_data: Refreshing state... [id=proctolearn_iac_minio_data][0m
+[0m[1mdocker_image.minio: Refreshing state... [id=sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936eminio/minio:latest][0m
+[0m[1mdocker_image.postgres: Refreshing state... [id=sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50postgres:16-alpine][0m
+[0m[1mdocker_network.proctolearn: Refreshing state... [id=50ac52e8b4e64726ab2c0cd2c04d2f25f89d201db5d58489ef3373c6840198f8][0m
+[0m[1mdocker_image.redis: Refreshing state... [id=sha256:7aec734b2bb298a1d769fd8729f13b8514a41bf90fcdd1f38ec52267fbaa8ee6redis:7-alpine][0m
+[0m[1mdocker_volume.postgres_data: Refreshing state... [id=proctolearn_iac_postgres_data][0m
+[0m[1mdocker_container.postgres: Refreshing state... [id=d9a899e320662512ea7dd70fda7ba9845bf45f077f5fa69de87b5ecad3a38384][0m
+[0m[1mdocker_container.minio: Refreshing state... [id=fd52d0a506481781ea78bce720c593dc87151f9ae4e95fe45aee9e65a769124c][0m
+[0m[1mdocker_container.redis: Refreshing state... [id=0f7d443300dd0dc8d019e9db3067a15189e534a646d6a56778a8fcc598ac85ff][0m
+
+[0m[1m[32mNo changes.[0m[1m Your infrastructure matches the configuration.[0m
+
+[0mTerraform has compared your real infrastructure against your configuration
+and found no differences, so no changes are needed.
+
+=== Ansible ===
+/usr/local/bin/ansible-playbook
+ansible [core 2.20.5]
+  config file = None
+  configured module search path = ['/home/arsen/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
+
+=== Ansible play recap (cached) ===
+102         content: |
+                     ^ column 18
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+changed: [127.0.0.1]
+
+PLAY RECAP *********************************************************************
+127.0.0.1                  : ok=18   changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+
+=== Terraform files ===
+main.tf
+outputs.tf
+terraform.tfstate
+terraform.tfvars
+terraform.tfvars.example
+variables.tf
+versions.tf
+
+=== Ansible files ===
+ansible.cfg
+files
+group_vars
+inventory.ini
+playbook-local.yml
+playbook.yml
+requirements.yml
+roles
