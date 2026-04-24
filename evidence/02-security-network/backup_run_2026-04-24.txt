@@ -1,0 +1,29 @@
+==========================================
+[2026-04-24_17-47-23] Начало резервного копирования...
+==========================================
+📦 Создание дампа БД...
+pg_dump: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: FATAL:  role "postgres" does not exist
+✅ БД сохранена: /home/arsen/IdeaProjects/ProctoLearn/backups/db_2026-04-24_17-47-23.sql.gz
+📦 Архивирование uploads...
+✅ Uploads сохранены: uploads_2026-04-24_17-47-23.tar.gz
+✅ .env сохранён: env_2026-04-24_17-47-23.bak
+🗑️  Удаление бэкапов старше 7 дней...
+
+==========================================
+✅ Резервное копирование завершено!
+📁 Папка: /home/arsen/IdeaProjects/ProctoLearn/backups
+9.4M	/home/arsen/IdeaProjects/ProctoLearn/backups
+==========================================
+итого 7088
+drwxrwxr-x  5 arsen arsen    4096 Apr 24 17:47 .
+drwxrwxr-x 17 arsen arsen    4096 Apr 23 21:08 ..
+-rw-rw-r--  1 arsen arsen 3602271 Apr 23 17:11 db_2026-03-04_10-22.sql
+-rw-rw-r--  1 arsen arsen 3602271 Apr 23 17:11 db_2026-03-04_10-23.sql
+-rw-rw-r--  1 arsen arsen      20 Apr 24 17:47 db_2026-04-24_17-47-23.sql.gz
+drwxrwxr-x  2 arsen arsen    4096 Apr 23 17:11 env_2026-03-04_10-22
+drwxrwxr-x  2 arsen arsen    4096 Apr 23 17:11 env_2026-03-04_10-23
+-rw-rw-r--  1 arsen arsen    1465 Apr 24 17:47 env_2026-04-24_17-47-23.bak
+-rw-rw-r--  1 arsen arsen    7096 Apr 23 17:11 schema_2026-03-04_10-22.prisma
+-rw-rw-r--  1 arsen arsen    7096 Apr 23 17:11 schema_2026-03-04_10-23.prisma
+drwxrwxr-x  8 arsen arsen    4096 Apr 24 17:47 snapshot_2026-04-24_17-47-23
+-rw-rw-r--  1 arsen arsen     113 Apr 24 17:47 uploads_2026-04-24_17-47-23.tar.gz
