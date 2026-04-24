@@ -1,19 +1,16 @@
 global:
   resolve_timeout: 5m
-
 route:
   group_by: ["alertname", "severity"]
   group_wait: 10s
   group_interval: 1m
   repeat_interval: 30m
-  receiver: "webhook-alerts"
-
+  receiver: "telegram-webhook"
 receivers:
-  - name: "webhook-alerts"
+  - name: "telegram-webhook"
     webhook_configs:
-      - url: "http://localhost:5001/alerts"
+      - url: "http://monitoring_telegram_bot:5001/alerts"
         send_resolved: true
-
   # Telegram receiver - activate after setting real bot token
   # - name: "telegram-alerts"
   #   telegram_configs:
@@ -21,7 +18,6 @@ receivers:
   #       bot_token: "YOUR_BOT_TOKEN"
   #       chat_id: YOUR_CHAT_ID
   #       parse_mode: "HTML"
-
 inhibit_rules:
   - source_matchers: ["severity=critical"]
     target_matchers: ["severity=warning"]
