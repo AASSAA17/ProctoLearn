@@ -19,6 +19,7 @@ import { EnrollmentsModule } from './enrollments/enrollments.module';
 import { CourseModulesModule } from './modules/modules.module';
 import { StepsModule } from './steps/steps.module';
 import { StepSubmissionsModule } from './step-submissions/step-submissions.module';
+import { AiModule } from './ai/ai.module';
 import { ActivityInterceptor } from './common/interceptors/activity.interceptor';
 import { GraphiteMetricsInterceptor } from '@/common/interceptors/graphite-metrics.interceptor';
 import { GraphiteService } from './common/services/graphite.service';

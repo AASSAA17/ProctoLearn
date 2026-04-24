@@ -56,7 +56,7 @@ export class AiService {
       .map((e) => `- ${e.course.title} (${e.course.level}): ${e.course._count.lessons} сабақ, ${e.course._count.exams} емтихан`)
       .join('\n');
     const attemptList = recentAttempts
-      .map((a) => `- ${a.exam.title}: ${a.score ?? 0}% (${a.status === 'PASSED' ? 'өтті' : a.status === 'FAILED' ? 'өтпеді' : a.status})`)
+      .map((a) => `- ${a.exam.title}: ${a.score ?? 0}% (${a.status === 'FINISHED' ? 'өтті' : a.status === 'FAILED' ? 'өтпеді' : a.status})`)
       .join('\n');
     const systemPrompt = `Сен ProctoLearn платформасының AI ассистентісің. Студенттер мен мұғалімдерге оқу процесінде көмектесесің.
 Платформада онлайн курстар, сабақтар, прокторингпен емтихандар бар.
