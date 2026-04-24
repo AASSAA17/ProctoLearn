@@ -1,0 +1,101 @@
+=== APP & API FULL EVIDENCE ===
+Date: Fri Apr 24 05:48:15 PM +05 2026
+
+=== 1. API Health ===
+{"status":"ok"}
+
+=== 2. Swagger UI ===
+
+
+=== 3. Frontend ===
+
+
+=== 4. API Endpoints (61 total) ===
+  GET                  /admin/courses/stats
+  GET                  /admin/export/courses
+  GET                  /admin/export/users
+  GET                  /admin/stats
+  GET                  /admin/users
+  GET                  /admin/users/online
+  GET                  /admin/users/{id}/progress
+  POST                 /admin/users/{id}/reset-password
+  GET                  /attempts
+  GET                  /attempts/exam/{examId}/results
+  GET                  /attempts/my
+  POST                 /attempts/start/{examId}
+  GET                  /attempts/{id}
+  PATCH                /attempts/{id}/flag
+  POST                 /attempts/{id}/submit
+  POST                 /auth/change-password
+  POST                 /auth/forgot-password
+  POST                 /auth/login
+  POST                 /auth/logout
+  GET                  /auth/me
+  POST                 /auth/refresh
+  POST                 /auth/register
+  POST                 /auth/reset-password
+  GET                  /certificates/my
+  GET                  /certificates/verify/{code}
+  GET                  /certificates/{id}/pdf
+  POST ,GET            /courses
+  POST ,GET            /courses/{courseId}/exams
+  PATCH ,DELETE        /courses/{courseId}/exams/{examId}/questions/{questionId}
+  GET ,DELETE ,PATCH   /courses/{courseId}/exams/{id}
+  POST                 /courses/{courseId}/exams/{id}/questions
+  POST ,GET            /courses/{courseId}/lessons
+  GET                  /courses/{courseId}/lessons/progress/my
+  GET ,PATCH ,DELETE   /courses/{courseId}/lessons/{id}
+  POST                 /courses/{courseId}/lessons/{id}/check-assignment
+  POST                 /courses/{courseId}/lessons/{id}/complete
+  POST ,GET            /courses/{courseId}/modules
+  GET ,PATCH ,DELETE   /courses/{id}
+  GET                  /enrollments/active
+  GET                  /enrollments/check/{courseId}
+  POST                 /enrollments/complete/{courseId}
+  POST ,DELETE         /enrollments/courses/{courseId}
+  GET                  /enrollments/my
+  GET                  /evidence/{attemptId}
+  POST                 /evidence/{attemptId}/recording
+  GET ,PATCH ,DELETE   /lessons/{id}
+  POST ,GET            /lessons/{lessonId}/steps
+  PATCH                /modules/reorder
+  GET ,PATCH ,DELETE   /modules/{id}
+  POST ,GET            /modules/{moduleId}/lessons
+  GET                  /proctor/sessions/{attemptId}
+  GET ,PATCH ,DELETE   /steps/{id}
+  POST                 /steps/{id}/submit
+  GET                  /submissions/course/{courseId}/progress
+  GET                  /submissions/lesson/{lessonId}/progress
+  GET                  /submissions/step/{stepId}
+  GET                  /users
+  GET                  /users/me
+  PATCH                /users/me/profile
+  GET                  /users/{id}
+  PATCH                /users/{id}/role
+
+Total: 61 endpoints
+
+=== 5. Test API Calls ===
+GET /auth/me (without token = 401 expected):
+401
+GET /courses (public):
+200
+POST /auth/login:
+Login response: ['message', 'error', 'statusCode']
+
+=== 6. Running ProctoLearn Containers ===
+proctolearn_opal_client    Up 47 minutes             7000/tcp, 8181/tcp
+proctolearn_opal_server    Up 47 minutes             0.0.0.0:7002->7002/tcp, [::]:7002->7002/tcp
+proctolearn_opal_redis     Up 47 minutes             0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+proctolearn_opa            Up 47 minutes             0.0.0.0:8181->8181/tcp, [::]:8181->8181/tcp
+proctolearn_iac_postgres   Up 50 minutes             0.0.0.0:55432->5432/tcp
+proctolearn_iac_redis      Up 50 minutes             0.0.0.0:56379->6379/tcp
+proctolearn_iac_minio      Up 50 minutes             0.0.0.0:59000->9000/tcp, 0.0.0.0:59001->9001/tcp
+proctolearn_web_dev        Up 59 minutes             0.0.0.0:3001->3000/tcp, [::]:3001->3000/tcp
+proctolearn_n8n            Up 15 minutes             0.0.0.0:5678->5678/tcp, [::]:5678->5678/tcp
+proctolearn_jenkins        Up 59 minutes             0.0.0.0:50000->50000/tcp, [::]:50000->50000/tcp, 0.0.0.0:8088->8080/tcp, [::]:8088->8080/tcp
+proctolearn_api_dev        Up 59 minutes             0.0.0.0:4000->4000/tcp, [::]:4000->4000/tcp
+proctolearn_mailpit        Up 59 minutes (healthy)   0.0.0.0:1025->1025/tcp, [::]:1025->1025/tcp, 0.0.0.0:8025->8025/tcp, [::]:8025->8025/tcp, 1110/tcp
+proctolearn_pgadmin        Up 59 minutes             443/tcp, 0.0.0.0:5050->80/tcp, [::]:5050->80/tcp
+proctolearn_postgres       Up 59 minutes (healthy)   0.0.0.0:5433->5432/tcp, [::]:5433->5432/tcp
+proctolearn_minio          Up 59 minutes (healthy)   0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp
