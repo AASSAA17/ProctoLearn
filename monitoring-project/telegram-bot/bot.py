@@ -168,20 +168,68 @@ async def on_startup(app: Application):
     )
 
 
+def _run_demo_mode():
+    """Run a simple HTTP health server when Telegram token is not configured."""
+    import http.server
+    import threading
+
+    print("⚠️  TELEGRAM_BOT_TOKEN not configured - running in DEMO mode")
+    print("   To activate Telegram bot: set TELEGRAM_BOT_TOKEN in .env")
+    print("✅ Health server running on port 5001")
+
+    class HealthHandler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path in ("/", "/health"):
+                body = b'{"status":"demo","message":"Telegram bot not configured"}'
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def do_POST(self):
+            # Accept alertmanager webhooks in demo mode
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length)
+            try:
+                data = json.loads(body)
+                print(f"[ALERT] {datetime.now()} - {data.get('status','?')} - {len(data.get('alerts',[]))} alerts")
+            except Exception:
+                pass
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'{"ok":true}')
+
+        def log_message(self, format, *args):
+            pass  # suppress access logs
+
+    server = http.server.HTTPServer(("0.0.0.0", 5001), HealthHandler)
+    server.serve_forever()
+
+
 def main():
-    if not BOT_TOKEN:
-        raise RuntimeError("TELEGRAM_BOT_TOKEN is not set")
+    if not BOT_TOKEN or BOT_TOKEN in ("YOUR_BOT_TOKEN_HERE", ""):
+        _run_demo_mode()
+        return
 
-    app = Application.builder().token(BOT_TOKEN).post_init(on_startup).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("status", status))
-    app.add_handler(CommandHandler("graph", graph))
-    app.add_handler(CommandHandler("containers", containers))
+    try:
+        app = Application.builder().token(BOT_TOKEN).post_init(on_startup).build()
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(CommandHandler("status", status))
+        app.add_handler(CommandHandler("graph", graph))
+        app.add_handler(CommandHandler("containers", containers))
 
-    if DEFAULT_CHAT_ID:
-        app.job_queue.run_repeating(scheduled_status, interval=STATUS_INTERVAL_MINUTES * 60, first=90)
+        if DEFAULT_CHAT_ID:
+            app.job_queue.run_repeating(scheduled_status, interval=STATUS_INTERVAL_MINUTES * 60, first=90)
 
-    app.run_polling(drop_pending_updates=True)
+        app.run_polling(drop_pending_updates=True)
+    except Exception as e:
+        print(f"⚠️  Telegram bot startup failed: {e}")
+        print("   Falling back to demo mode...")
+        _run_demo_mode()
 
 
 if __name__ == "__main__":

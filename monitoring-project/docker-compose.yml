@@ -132,6 +132,8 @@ services:
       context: ./telegram-bot
       dockerfile: Dockerfile
     container_name: monitoring_telegram_bot
+    ports:
+      - "5001:5001"
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
