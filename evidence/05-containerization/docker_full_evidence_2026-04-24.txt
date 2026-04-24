@@ -1,0 +1,98 @@
+=== DOCKER FULL EVIDENCE ===
+Date: Fri Apr 24 05:48:27 PM +05 2026
+
+=== 1. All running containers ===
+NAMES                      STATUS                    PORTS
+monitoring_pgadmin         Up 31 minutes             443/tcp, 0.0.0.0:5051->80/tcp, [::]:5051->80/tcp
+monitoring_telegram_bot    Up 31 minutes             0.0.0.0:5001->5001/tcp, [::]:5001->5001/tcp
+alertmanager               Up 38 minutes             0.0.0.0:9093->9093/tcp, [::]:9093->9093/tcp
+grafana                    Up 40 minutes             0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+zabbix_agent               Up 40 minutes             0.0.0.0:10050->10050/tcp, [::]:10050->10050/tcp, 31999/tcp
+zabbix_web                 Up 40 minutes (healthy)   8443/tcp, 0.0.0.0:8082->8080/tcp, [::]:8082->8080/tcp
+prometheus                 Up 40 minutes             0.0.0.0:9090->9090/tcp, [::]:9090->9090/tcp
+zabbix_server              Up 40 minutes             0.0.0.0:10051->10051/tcp, [::]:10051->10051/tcp
+postgres_exporter          Up 40 minutes             0.0.0.0:9187->9187/tcp, [::]:9187->9187/tcp
+nginx_exporter             Up 40 minutes             0.0.0.0:9113->9113/tcp, [::]:9113->9113/tcp
+zabbix_pgsql               Up 40 minutes             5432/tcp
+monitoring_nginx           Up 40 minutes             0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp
+portainer                  Up 40 minutes             8000/tcp, 0.0.0.0:9443->9443/tcp, [::]:9443->9443/tcp, 0.0.0.0:9002->9000/tcp, [::]:9002->9000/tcp
+graphite                   Up 40 minutes             2004/tcp, 2013-2014/tcp, 2023-2024/tcp, 8080/tcp, 0.0.0.0:2003->2003/tcp, [::]:2003->2003/tcp, 8125-8126/tcp, 0.0.0.0:8125->8125/udp, [::]:8125->8125/udp, 0.0.0.0:8085->80/tcp, [::]:8085->80/tcp
+cadvisor                   Up 40 minutes (healthy)   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp
+blackbox_exporter          Up 40 minutes             0.0.0.0:9115->9115/tcp, [::]:9115->9115/tcp
+node_exporter              Up 40 minutes             0.0.0.0:9100->9100/tcp, [::]:9100->9100/tcp
+nagios                     Up 40 minutes             5667/tcp, 0.0.0.0:8084->80/tcp, [::]:8084->80/tcp
+proctolearn_opal_client    Up 47 minutes             7000/tcp, 8181/tcp
+proctolearn_opal_server    Up 47 minutes             0.0.0.0:7002->7002/tcp, [::]:7002->7002/tcp
+proctolearn_opal_redis     Up 47 minutes             0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+proctolearn_opa            Up 47 minutes             0.0.0.0:8181->8181/tcp, [::]:8181->8181/tcp
+proctolearn_iac_postgres   Up 50 minutes             0.0.0.0:55432->5432/tcp
+proctolearn_iac_redis      Up 50 minutes             0.0.0.0:56379->6379/tcp
+proctolearn_iac_minio      Up 50 minutes             0.0.0.0:59000->9000/tcp, 0.0.0.0:59001->9001/tcp
+proctolearn_web_dev        Up 59 minutes             0.0.0.0:3001->3000/tcp, [::]:3001->3000/tcp
+proctolearn_n8n            Up 16 minutes             0.0.0.0:5678->5678/tcp, [::]:5678->5678/tcp
+proctolearn_jenkins        Up 59 minutes             0.0.0.0:50000->50000/tcp, [::]:50000->50000/tcp, 0.0.0.0:8088->8080/tcp, [::]:8088->8080/tcp
+proctolearn_api_dev        Up 59 minutes             0.0.0.0:4000->4000/tcp, [::]:4000->4000/tcp
+proctolearn_mailpit        Up 59 minutes (healthy)   0.0.0.0:1025->1025/tcp, [::]:1025->1025/tcp, 0.0.0.0:8025->8025/tcp, [::]:8025->8025/tcp, 1110/tcp
+proctolearn_pgadmin        Up 59 minutes             443/tcp, 0.0.0.0:5050->80/tcp, [::]:5050->80/tcp
+proctolearn_postgres       Up 59 minutes (healthy)   0.0.0.0:5433->5432/tcp, [::]:5433->5432/tcp
+proctolearn_minio          Up 59 minutes (healthy)   0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp
+
+=== 2. ProctoLearn containers (healthy) ===
+proctolearn_opal_client    Up 47 minutes
+proctolearn_opal_server    Up 47 minutes
+proctolearn_opal_redis     Up 47 minutes
+proctolearn_opa            Up 47 minutes
+proctolearn_iac_postgres   Up 50 minutes
+proctolearn_iac_redis      Up 50 minutes
+proctolearn_iac_minio      Up 50 minutes
+proctolearn_web_dev        Up 59 minutes
+proctolearn_n8n            Up 16 minutes
+proctolearn_jenkins        Up 59 minutes
+proctolearn_api_dev        Up 59 minutes
+proctolearn_mailpit        Up 59 minutes (healthy)
+proctolearn_pgadmin        Up 59 minutes
+proctolearn_postgres       Up 59 minutes (healthy)
+proctolearn_minio          Up 59 minutes (healthy)
+
+=== 3. API logs (last 20, no errors) ===
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/submissions/lesson/:lessonId/progress, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/submissions/course/:courseId/progress, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[MinioService] [39m[32mMinIO: Bucket "proctolearn-evidence" already exists[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +5ms[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[Bootstrap] [39m[32m🚀 ProctoLearn API is running on: http://localhost:4000[39m
+[32m[Nest] 61  - [39m04/24/2026, 11:49:59 AM [32m    LOG[39m [38;5;3m[Bootstrap] [39m[32m📚 Swagger docs: http://localhost:4000/api/docs[39m
+[33m[Nest] 61  - [39m04/24/2026, 11:57:23 AM [33m   WARN[39m [38;5;3m[GraphiteService] [39m[33mGraphite send error: Error sending hot-shots message: Error: getaddrinfo EAI_AGAIN host.docker.internal[39m
+[33m[Nest] 61  - [39m04/24/2026, 11:57:23 AM [33m   WARN[39m [38;5;3m[GraphiteService] [39m[33mGraphite send error: Error sending hot-shots message: Error: getaddrinfo EAI_AGAIN host.docker.internal[39m
+[33m[Nest] 61  - [39m04/24/2026, 11:57:24 AM [33m   WARN[39m [38;5;3m[GraphiteService] [39m[33mGraphite send error: Error sending hot-shots message: Error: getaddrinfo ENOTFOUND host.docker.internal[39m
+[33m[Nest] 61  - [39m04/24/2026, 11:57:24 AM [33m   WARN[39m [38;5;3m[GraphiteService] [39m[33mGraphite send error: Error sending hot-shots message: Error: getaddrinfo ENOTFOUND host.docker.internal[39m
+[33m[Nest] 61  - [39m04/24/2026, 11:57:24 AM [33m   WARN[39m [38;5;3m[GraphiteService] [39m[33mGraphite send error: Error sending hot-shots message: Error: getaddrinfo ENOTFOUND host.docker.internal[39m
+[33m[Nest] 61  - [39m04/24/2026, 11:57:24 AM [33m   WARN[39m [38;5;3m[GraphiteService] [39m[33mGraphite send error: Error sending hot-shots message: Error: getaddrinfo ENOTFOUND host.docker.internal[39m
+[33m[Nest] 61  - [39m04/24/2026, 12:48:20 PM [33m   WARN[39m [38;5;3m[GraphiteService] [39m[33mGraphite send error: Error sending hot-shots message: Error: getaddrinfo EAI_AGAIN host.docker.internal[39m
+[33m[Nest] 61  - [39m04/24/2026, 12:48:20 PM [33m   WARN[39m [38;5;3m[GraphiteService] [39m[33mGraphite send error: Error sending hot-shots message: Error: getaddrinfo EAI_AGAIN host.docker.internal[39m
+[33m[Nest] 61  - [39m04/24/2026, 12:48:25 PM [33m   WARN[39m [38;5;3m[GraphiteService] [39m[33mGraphite send error: Error sending hot-shots message: Error: getaddrinfo EAI_AGAIN host.docker.internal[39m
+[33m[Nest] 61  - [39m04/24/2026, 12:48:25 PM [33m   WARN[39m [38;5;3m[GraphiteService] [39m[33mGraphite send error: Error sending hot-shots message: Error: getaddrinfo EAI_AGAIN host.docker.internal[39m
+[33m[Nest] 61  - [39m04/24/2026, 12:48:27 PM [33m   WARN[39m [38;5;3m[GraphiteService] [39m[33mGraphite send error: Error sending hot-shots message: Error: getaddrinfo ENOTFOUND host.docker.internal[39m
+[33m[Nest] 61  - [39m04/24/2026, 12:48:27 PM [33m   WARN[39m [38;5;3m[GraphiteService] [39m[33mGraphite send error: Error sending hot-shots message: Error: getaddrinfo ENOTFOUND host.docker.internal[39m
+[33m[Nest] 61  - [39m04/24/2026, 12:48:27 PM [33m   WARN[39m [38;5;3m[GraphiteService] [39m[33mGraphite send error: Error sending hot-shots message: Error: getaddrinfo ENOTFOUND host.docker.internal[39m
+[33m[Nest] 61  - [39m04/24/2026, 12:48:27 PM [33m   WARN[39m [38;5;3m[GraphiteService] [39m[33mGraphite send error: Error sending hot-shots message: Error: getaddrinfo ENOTFOUND host.docker.internal[39m
+
+=== 4. Docker compose config version ===
+docker-compose.dev.yml: valid
+
+=== 5. Container stats ===
+NAME                       CPU %     MEM USAGE / LIMIT
+proctolearn_opal_client    0.34%     50.85MiB / 9.708GiB
+proctolearn_opal_server    0.31%     35.12MiB / 9.708GiB
+proctolearn_opal_redis     0.50%     3.707MiB / 9.708GiB
+proctolearn_opa            0.00%     11.1MiB / 9.708GiB
+proctolearn_iac_postgres   0.00%     19.63MiB / 9.708GiB
+proctolearn_iac_redis      0.71%     8.344MiB / 9.708GiB
+proctolearn_iac_minio      0.05%     51.04MiB / 9.708GiB
+proctolearn_web_dev        37.25%    98.81MiB / 9.708GiB
+proctolearn_n8n            0.43%     220.1MiB / 9.708GiB
+proctolearn_jenkins        0.26%     63.7MiB / 9.708GiB
+proctolearn_api_dev        1.47%     70.93MiB / 9.708GiB
+proctolearn_mailpit        4.74%     10.29MiB / 9.708GiB
+proctolearn_pgadmin        0.05%     18MiB / 9.708GiB
+proctolearn_postgres       0.00%     18.8MiB / 9.708GiB
+proctolearn_minio          0.04%     82.11MiB / 9.708GiB
