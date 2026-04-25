@@ -149,9 +149,12 @@ export default function LessonViewerPage() {
   const prevLesson = currentIndex > 0 ? lessons[currentIndex - 1] : null;
   const nextLesson = currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null;
   const completedCount = lessons.filter((l) => l.completed).length;
-  const canGoNext = isCompleted && nextLesson;
+  // If all lessons completed (certificate mode) — allow navigation to any lesson
+  const allLessonsCompleted = lessons.length > 0 && lessons.every((l) => l.completed);
+  const canGoNext = (isCompleted || allLessonsCompleted) && nextLesson;
 
   const isLessonAccessible = (l: LessonNav) => {
+    if (allLessonsCompleted) return true; // certificate: all lessons open
     if (l.order === 1) return true;
     if (l.completed) return true;
     if (l.id === lessonId) return true;

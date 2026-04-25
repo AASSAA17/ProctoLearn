@@ -13,4 +13,3 @@ export class ChatMessageDto {
   @IsArray()
   history?: { role: 'user' | 'assistant'; content: string }[];
 }
-

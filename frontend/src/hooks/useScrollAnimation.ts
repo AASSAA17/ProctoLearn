@@ -26,7 +26,7 @@ export const useScrollAnimation = ({
     const elements = ref.current.querySelectorAll('[data-animate]');
     if (elements.length === 0) return;
 
-    const getAnimationProps = (animType: AnimationType) => {
+    const getAnimationProps = (animType: AnimationType): { from: Record<string, number>; duration: number; ease: string } => {
       const baseProps = { duration, ease: 'power3.out' };
       switch (animType) {
         case 'fadeInUp':
@@ -40,7 +40,7 @@ export const useScrollAnimation = ({
         case 'slideInDown':
           return { ...baseProps, from: { y: -40, opacity: 0 } };
         default:
-          return baseProps;
+          return { ...baseProps, from: { y: 60, opacity: 0 } };
       }
     };
 

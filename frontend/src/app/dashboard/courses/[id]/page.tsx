@@ -81,8 +81,8 @@ export default function CourseDetailPage() {
   if (!course) return null;
 
   const completedIds = new Set(progress.filter((l) => l.completed).map((l) => l.id));
-  const allLessonsCompleted = course.lessons.length > 0 && course.lessons.every((l) => completedIds.has(l.id));
-  const completedCount = completedIds.size;
+  const allLessonsCompleted = hasCertificate || (course.lessons.length > 0 && course.lessons.every((l) => completedIds.has(l.id)));
+  const completedCount = hasCertificate ? course.lessons.length : completedIds.size;
   const hasModules = (course.modules ?? []).length > 0;
   // Total lessons across all modules
   const totalModuleLessons = (course.modules ?? []).reduce((sum, m) => sum + m.lessons.length, 0);
@@ -91,21 +91,22 @@ export default function CourseDetailPage() {
 
   // All lessons from modules for progress tracking
   const allModuleLessonIds = (course.modules ?? []).flatMap((m) => m.lessons.map((l) => l.id));
-  const moduleLessonsCompleted = allModuleLessonIds.filter((id) => completedIds.has(id)).length;
-  const allModuleLessonsDone = totalModuleLessons > 0 && moduleLessonsCompleted >= totalModuleLessons;
+  const moduleLessonsCompleted = hasCertificate ? totalModuleLessons : allModuleLessonIds.filter((id) => completedIds.has(id)).length;
+  const allModuleLessonsDone = hasCertificate || (totalModuleLessons > 0 && moduleLessonsCompleted >= totalModuleLessons);
 
-  // A lesson is accessible: order=1 is always open, others need prev completed
+  // A lesson is accessible: if has certificate — all open; order=1 always open; others need prev completed
   const isAccessible = (lesson: { id: string; order: number }) => {
+    if (hasCertificate) return true;
     if (lesson.order === 1) return true;
     const prev = course.lessons.find((l) => l.order === lesson.order - 1);
     return prev ? completedIds.has(prev.id) : false;
   };
 
-  // Module lesson accessible: first lesson of module always open; others sequential
+  // Module lesson accessible: if has certificate — all open; otherwise sequential
   const isModuleLessonAccessible = (modIdx: number, lessonIdx: number): boolean => {
+    if (hasCertificate) return true;
     if (modIdx === 0 && lessonIdx === 0) return true;
     const mods = course.modules ?? [];
-    // get previous lesson id
     let prevId: string | null = null;
     if (lessonIdx > 0) {
       prevId = mods[modIdx]?.lessons[lessonIdx - 1]?.id ?? null;
@@ -123,6 +124,25 @@ export default function CourseDetailPage() {
           ← Курстарға оралу
         </Link>
       </div>
+
+      {/* Certificate / Completion Banner */}
+      {hasCertificate && (
+        <div className="mb-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-2xl flex items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-4">
+            <span className="text-5xl">🏆</span>
+            <div>
+              <p className="text-xl font-bold text-green-800">Курс аяқталды!</p>
+              <p className="text-sm text-green-600">Сіз осы курс бойынша сертификат алдыңыз. Барлық сабақтар қол жетімді.</p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/certificates"
+            className="whitespace-nowrap bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
+          >
+            🎓 Сертификатты көру
+          </Link>
+        </div>
+      )}
 
       <div className="card mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">{course.title}</h1>

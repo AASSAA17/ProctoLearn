@@ -5,19 +5,27 @@ route:
   group_wait: 10s
   group_interval: 1m
   repeat_interval: 30m
-  receiver: "telegram-webhook"
+  receiver: "telegram-alerts"
 receivers:
   - name: "telegram-webhook"
     webhook_configs:
       - url: "http://monitoring_telegram_bot:5001/alerts"
         send_resolved: true
-  # Telegram receiver - activate after setting real bot token
-  # - name: "telegram-alerts"
-  #   telegram_configs:
-  #     - api_url: "https://api.telegram.org"
-  #       bot_token: "YOUR_BOT_TOKEN"
-  #       chat_id: YOUR_CHAT_ID
-  #       parse_mode: "HTML"
+  - name: "telegram-alerts"
+    telegram_configs:
+      - api_url: "https://api.telegram.org"
+        bot_token: "7613071728:AAH_iDQggErNIC--BSbqupkIVbe4HnLCSE4"
+        chat_id: 6331359365
+        parse_mode: "HTML"
+        message: |
+          {{ if eq .Status "firing" }}🔴 <b>ALERT FIRING</b>{{ else }}✅ <b>RESOLVED</b>{{ end }}
+          {{ range .Alerts }}
+          📌 <b>{{ .Labels.alertname }}</b>
+          {{ if .Labels.severity }}Severity: <code>{{ .Labels.severity }}</code>{{ end }}
+          {{ if .Annotations.summary }}{{ .Annotations.summary }}{{ end }}
+          {{ if .Annotations.description }}{{ .Annotations.description }}{{ end }}
+          {{ end }}
+        send_resolved: true
 inhibit_rules:
   - source_matchers: ["severity=critical"]
     target_matchers: ["severity=warning"]

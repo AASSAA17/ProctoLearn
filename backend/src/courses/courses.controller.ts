@@ -9,7 +9,6 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Role, CourseLevel } from '@prisma/client';
-
 @ApiTags('Курстар')
 @Controller('courses')
 export class CoursesController {

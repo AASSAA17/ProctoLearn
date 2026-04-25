@@ -79,7 +79,7 @@ export default function ChatWidget() {
             : 'bg-primary-600 hover:bg-primary-700 hover:scale-110'
         }`}
       >
-        {isOpen ? '✕' : '🤖'}
+        {isOpen ? '✕' : ''}
       </button>
 
       {/* Chat panel */}
@@ -89,7 +89,7 @@ export default function ChatWidget() {
           <div className="bg-primary-600 px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-lg">
-                🤖
+                
               </div>
               <div>
                 <p className="text-white font-semibold text-sm">ProctoLearn AI</p>
@@ -106,7 +106,7 @@ export default function ChatWidget() {
           <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0 max-h-[360px]">
             {messages.length === 0 ? (
               <div className="text-center py-4">
-                <p className="text-4xl mb-3">👋</p>
+                <p className="text-4xl mb-3"></p>
                 <p className="text-gray-700 font-semibold text-sm mb-1">Сәлем! Мен AI ассистентпін</p>
                 <p className="text-gray-400 text-xs mb-4">Оқу процесіңізде көмектесуге дайынмын</p>
                 <div className="grid grid-cols-2 gap-2">
@@ -129,7 +129,7 @@ export default function ChatWidget() {
                 >
                   {msg.role === 'assistant' && (
                     <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-sm mr-2 flex-shrink-0 mt-0.5">
-                      🤖
+                      
                     </div>
                   )}
                   <div
@@ -159,7 +159,7 @@ export default function ChatWidget() {
             {isLoading && (
               <div className="flex justify-start">
                 <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-sm mr-2 flex-shrink-0">
-                  🤖
+                  
                 </div>
                 <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-4 py-3">
                   <div className="flex gap-1">
@@ -207,4 +207,3 @@ export default function ChatWidget() {
     </>
   );
 }
-

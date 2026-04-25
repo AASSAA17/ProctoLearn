@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import api, { WS_URL } from '@/lib/api';
-import { io, Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -11,9 +11,9 @@ interface AttemptSummary {
   status: string;
   trustScore: number;
   startedAt: string;
-  user: { name: string; email: string };
-  exam: { title: string };
-  _count: { events: number; evidences: number };
+  user: { name: string; email: string } | null;
+  exam: { title: string } | null;
+  _count: { events: number; evidences: number } | null;
 }
 
 export default function ProctorDashboardPage() {
@@ -25,7 +25,10 @@ export default function ProctorDashboardPage() {
   useEffect(() => {
     api
       .get('/attempts')
-      .then(({ data }) => setAttempts(data))
+      .then(({ data }) => {
+        const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+        setAttempts(list);
+      })
       .catch(() => toast.error('Жүктеу қатесі'))
       .finally(() => setLoading(false));
   }, []);
@@ -33,7 +36,7 @@ export default function ProctorDashboardPage() {
   useEffect(() => {
     if (!selected) return;
 
-    const token = localStorage.getItem('accessToken');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     const socket = io(`${WS_URL}/proctor`, {
       auth: { token },
       transports: ['websocket'],
@@ -50,7 +53,7 @@ export default function ProctorDashboardPage() {
       );
     });
 
-    socket.on('proctor:screenshot:saved', ({ url }) => {
+    socket.on('proctor:screenshot:saved', () => {
       toast.success('Жаңа скриншот сақталды', { duration: 2000 });
     });
 
@@ -63,16 +66,20 @@ export default function ProctorDashboardPage() {
     if (!selected) return;
     api
       .get(`/proctor/sessions/${selected}`)
-      .then(({ data }) => setEvents(data.events.reverse()))
+      .then(({ data }) => setEvents((data?.events ?? []).reverse()))
       .catch(() => {});
   }, [selected]);
 
   const handleFlag = async (attemptId: string) => {
-    await api.patch(`/attempts/${attemptId}/flag`);
-    setAttempts((prev) =>
-      prev.map((a) => (a.id === attemptId ? { ...a, status: 'FLAGGED' } : a)),
-    );
-    toast.success('Талпыныс белгіленді');
+    try {
+      await api.patch(`/attempts/${attemptId}/flag`);
+      setAttempts((prev) =>
+        prev.map((a) => (a.id === attemptId ? { ...a, status: 'FLAGGED' } : a)),
+      );
+      toast.success('Талпыныс белгіленді');
+    } catch {
+      toast.error('Қате болды');
+    }
   };
 
   const trustColor = (score: number) => {
@@ -82,11 +89,12 @@ export default function ProctorDashboardPage() {
   };
 
   const statusBadge = (s: string) => {
-    if (s === 'FINISHED') return <span className="badge-success">Аяқталды</span>;
-    if (s === 'IN_PROGRESS') return <span className="badge-warning">Жүргізілуде</span>;
-    if (s === 'FAILED') return <span className="badge-danger">Сәтсіз ✗</span>;
-    if (s === 'FLAGGED') return <span className="badge-danger">Белгіленді 🚩</span>;
-    return <span className="badge-danger">{s}</span>;
+    const base = 'text-xs font-semibold px-2 py-0.5 rounded-full';
+    if (s === 'FINISHED') return <span className={`${base} bg-green-100 text-green-700`}>Аяқталды</span>;
+    if (s === 'IN_PROGRESS') return <span className={`${base} bg-yellow-100 text-yellow-700`}>Жүргізілуде</span>;
+    if (s === 'FAILED') return <span className={`${base} bg-red-100 text-red-700`}>Сәтсіз ✗</span>;
+    if (s === 'FLAGGED') return <span className={`${base} bg-red-100 text-red-700`}>Белгіленді 🚩</span>;
+    return <span className={`${base} bg-gray-100 text-gray-700`}>{s}</span>;
   };
 
   const eventTypeLabel = (type: string) => {
@@ -97,7 +105,7 @@ export default function ProctorDashboardPage() {
       fullscreen_exit: '⚠️ Толық экраннан шығу',
       face_not_detected: '🚫 Бет анықталмады',
     };
-    return labels[type] || type;
+    return labels[type] ?? type;
   };
 
   return (
@@ -129,18 +137,21 @@ export default function ProctorDashboardPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium text-gray-900">{attempt.user.name}</p>
-                        <p className="text-sm text-gray-500">{attempt.exam.title}</p>
+                        <p className="font-medium text-gray-900">{attempt.user?.name ?? '—'}</p>
+                        <p className="text-sm text-gray-500">{attempt.user?.email ?? '—'}</p>
+                        <p className="text-sm text-gray-400">{attempt.exam?.title ?? '—'}</p>
                       </div>
                       <div className="text-right">
                         {statusBadge(attempt.status)}
-                        <p className={`text-sm font-bold mt-1 ${trustColor(attempt.trustScore)}`}>
-                          Сенімділік: {attempt.trustScore}
+                        <p className={`text-sm font-bold mt-1 ${trustColor(attempt.trustScore ?? 100)}`}>
+                          Сенімділік: {attempt.trustScore ?? 100}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
-                      <span>{attempt._count.events} оқиға · {attempt._count.evidences} скриншот</span>
+                      <span>
+                        {attempt._count?.events ?? 0} оқиға · {attempt._count?.evidences ?? 0} скриншот
+                      </span>
                       <div className="flex gap-2">
                         <Link
                           href={`/dashboard/proctor/evidence/${attempt.id}`}
@@ -163,13 +174,13 @@ export default function ProctorDashboardPage() {
                     <div className="mt-2 w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all ${
-                          attempt.trustScore >= 80
+                          (attempt.trustScore ?? 100) >= 80
                             ? 'bg-green-500'
-                            : attempt.trustScore >= 50
+                            : (attempt.trustScore ?? 100) >= 50
                             ? 'bg-yellow-500'
                             : 'bg-red-500'
                         }`}
-                        style={{ width: `${attempt.trustScore}%` }}
+                        style={{ width: `${attempt.trustScore ?? 100}%` }}
                       />
                     </div>
                   </div>
@@ -189,11 +200,11 @@ export default function ProctorDashboardPage() {
               {events.length === 0 ? (
                 <p className="text-gray-400 text-sm">Оқиға жоқ</p>
               ) : (
-                events.map((ev) => (
-                  <div key={ev.id} className="p-2 bg-yellow-50 rounded text-sm border border-yellow-200">
-                    <p className="font-medium">{eventTypeLabel(ev.type)}</p>
+                events.map((ev, idx) => (
+                  <div key={ev?.id ?? idx} className="p-2 bg-yellow-50 rounded text-sm border border-yellow-200">
+                    <p className="font-medium">{eventTypeLabel(ev?.type ?? '')}</p>
                     <p className="text-xs text-gray-400">
-                      {new Date(ev.timestamp).toLocaleTimeString('kk-KZ')}
+                      {ev?.timestamp ? new Date(ev.timestamp).toLocaleTimeString('kk-KZ') : '—'}
                     </p>
                   </div>
                 ))

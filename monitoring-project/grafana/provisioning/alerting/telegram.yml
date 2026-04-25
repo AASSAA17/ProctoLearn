@@ -1,0 +1,33 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: Telegram
+    receivers:
+      - uid: telegram-receiver
+        type: telegram
+        settings:
+          bottoken: "7613071728:AAH_iDQggErNIC--BSbqupkIVbe4HnLCSE4"
+          chatid: "6331359365"
+          parse_mode: "HTML"
+          message: |
+            {{ if eq .Status "firing" }}🔴 ALERT FIRING{{ else }}✅ RESOLVED{{ end }}
+
+            {{ range .Alerts }}
+            <b>{{ .Labels.alertname }}</b>
+            {{ if .Labels.severity }}Severity: {{ .Labels.severity }}{{ end }}
+            {{ if .Annotations.summary }}{{ .Annotations.summary }}{{ end }}
+            {{ if .Annotations.description }}{{ .Annotations.description }}{{ end }}
+            {{ end }}
+        disableResolveMessage: false
+
+policies:
+  - orgId: 1
+    receiver: Telegram
+    group_by:
+      - alertname
+      - severity
+    group_wait: 10s
+    group_interval: 1m
+    repeat_interval: 30m
+

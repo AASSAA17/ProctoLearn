@@ -37,12 +37,12 @@ interface Attempt {
 }
 
 const EVENT_LABELS: Record<string, string> = {
-  TAB_SWITCH:       '🔀 Қойынды ауыстыру',
-  FULLSCREEN_EXIT:  '🖥 Толық экраннан шығу',
-  FACE_NOT_FOUND:   '👤 Бет анықталмады',
-  MULTIPLE_FACES:   '👥 Бірнеше бет анықталды',
-  COPY_PASTE:       '📋 Көшіру/қою',
-  WINDOW_BLUR:      '🪟 Терезеден шығу',
+  TAB_SWITCH:       ' Қойынды ауыстыру',
+  FULLSCREEN_EXIT:  ' Толық экраннан шығу',
+  FACE_NOT_FOUND:   ' Бет анықталмады',
+  MULTIPLE_FACES:   ' Бірнеше бет анықталды',
+  COPY_PASTE:       ' Көшіру/қою',
+  WINDOW_BLUR:      ' Терезеден шығу',
 };
 
 export default function AttemptReviewPage() {
@@ -105,13 +105,13 @@ export default function AttemptReviewPage() {
               </span>
               {attempt.status === 'FLAGGED' && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">
-                  🚩 Күмәнді
+                   Күмәнді
                 </span>
               )}
             </div>
             <h1 className="text-xl font-bold text-gray-900">{attempt.exam.title}</h1>
             <p className="text-gray-400 text-sm mt-1">
-              📅 {new Date(attempt.startedAt).toLocaleString('kk-KZ')}
+               {new Date(attempt.startedAt).toLocaleString('kk-KZ')}
               {duration !== null && <span className="ml-3">⏱ {duration} мин</span>}
             </p>
           </div>
@@ -161,11 +161,11 @@ export default function AttemptReviewPage() {
       {/* Answers section */}
       <div className="mb-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-3">
-          📝 Сұрақтар мен жауаптар
+           Сұрақтар мен жауаптар
         </h2>
         {attempt.answers.length === 0 ? (
           <div className="card text-center py-10 text-gray-400">
-            <p className="text-4xl mb-2">📭</p>
+            <p className="text-4xl mb-2"></p>
             <p>Жауаптар жоқ</p>
           </div>
         ) : (
@@ -249,7 +249,7 @@ export default function AttemptReviewPage() {
       {attempt.events.length > 0 && (
         <div className="card border border-orange-200 bg-orange-50">
           <h2 className="text-lg font-semibold mb-4 text-orange-700 flex items-center gap-2">
-            🚨 Проктеринг іс-шаралары
+             Проктеринг іс-шаралары
             <span className="text-sm font-normal bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">
               {attempt.events.length}
             </span>

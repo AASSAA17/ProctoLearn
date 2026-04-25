@@ -56,10 +56,28 @@ export class AdminController {
     return this.adminService.getUserCourseProgress(id);
   }
 
-  @Post('users/:id/reset-password')
+  @Post('users/:userId/reset-password')
   @ApiOperation({ summary: 'Уақытша пароль жіберу' })
-  resetPassword(@Param('id') id: string) {
+  resetPassword(@Param('userId') id: string) {
     return this.adminService.resetUserPassword(id);
+  }
+
+  @Post('users/:userId/grant-certificate/:courseId')
+  @ApiOperation({ summary: 'Пайдаланушыға курсты өткізіп сертификат беру' })
+  grantCertificate(
+    @Param('userId') userId: string,
+    @Param('courseId') courseId: string,
+  ) {
+    return this.adminService.grantFullCertificate(userId, courseId);
+  }
+
+  @Post('users/:userId/grant-exam-access/:courseId')
+  @ApiOperation({ summary: 'Пайдаланушыға тікелей экзаменге кіру рұқсатын беру' })
+  grantExamAccess(
+    @Param('userId') userId: string,
+    @Param('courseId') courseId: string,
+  ) {
+    return this.adminService.grantExamAccess(userId, courseId);
   }
 
   @Get('export/users')

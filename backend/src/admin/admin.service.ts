@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { CertificatesService } from '../certificates/certificates.service';
 import * as bcrypt from 'bcryptjs';
 import * as ExcelJS from 'exceljs';
 
@@ -9,6 +10,7 @@ export class AdminService {
   constructor(
     private prisma: PrismaService,
     private mailService: MailService,
+    private certificatesService: CertificatesService,
   ) {}
 
   // ─── Статистика ────────────────────────────────────────────────────────────
@@ -242,6 +244,84 @@ export class AdminService {
       message: 'Пароль сәтті жаңартылды',
       tempPassword: shuffled,
       email: user.email,
+    };
+  }
+
+  // ─── Арнайы рұқсат беру ───────────────────────────────────────────────────
+
+  /**
+   * Пайдаланушыға толық курсты өткізіп, сертификат береді.
+   * Барлық сабақтарды оқылған деп белгілейді + enrollment-ты бітіреді + сертификат жасайды.
+   */
+  async grantFullCertificate(userId: string, courseId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Пайдаланушы табылмады');
+
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      include: { lessons: { select: { id: true } } },
+    });
+    if (!course) throw new NotFoundException('Курс табылмады');
+
+    // 1. Enrollment — тіркел немесе жаңарт
+    await this.prisma.enrollment.upsert({
+      where: { userId_courseId: { userId, courseId } },
+      create: { userId, courseId, completedAt: new Date() },
+      update: { completedAt: new Date() },
+    });
+
+    // 2. Барлық сабақтарды оқылған деп белгіле
+    for (const lesson of course.lessons) {
+      await this.prisma.lessonProgress.upsert({
+        where: { userId_lessonId: { userId, lessonId: lesson.id } },
+        create: { userId, courseId, lessonId: lesson.id },
+        update: { viewedAt: new Date() },
+      });
+    }
+
+    // 3. Сертификат жасау
+    const certificate = await this.certificatesService.issue(userId, courseId);
+
+    return {
+      message: 'Сертификат сәтті берілді',
+      certificate,
+      lessonsMarked: course.lessons.length,
+    };
+  }
+
+  /**
+   * Пайдаланушыға сабақтарды өткізіп, тікелей экзаменге кіруге рұқсат береді.
+   * Барлық сабақтарды оқылған деп белгілейді, бірақ сертификат бермейді.
+   */
+  async grantExamAccess(userId: string, courseId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Пайдаланушы табылмады');
+
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      include: { lessons: { select: { id: true } } },
+    });
+    if (!course) throw new NotFoundException('Курс табылмады');
+
+    // 1. Enrollment — тіркел немесе жаңарт (бітірмей)
+    await this.prisma.enrollment.upsert({
+      where: { userId_courseId: { userId, courseId } },
+      create: { userId, courseId },
+      update: {},
+    });
+
+    // 2. Барлық сабақтарды оқылған деп белгіле
+    for (const lesson of course.lessons) {
+      await this.prisma.lessonProgress.upsert({
+        where: { userId_lessonId: { userId, lessonId: lesson.id } },
+        create: { userId, courseId, lessonId: lesson.id },
+        update: { viewedAt: new Date() },
+      });
+    }
+
+    return {
+      message: 'Экзаменге кіру рұқсаты берілді',
+      lessonsMarked: course.lessons.length,
     };
   }
 

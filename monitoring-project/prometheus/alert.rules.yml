@@ -101,3 +101,35 @@ groups:
         annotations:
           summary: "Observability demo alert: API жүктемесі"
           description: "Демо үшін жасалған alert. Load-test кезінде firing, кейін resolved болуы керек."
+
+      # ── LOAD TEST DEMO ALERTS (node_exporter based — always work) ──
+      - alert: LoadTestHighCPU
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100) > 30
+        for: 30s
+        labels:
+          severity: warning
+          lifecycle: demo
+        annotations:
+          summary: "🔥 Load Test: CPU жүктемесі жоғары"
+          description: "CPU пайдалануы {{ $value | printf \"%.1f\" }}% — стресс-тест жүріп жатыр"
+
+      - alert: LoadTestHighMemory
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 60
+        for: 30s
+        labels:
+          severity: warning
+          lifecycle: demo
+        annotations:
+          summary: "⚠️ Load Test: RAM пайдалануы жоғары"
+          description: "Жад пайдалануы {{ $value | printf \"%.1f\" }}% жетті"
+
+      - alert: LoadTestActive
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[30s])) * 100) > 20
+        for: 15s
+        labels:
+          severity: info
+          lifecycle: demo
+        annotations:
+          summary: "📊 Load Test белсенді"
+          description: "CPU {{ $value | printf \"%.1f\" }}% — нагрузочный тест жүріп жатыр. Alertmanager → Telegram тізбегі тексерілуде."
+

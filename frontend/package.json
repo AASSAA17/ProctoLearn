@@ -12,6 +12,7 @@
     "@heroicons/react": "^2.1.5",
     "@hookform/resolvers": "^3.9.0",
     "axios": "^1.7.9",
+    "class-validator": "^0.15.1",
     "clsx": "^2.1.1",
     "dompurify": "^3.3.1",
     "gsap": "^3.15.0",
