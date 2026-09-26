@@ -36,6 +36,7 @@ jobs:
       - run: npm run prisma:generate
       - run: npm run build
       - run: npm test
+      - run: npm run test:migrations
       - run: npx --no-install prisma migrate deploy
       - run: npm run test:integration
   frontend:
