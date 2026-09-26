@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MinioService } from '../minio/minio.service';
+import { randomUUID } from 'crypto';
+import { recordingFormat } from './recording-format';
 
 @Injectable()
 export class EvidenceService {
@@ -11,24 +13,33 @@ export class EvidenceService {
     private minio: MinioService,
   ) {}
 
-  async saveRecording(
-    attemptId: string,
-    buffer: Buffer,
-    mimeType: string,
-    recordingType: 'camera' | 'screen',
-  ) {
+  async assertOwner(attemptId: string, userId: string) {
     const attempt = await this.prisma.attempt.findUnique({ where: { id: attemptId } });
     if (!attempt) throw new NotFoundException('Талпыныс табылмады');
+    if (attempt.userId !== userId) throw new ForbiddenException('Рұқсат жоқ');
+    return attempt;
+  }
 
-    const ext = mimeType.includes('webm') ? 'webm' : mimeType.includes('mp4') ? 'mp4' : 'webm';
-    const objectName = `recordings/${attemptId}/${recordingType}-${Date.now()}.${ext}`;
+  async saveRecording(
+    attemptId: string,
+    filePath: string,
+    mimeType: string,
+    recordingType: 'camera' | 'screen',
+    userId: string,
+  ) {
+    await this.assertOwner(attemptId, userId);
 
-    const url = await this.minio.uploadBuffer(buffer, objectName, mimeType);
-    this.logger.log(`Жазба MinIO-ға жүктелді: ${objectName} (${(buffer.length / 1024 / 1024).toFixed(1)} MB)`);
-
-    return this.prisma.evidenceFile.create({
-      data: { attemptId, type: `recording_${recordingType}`, url: objectName },
-    });
+    const format = await recordingFormat(filePath, mimeType);
+    const objectName = `recordings/${attemptId}/${recordingType}-${randomUUID()}.${format.extension}`;
+    await this.minio.uploadFile(filePath, objectName, format.mime);
+    try {
+      return await this.prisma.evidenceFile.create({
+        data: { attemptId, type: `recording_${recordingType}`, url: objectName },
+      });
+    } catch (error) {
+      await this.minio.removeObject(objectName).catch(() => this.logger.error('Failed to remove unreferenced recording'));
+      throw error;
+    }
   }
 
   async getEvidenceByAttempt(attemptId: string) {

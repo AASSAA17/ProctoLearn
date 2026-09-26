@@ -1,5 +1,5 @@
 import {
-  IsArray, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min, ValidateNested,
+  ArrayMinSize, ArrayMaxSize, IsArray, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Max, Min, ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -62,10 +62,13 @@ export class CreateExamDto {
   @IsOptional()
   @IsInt()
   @Min(0)
+  @Max(100)
   passScore?: number;
 
   @ApiProperty({ type: [CreateQuestionDto] })
   @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(1000)
   @ValidateNested({ each: true })
   @Type(() => CreateQuestionDto)
   questions: CreateQuestionDto[];
@@ -88,5 +91,6 @@ export class UpdateExamDto {
   @IsOptional()
   @IsInt()
   @Min(0)
+  @Max(100)
   passScore?: number;
 }

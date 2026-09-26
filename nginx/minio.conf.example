@@ -1,0 +1,19 @@
+# Separate MinIO S3 origin for browser playback. Replace storage.example.com
+# and certificate paths; MINIO_PUBLIC_URL=https://storage.example.com.
+# Do not place the S3 API below a path prefix: that invalidates signatures.
+server {
+    listen 443 ssl;
+    server_name storage.example.com;
+    ssl_certificate /etc/ssl/certs/storage.crt;
+    ssl_certificate_key /etc/ssl/private/storage.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    location / {
+        proxy_pass http://127.0.0.1:9000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_buffering off;
+    }
+}

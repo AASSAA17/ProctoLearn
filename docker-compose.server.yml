@@ -1,4 +1,6 @@
 # ОСНОВНОЙ СЕРВЕР (BACKEND + FRONTEND + БАЗА ДАННЫХ)
+# Historical demo stack: development images and bind mounts, not production.
+# For production use docker-compose.yml and docs/SECURITY_PHASE_1.md.
 # Запуск: docker compose -f docker-compose.server.yml up -d
 # Остановка: docker compose -f docker-compose.server.yml down
 

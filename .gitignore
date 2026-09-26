@@ -23,7 +23,7 @@ npm-debug.log*
 Thumbs.db
 
 # Prisma
-backend/prisma/migrations/
+# Keep migrations in Git so deployments are reproducible.
 
 # MinIO data
 minio_data/
@@ -41,3 +41,10 @@ infra/terraform/*.tfstate
 infra/terraform/*.tfstate.*
 infra/terraform/terraform.tfvars
 .idea/
+
+# Local backups may contain credentials, personal data and recordings.
+# Existing tracked/history entries require a separate, reviewed cleanup.
+backups/
+*.bak
+*.tsbuildinfo
+/handoff/

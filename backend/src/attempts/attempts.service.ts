@@ -10,7 +10,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SubmitAnswersDto } from './dto/attempt.dto';
 import { QuestionType } from '@prisma/client';
 import { CertificatesService } from '../certificates/certificates.service';
-import { EnrollmentsService } from '../enrollments/enrollments.service';
+import { attemptDeadline, attemptExpired, expiredAttemptError, validateAnswerIds } from './attempt-policy';
+import { serializable } from '../prisma/serializable';
 
 @Injectable()
 export class AttemptsService {
@@ -19,99 +20,140 @@ export class AttemptsService {
   constructor(
     private prisma: PrismaService,
     private certificatesService: CertificatesService,
-    private enrollmentsService: EnrollmentsService,
     private configService: ConfigService,
   ) {}
 
   private static readonly MAX_ATTEMPTS_PER_EXAM = 5;
 
   async startAttempt(examId: string, userId: string) {
-    const exam = await this.prisma.exam.findUnique({ where: { id: examId } });
-    if (!exam) throw new NotFoundException('Емтихан табылмады');
+    const attempt = await serializable(this.prisma, async (tx) => {
+      const exam = await tx.exam.findUnique({ where: { id: examId }, include: { _count: { select: { questions: true } } } });
+      if (!exam) throw new NotFoundException('Емтихан табылмады');
+      if (!exam._count.questions) throw new BadRequestException('Емтиханда сұрақтар жоқ');
 
-    const includeExam = {
-      exam: { include: { questions: { select: { id: true, text: true, type: true, options: true } } } },
-    } as const;
+      const enrollment = await tx.enrollment.findUnique({
+        where: { userId_courseId: { userId, courseId: exam.courseId } },
+      });
+      if (!enrollment) throw new ForbiddenException('Алдымен курсқа тіркеліңіз');
 
-    const existingAttempt = await this.prisma.attempt.findFirst({
-      where: { examId, userId, status: 'IN_PROGRESS' },
-      include: includeExam,
+      const includeExam = {
+        exam: { include: { questions: { select: { id: true, text: true, type: true, options: true } } } },
+      } as const;
+
+      const existingAttempt = await tx.attempt.findFirst({
+        where: { examId, userId, status: 'IN_PROGRESS' },
+        include: includeExam,
+      });
+
+      if (existingAttempt) {
+        if (attemptExpired(existingAttempt.startedAt, exam.duration)) {
+          await tx.attempt.update({
+            where: { id: existingAttempt.id },
+            data: { status: 'FAILED', score: 0, finishedAt: new Date() },
+          });
+          return null;
+        }
+        return existingAttempt;
+      }
+
+      // Enforce max attempts per exam per user
+      const totalAttempts = await tx.attempt.count({
+        where: { examId, userId },
+      });
+      if (totalAttempts >= AttemptsService.MAX_ATTEMPTS_PER_EXAM) {
+        throw new BadRequestException(
+          `Сіз бұл емтиханға ${AttemptsService.MAX_ATTEMPTS_PER_EXAM} рет талпыныс жасадыңыз. Максималды шек.`,
+        );
+      }
+
+      return tx.attempt.create({
+        data: { examId, userId },
+        include: includeExam,
+      });
     });
-
-    if (existingAttempt) {
-      return existingAttempt;
-    }
-
-    // Enforce max attempts per exam per user
-    const totalAttempts = await this.prisma.attempt.count({
-      where: { examId, userId },
-    });
-    if (totalAttempts >= AttemptsService.MAX_ATTEMPTS_PER_EXAM) {
-      throw new BadRequestException(
-        `Сіз бұл емтиханға ${AttemptsService.MAX_ATTEMPTS_PER_EXAM} рет талпыныс жасадыңыз. Максималды шек.`,
-      );
-    }
-
-    return this.prisma.attempt.create({
-      data: { examId, userId },
-      include: includeExam,
-    });
+    // Throw after committing expiry so this attempt cannot remain active forever.
+    if (!attempt) throw expiredAttemptError();
+    return {
+      ...attempt,
+      expiresAt: new Date(attemptDeadline(attempt.startedAt, attempt.exam.duration)).toISOString(),
+      serverTime: new Date().toISOString(),
+    };
   }
 
   async submitAnswers(attemptId: string, dto: SubmitAnswersDto, userId: string) {
-    const attempt = await this.prisma.attempt.findUnique({
-      where: { id: attemptId },
-      include: {
-        exam: { include: { questions: true, course: true } },
-        user: { select: { id: true, email: true, name: true } },
-      },
-    });
+    const outcome = await serializable(this.prisma, async (tx) => {
+      const attempt = await tx.attempt.findUnique({
+        where: { id: attemptId },
+        include: {
+          exam: { include: { questions: true, course: true } },
+          user: { select: { id: true, email: true, name: true } },
+        },
+      });
 
-    if (!attempt) throw new NotFoundException('Талпыныс табылмады');
-    if (attempt.userId !== userId) throw new ForbiddenException('Рұқсат жоқ');
-    if (attempt.status !== 'IN_PROGRESS') {
-      throw new BadRequestException('Бұл талпыныс аяқталған');
-    }
-
-    const questions = attempt.exam.questions;
-    let correctCount = 0;
-
-    const answerRecords = dto.answers.map((ans) => {
-      const question = questions.find((q) => q.id === ans.questionId);
-      let isCorrect = false;
-
-      if (question) {
-        if (question.type === QuestionType.SINGLE_CHOICE || question.type === QuestionType.TEXT) {
-          isCorrect = ans.answer.trim().toLowerCase() === question.answer.trim().toLowerCase();
-        } else if (question.type === QuestionType.MULTIPLE_CHOICE) {
-          const userAnswers = ans.answer.split(',').map((a) => a.trim().toLowerCase()).sort();
-          const correctAnswers = question.answer.split(',').map((a) => a.trim().toLowerCase()).sort();
-          isCorrect = JSON.stringify(userAnswers) === JSON.stringify(correctAnswers);
-        }
-        if (isCorrect) correctCount++;
+      if (!attempt) throw new NotFoundException('Талпыныс табылмады');
+      if (attempt.userId !== userId) throw new ForbiddenException('Рұқсат жоқ');
+      if (attempt.status !== 'IN_PROGRESS') {
+        throw new BadRequestException({ code: 'ATTEMPT_CLOSED', message: 'Бұл талпыныс аяқталған немесе тексеруге белгіленген' });
+      }
+      if (attemptExpired(attempt.startedAt, attempt.exam.duration)) {
+        await tx.attempt.update({
+          where: { id: attemptId },
+          data: { status: 'FAILED', score: 0, finishedAt: new Date() },
+        });
+        return null;
       }
 
-      return {
-        attemptId,
-        questionId: ans.questionId,
-        answer: ans.answer,
-        isCorrect,
-      };
-    });
+      const questions = attempt.exam.questions;
+      if (!questions.length) throw new BadRequestException('Емтиханда сұрақтар жоқ');
+      validateAnswerIds(dto.answers, questions);
+      let correctCount = 0;
 
-    const totalQuestions = questions.length;
-    const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
-    const passed = score >= attempt.exam.passScore;
-    // FLAGGED is reserved for proctoring violations; academic failure uses FAILED
-    const status = passed ? 'FINISHED' : 'FAILED';
+      const answerRecords = dto.answers.map((ans) => {
+        const question = questions.find((q) => q.id === ans.questionId);
+        let isCorrect = false;
 
-    await this.prisma.$transaction([
-      this.prisma.answer.createMany({ data: answerRecords }),
-      this.prisma.attempt.update({
-        where: { id: attemptId },
+        if (question) {
+          if (question.type === QuestionType.SINGLE_CHOICE || question.type === QuestionType.TEXT) {
+            isCorrect = ans.answer.trim().toLowerCase() === question.answer.trim().toLowerCase();
+          } else if (question.type === QuestionType.MULTIPLE_CHOICE) {
+            const userAnswers = ans.answer.split(',').map((a) => a.trim().toLowerCase()).sort();
+            const correctAnswers = question.answer.split(',').map((a) => a.trim().toLowerCase()).sort();
+            isCorrect = JSON.stringify(userAnswers) === JSON.stringify(correctAnswers);
+          }
+          if (isCorrect) correctCount++;
+        }
+
+        return {
+          attemptId,
+          questionId: ans.questionId,
+          answer: ans.answer,
+          isCorrect,
+        };
+      });
+
+      const totalQuestions = questions.length;
+      const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+      const passed = score >= attempt.exam.passScore;
+      // FLAGGED is reserved for proctoring violations; academic failure uses FAILED
+      const status = passed ? 'FINISHED' : 'FAILED';
+
+      const changed = await tx.attempt.updateMany({
+        where: { id: attemptId, userId, status: 'IN_PROGRESS' },
         data: { score, status, finishedAt: new Date() },
-      }),
-    ]);
+      });
+      if (changed.count !== 1) throw new BadRequestException('Бұл талпыныс аяқталған');
+      await tx.answer.createMany({ data: answerRecords });
+      if (passed) {
+        await this.certificatesService.issue(userId, attempt.exam.courseId, tx);
+        await tx.enrollment.updateMany({
+          where: { userId, courseId: attempt.exam.courseId, completedAt: null },
+          data: { completedAt: new Date() },
+        });
+      }
+      return { attempt, score, passed, correctCount, totalQuestions };
+    });
+    if (!outcome) throw expiredAttemptError();
+    const { attempt, score, passed, correctCount, totalQuestions } = outcome;
 
     const submitPayload = {
       attemptId,
@@ -128,17 +170,9 @@ export class AttemptsService {
 
     await this.notifyN8nExamSubmit(submitPayload);
 
-    // Issue certificate if passed
-    if (score >= attempt.exam.passScore) {
-      await this.certificatesService.issue(userId, attempt.exam.courseId);
-
-      // Auto-complete enrollment so new courses become available
+    // Certificate has already been committed; return optional course suggestions.
+    if (passed) {
       try {
-        await this.enrollmentsService.completeEnrollment(userId, attempt.exam.courseId);
-      } catch {
-        // enrollment may already be completed — ignore
-      }
-
       // Fetch available courses the user hasn't enrolled in yet
       const enrolledCourseIds = (
         await this.prisma.enrollment.findMany({
@@ -161,6 +195,10 @@ export class AttemptsService {
       });
 
       return { attemptId, score, correctCount, totalQuestions, passed, availableCourses };
+      } catch {
+        this.logger.warn(`Course suggestions unavailable for completed attempt ${attemptId}`);
+        return { attemptId, score, correctCount, totalQuestions, passed, availableCourses: [] };
+      }
     }
 
     return { attemptId, score, correctCount, totalQuestions, passed };
@@ -196,6 +234,7 @@ export class AttemptsService {
         method: 'POST',
         headers,
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(5000),
       });
 
       if (!response.ok) {

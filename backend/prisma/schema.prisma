@@ -57,6 +57,7 @@ model User {
   attempts            Attempt[]
   certificates        Certificate[]
   refreshToken        String?
+  tokenVersion        Int                   @default(0)
   lessonProgress      LessonProgress[]
   passwordResetTokens PasswordResetToken[]
   enrollments         Enrollment[]

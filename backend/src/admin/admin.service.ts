@@ -3,6 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { CertificatesService } from '../certificates/certificates.service';
 import * as bcrypt from 'bcryptjs';
+import { randomInt } from 'crypto';
+import { serializable } from '../prisma/serializable';
 import * as ExcelJS from 'exceljs';
 
 @Injectable()
@@ -208,11 +210,11 @@ export class AdminService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Пайдаланушы табылмады');
 
-    // Generate temp password: 2 specials + 2 digits + 4 letters = 8 chars
+    // Use cryptographic randomness for temporary credentials.
     const specials = '!@#$%';
     const digits = '0123456789';
     const letters = 'abcdefghjkmnpqrstuvwxyz';
-    const rand = (str: string) => str[Math.floor(Math.random() * str.length)];
+    const rand = (str: string) => str[randomInt(str.length)];
 
     const tempPassword =
       rand(specials) +
@@ -222,19 +224,24 @@ export class AdminService {
       rand(letters) +
       rand(letters) +
       rand(letters) +
-      rand(letters);
+      Array.from({ length: 9 }, () => rand(letters)).join('');
 
     // Shuffle
-    const shuffled = tempPassword
-      .split('')
-      .sort(() => Math.random() - 0.5)
-      .join('');
+    const characters = tempPassword.split('');
+    for (let i = characters.length - 1; i > 0; i--) {
+      const j = randomInt(i + 1);
+      [characters[i], characters[j]] = [characters[j], characters[i]];
+    }
+    const shuffled = characters.join('');
 
     const hashed = await bcrypt.hash(shuffled, 12);
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { password: hashed, mustChangePassword: true },
+    await serializable(this.prisma, async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { password: hashed, mustChangePassword: true, refreshToken: null, tokenVersion: { increment: 1 } },
+      });
+      await tx.passwordResetToken.deleteMany({ where: { userId } });
     });
 
     // Try to send email (non-blocking)
