@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import demoSeed from './demo-seed.cjs';
 /**
  * generate-seed-sql.mjs
  * 
@@ -117,8 +118,8 @@ function escapeSQL(str) {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log('⏳ Хэштеу: Test@1234 (bcrypt 12 rounds)...');
-  const passwordHash = await bcrypt.hash('Test@1234', 12);
+  const seedPassword = demoSeed.demoSeedPassword('DEMO_SEED_PASSWORD');
+  const passwordHash = await bcrypt.hash(seedPassword, 12);
   console.log('✅ Хэш дайын');
 
   const usedEmails = new Set();
@@ -128,7 +129,7 @@ async function main() {
   lines.push('-- ==========================================================');
   lines.push('-- seed-users.sql');
   lines.push('-- 1110 Қазақ пайдаланушылар (PostgreSQL тікелей INSERT)');
-  lines.push('-- Құпиясөз: Test@1234 (bcrypt 12 salt rounds)');
+  lines.push('-- Private generated demo data; never commit or load into production.');
   lines.push(`-- Жасалған: ${new Date().toISOString()}`);
   lines.push('-- ==========================================================');
   lines.push('');

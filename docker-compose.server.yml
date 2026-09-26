@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your private environment}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - '5433:5432'
@@ -46,7 +46,7 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in your private environment}
     ports:
       - '9000:9000'
       - '9001:9001'
@@ -68,11 +68,11 @@ services:
     command: /bin/sh -c "node_modules/.bin/prisma generate && npm run start:dev"
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your private environment}@postgres:5432/${POSTGRES_DB}
       MINIO_ENDPOINT: minio
       REDIS_URL: redis://redis:6379
       N8N_EXAM_SUBMIT_WEBHOOK_URL: ${N8N_EXAM_SUBMIT_WEBHOOK_URL:-http://n8n:5678/webhook/proctolearn/exam-submit}
-      N8N_WEBHOOK_TOKEN: ${N8N_WEBHOOK_TOKEN:-change_me}
+      N8N_WEBHOOK_TOKEN: ${N8N_WEBHOOK_TOKEN:-}
       NODE_ENV: development
     ports:
       - '4000:4000'
@@ -114,7 +114,7 @@ services:
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@proctolearn.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-1234}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?Set PGADMIN_DEFAULT_PASSWORD in your private environment}
       PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
       - '5050:80'
@@ -138,8 +138,8 @@ services:
     environment:
       N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE:-true}
       N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
-      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-admin123}
-      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-proctolearn_n8n_encryption_key}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:?Set N8N_BASIC_AUTH_PASSWORD in your private environment}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?Set N8N_ENCRYPTION_KEY in your private environment}
       WEBHOOK_URL: ${N8N_PUBLIC_WEBHOOK_URL:-http://localhost:5678/}
       N8N_HOST: n8n
       N8N_PORT: 5678
@@ -163,7 +163,7 @@ services:
     user: root
     environment:
       JENKINS_ADMIN_ID: ${JENKINS_ADMIN_ID:-admin}
-      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:-admin123}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:?Set JENKINS_ADMIN_PASSWORD in your private environment}
       JENKINS_ADMIN_EMAIL: ${JENKINS_ADMIN_EMAIL:-admin@proctolearn.com}
     ports:
       - '8088:8080'

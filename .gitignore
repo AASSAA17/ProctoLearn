@@ -13,6 +13,11 @@ build/
 .env
 .env.local
 .env.*.local
+.env.*
+*.env
+*.env.*
+!.env.example
+!*.env.example
 
 # Logs
 *.log
@@ -48,3 +53,18 @@ backups/
 *.bak
 *.tsbuildinfo
 /handoff/
+
+# Generated evidence is private by default; only reviewed Markdown guides belong in Git.
+evidence/**/*
+!evidence/**/
+!evidence/**/*.md
+private-evidence/
+backend/prisma/seed-users.sql
+*.dump
+*.sql.gz
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519

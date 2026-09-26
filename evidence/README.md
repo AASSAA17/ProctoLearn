@@ -1,6 +1,8 @@
 # Evidence Pack for Project Defense
 
-Store screenshots, logs, and command outputs here for each scoring module.
+Generated screenshots, logs and command outputs are private local artifacts. They are ignored by Git; only manually reviewed Markdown guides belong in this directory's published contents. Do not force-add raw logs, database output, screenshots or expanded Compose configuration. They may contain credentials and personal data.
+
+Previously tracked raw reports were removed from the current branch during the secrets audit. Their history is still accessible: see [security phase 2](../docs/SECURITY_PHASE_2.md). Before sharing an excerpt, remove credentials and personal data and run `node scripts/check-secrets.cjs` from the repository root. A passing scanner cannot prove that a screenshot or arbitrary text is safe to publish.
 
 ## Suggested structure
 

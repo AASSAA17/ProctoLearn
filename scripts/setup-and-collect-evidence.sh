@@ -145,7 +145,7 @@ ok "Module 6 — Git history captured"
 echo -e "\n[7/9] Observability"
 {
   echo "=== Monitoring stack compose config ==="
-  docker compose -f "$PROJECT_ROOT/monitoring-project/docker-compose.yml" config 2>/dev/null | head -60 || echo "Cannot read compose config"
+  docker compose -f "$PROJECT_ROOT/monitoring-project/docker-compose.yml" config --services 2>/dev/null | head -60 || echo "Cannot read compose config"
   echo ""; echo "=== Prometheus health ==="
   curl -sf http://localhost:9090/-/healthy 2>/dev/null || echo "Prometheus not running"
   echo ""; echo "=== Alertmanager health ==="

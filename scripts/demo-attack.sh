@@ -174,7 +174,7 @@ attack_unauthorized() {
     S1=$(curl -s -o /dev/null -w "%{http_code}" "$API$EP" --max-time 5 2>/dev/null)
     # Fake token
     S2=$(curl -s -o /dev/null -w "%{http_code}" "$API$EP" \
-      -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.fake.token" \
+      -H "Authorization: Bearer ${INVALID_TOKEN:-invalid-token}" \
       --max-time 5 2>/dev/null)
 
     if [ "$S1" = "401" ] && [ "$S2" = "401" ]; then

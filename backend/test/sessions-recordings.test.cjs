@@ -174,8 +174,14 @@ test('presigned URLs use the external host without contacting internal MinIO', a
   assert.ok(url.searchParams.has('X-Amz-Signature'));
 });
 test('production rejects missing external storage URL and URLs with paths', () => {
-  assert.throws(() => new MinioService(new ConfigService({ NODE_ENV: 'production' })), /MINIO_PUBLIC_URL/);
-  assert.throws(() => new MinioService(new ConfigService({ MINIO_PUBLIC_URL: 'https://example.invalid/storage' })), /MINIO_PUBLIC_URL/);
+  const credentials = { MINIO_ROOT_USER: 'test-user', MINIO_ROOT_PASSWORD: 'test-only-password' };
+  assert.throws(() => new MinioService(new ConfigService({ ...credentials, NODE_ENV: 'production' })), /MINIO_PUBLIC_URL/);
+  assert.throws(() => new MinioService(new ConfigService({ ...credentials, MINIO_PUBLIC_URL: 'https://example.invalid/storage' })), /MINIO_PUBLIC_URL/);
+});
+
+test('MinIO never falls back to shared public credentials', () => {
+  assert.throws(() => new MinioService(new ConfigService({})), /MINIO_ROOT_USER/);
+  assert.throws(() => new MinioService(new ConfigService({ MINIO_ROOT_USER: 'test-user' })), /MINIO_ROOT_PASSWORD/);
 });
 
 test('HTTP multipart accepts camera/screen files and rejects foreign owners before storing', async () => {

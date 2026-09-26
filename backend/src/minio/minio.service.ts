@@ -14,8 +14,8 @@ export class MinioService implements OnModuleInit {
       endPoint: this.configService.get('MINIO_ENDPOINT', 'localhost'),
       port: parseInt(this.configService.get('MINIO_PORT', '9000')),
       useSSL: this.configService.get('MINIO_USE_SSL') === 'true',
-      accessKey: this.configService.get('MINIO_ROOT_USER', 'minioadmin'),
-      secretKey: this.configService.get('MINIO_ROOT_PASSWORD', 'minioadmin_secret'),
+      accessKey: this.configService.getOrThrow('MINIO_ROOT_USER'),
+      secretKey: this.configService.getOrThrow('MINIO_ROOT_PASSWORD'),
       region: this.configService.get('MINIO_REGION', 'us-east-1'),
     });
     this.bucket = this.configService.get('MINIO_BUCKET', 'proctolearn-evidence');
