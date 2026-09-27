@@ -8,6 +8,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('Админ панелі')
 @ApiBearerAuth()
@@ -67,8 +68,9 @@ export class AdminController {
   grantCertificate(
     @Param('userId') userId: string,
     @Param('courseId') courseId: string,
+    @CurrentUser('id') adminId: string,
   ) {
-    return this.adminService.grantFullCertificate(userId, courseId);
+    return this.adminService.grantFullCertificate(userId, courseId, adminId);
   }
 
   @Post('users/:userId/grant-exam-access/:courseId')
@@ -76,8 +78,9 @@ export class AdminController {
   grantExamAccess(
     @Param('userId') userId: string,
     @Param('courseId') courseId: string,
+    @CurrentUser('id') adminId: string,
   ) {
-    return this.adminService.grantExamAccess(userId, courseId);
+    return this.adminService.grantExamAccess(userId, courseId, adminId);
   }
 
   @Get('export/users')

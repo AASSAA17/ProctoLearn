@@ -1,14 +1,17 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { attemptExpired, expiredAttemptError } from '../attempts/attempt-policy';
 import { serializable } from '../prisma/serializable';
-import { TRUST_SCORE_DEDUCTIONS } from './proctor.dto';
+import { ReviewAttemptDto, TRUST_SCORE_DEDUCTIONS } from './proctor.dto';
 import { Actor, assertProctorAccess } from './proctor-access';
+import { CertificatesService } from '../certificates/certificates.service';
+import { safeAttempt, snapshotDuration } from '../attempts/attempt-state';
 
 @Injectable()
 export class ProctorService {
   constructor(
     private prisma: PrismaService,
+    private certificatesService: CertificatesService,
   ) {}
 
   async recordEvent(
@@ -23,7 +26,7 @@ export class ProctorService {
       if (!attempt) throw new NotFoundException('Талпыныс табылмады');
       if (attempt.userId !== userId) throw new ForbiddenException('Рұқсат жоқ');
       if (attempt.status !== 'IN_PROGRESS') throw new BadRequestException('Бұл талпыныс аяқталған');
-      if (attemptExpired(attempt.startedAt, attempt.exam.duration)) throw expiredAttemptError();
+      if (attemptExpired(attempt.startedAt, snapshotDuration(attempt))) throw expiredAttemptError();
 
       const event = await tx.proctorEvent.create({
         data: { attemptId, type, metadata },
@@ -34,22 +37,65 @@ export class ProctorService {
         where: { id: attemptId },
         data: {
           trustScore: newTrustScore,
-          status: newTrustScore === 0 ? 'FLAGGED' : attempt.status,
+          ...(newTrustScore === 0 && !attempt.flaggedAt ? { flaggedAt: new Date() } : {}),
         },
       });
 
-      return { event, trustScore: updatedAttempt.trustScore };
+      return { event, trustScore: updatedAttempt.trustScore, flaggedAt: updatedAttempt.flaggedAt };
     });
   }
 
   async assertSessionAccess(attemptId: string, userId: string, role: string, asProctor: boolean) {
     if (asProctor) return assertProctorAccess(this.prisma, attemptId, { id: userId, role });
-    if (asProctor && !['PROCTOR', 'ADMIN'].includes(role)) throw new ForbiddenException('Рұқсат жоқ');
-    if (!asProctor && role !== 'STUDENT') throw new ForbiddenException('Рұқсат жоқ');
+    if (role !== 'STUDENT') throw new ForbiddenException('Рұқсат жоқ');
     const attempt = await this.prisma.attempt.findUnique({ where: { id: attemptId } });
     if (!attempt) throw new NotFoundException('Талпыныс табылмады');
-    if (!asProctor && attempt.userId !== userId) throw new ForbiddenException('Рұқсат жоқ');
-    return attempt;
+    if (attempt.userId !== userId) throw new ForbiddenException('Рұқсат жоқ');
+    return safeAttempt(attempt);
+  }
+
+  async reviewAttempt(attemptId: string, actor: Actor, dto: ReviewAttemptDto) {
+    const reason = typeof dto.reason === 'string' ? dto.reason.trim() : '';
+    if (!['APPROVED', 'REJECTED'].includes(dto.decision) || reason.length < 3 || reason.length > 2000) {
+      throw new BadRequestException('Тексеру шешімі мен себебі қажет');
+    }
+    return serializable(this.prisma, async (tx) => {
+      const attempt = await assertProctorAccess(tx, attemptId, actor);
+      if (attempt.userId === actor.id) throw new ForbiddenException('Өз талпынысыңызды тексеруге болмайды');
+      if (!attempt.finishedAt || !['FINISHED', 'FAILED'].includes(attempt.status)) {
+        throw new ConflictException('Алдымен студент емтиханды аяқтауы керек');
+      }
+      if (attempt.reviewStatus !== 'PENDING') {
+        if (attempt.reviewStatus !== dto.decision || attempt.reviewReason !== reason) {
+          throw new ConflictException('Тексеру шешімі бұрын сақталған');
+        }
+        const certificate = attempt.reviewStatus === 'APPROVED'
+          ? await this.certificatesService.findForAttempt(attemptId, tx)
+          : null;
+        return this.reviewResult(attempt, certificate);
+      }
+      const reviewedAt = new Date();
+      const changed = await tx.attempt.updateMany({
+        where: { id: attemptId, reviewStatus: 'PENDING', finishedAt: { not: null }, status: { in: ['FINISHED', 'FAILED'] } },
+        data: { reviewStatus: dto.decision, reviewedAt, reviewedBy: actor.id, reviewReason: reason },
+      });
+      if (changed.count !== 1) throw new ConflictException('Талпынысты басқа проктор тексерді');
+      // Eligibility and issuance use the same transaction as the review. Any
+      // missing evidence or certificate failure rolls back the entire decision.
+      const certificate = dto.decision === 'APPROVED'
+        ? await this.certificatesService.issueForAttempt(attemptId, tx)
+        : null;
+      return this.reviewResult({ ...attempt, reviewStatus: dto.decision, reviewedAt, reviewedBy: actor.id, reviewReason: reason }, certificate);
+    });
+  }
+
+  private reviewResult(attempt: { id: string; status: string; reviewStatus: string; reviewedAt: Date | null; reviewedBy: string | null; reviewReason: string | null }, certificate: { id: string } | null) {
+    return {
+      attemptId: attempt.id, status: attempt.status, reviewStatus: attempt.reviewStatus,
+      reviewedAt: attempt.reviewedAt, reviewedBy: attempt.reviewedBy, reviewReason: attempt.reviewReason,
+      certificatePending: false, certificateIssued: !!certificate,
+      ...(certificate ? { certificateId: certificate.id } : {}),
+    };
   }
 
   async endSession(attemptId: string, userId: string, role: string) {
@@ -71,7 +117,7 @@ export class ProctorService {
       },
     });
     if (!attempt) throw new NotFoundException('Талпыныс табылмады');
-    return attempt;
+    return { ...safeAttempt(attempt), events: attempt.events, evidences: attempt.evidences };
   }
 
   private async assertAssignmentManager(examId: string, actor: Actor) {

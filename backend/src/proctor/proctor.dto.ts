@@ -1,4 +1,5 @@
-import { IsIn, IsNotEmpty, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsNotEmpty, IsObject, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export const TRUST_SCORE_DEDUCTIONS = {
   tab_switch: 10,
@@ -29,4 +30,15 @@ export class ProctorEventDto extends SessionDto {
   @IsOptional()
   @IsObject()
   metadata?: Record<string, unknown>;
+}
+
+export class ReviewAttemptDto {
+  @IsIn(['APPROVED', 'REJECTED'])
+  decision: 'APPROVED' | 'REJECTED';
+
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @IsString()
+  @MinLength(3)
+  @MaxLength(2000)
+  reason: string;
 }

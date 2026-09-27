@@ -9,6 +9,8 @@ import Link from 'next/link';
 interface AttemptSummary {
   id: string;
   status: string;
+  reviewStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
+  flaggedAt?: string | null;
   trustScore: number;
   startedAt: string;
   user: { name: string; email: string } | null;
@@ -46,10 +48,10 @@ export default function ProctorDashboardPage() {
       socket.emit('proctor:start', { attemptId: selected, role: 'proctor' });
     });
 
-    socket.on('proctor:event:recorded', ({ event, trustScore }) => {
+    socket.on('proctor:event:recorded', ({ event, trustScore, flaggedAt }) => {
       setEvents((prev) => [event, ...prev].slice(0, 50));
       setAttempts((prev) =>
-        prev.map((a) => (a.id === selected ? { ...a, trustScore } : a)),
+        prev.map((a) => (a.id === selected ? { ...a, trustScore, flaggedAt: flaggedAt ?? a.flaggedAt } : a)),
       );
     });
 
@@ -78,17 +80,24 @@ export default function ProctorDashboardPage() {
 
   useEffect(() => {
     if (!selected) return;
+    const controller = new AbortController();
+    setEvents([]);
     api
-      .get(`/proctor/sessions/${selected}`)
-      .then(({ data }) => setEvents((data?.events ?? []).reverse()))
-      .catch(() => {});
+      .get(`/proctor/sessions/${selected}`, { signal: controller.signal })
+      .then(({ data }) => {
+        if (controller.signal.aborted) return;
+        setEvents((data?.events ?? []).reverse());
+        setAttempts((previous) => previous.map((attempt) => attempt.id === selected ? { ...attempt, ...data } : attempt));
+      })
+      .catch(() => { if (!controller.signal.aborted) { setEvents([]); toast.error('Сессияны жүктеу мүмкін болмады'); } });
+    return () => controller.abort();
   }, [selected]);
 
   const handleFlag = async (attemptId: string) => {
     try {
-      await api.patch(`/attempts/${attemptId}/flag`);
+      const { data } = await api.patch(`/attempts/${attemptId}/flag`);
       setAttempts((prev) =>
-        prev.map((a) => (a.id === attemptId ? { ...a, status: 'FLAGGED' } : a)),
+        prev.map((a) => (a.id === attemptId ? { ...a, ...data } : a)),
       );
       toast.success('Талпыныс белгіленді');
     } catch {
@@ -130,7 +139,7 @@ export default function ProctorDashboardPage() {
         {/* Attempts list */}
         <div className="lg:col-span-2">
           <div className="card">
-            <h2 className="text-lg font-semibold mb-4">Барлық талпынулар</h2>
+            <h2 className="text-lg font-semibold mb-4">Қолжетімді талпынулар</h2>
             {loading ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -157,6 +166,10 @@ export default function ProctorDashboardPage() {
                       </div>
                       <div className="text-right">
                         {statusBadge(attempt.status)}
+                        <p className="mt-1 text-xs font-medium text-gray-600">
+                          {attempt.reviewStatus === 'APPROVED' ? 'Тексеру: мақұлданды' : attempt.reviewStatus === 'REJECTED' ? 'Тексеру: қабылданбады' : 'Тексеру: күтілуде'}
+                          {attempt.flaggedAt ? ' · 🚩 Белгіленген' : ''}
+                        </p>
                         <p className={`text-sm font-bold mt-1 ${trustColor(attempt.trustScore ?? 100)}`}>
                           Сенімділік: {attempt.trustScore ?? 100}
                         </p>
@@ -164,7 +177,7 @@ export default function ProctorDashboardPage() {
                     </div>
                     <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
                       <span>
-                        {attempt._count?.events ?? 0} оқиға · {attempt._count?.evidences ?? 0} скриншот
+                        {attempt._count?.events ?? 0} оқиға · {attempt._count?.evidences ?? 0} жазба
                       </span>
                       <div className="flex gap-2">
                         <Link
@@ -172,9 +185,9 @@ export default function ProctorDashboardPage() {
                           onClick={(e) => e.stopPropagation()}
                           className="text-primary-600 hover:underline"
                         >
-                          Дәлелдемелер
+                          Дәлелдемелер және тексеру
                         </Link>
-                        {attempt.status !== 'FLAGGED' && attempt.status !== 'FINISHED' && attempt.status !== 'FAILED' && (
+                        {!attempt.flaggedAt && attempt.reviewStatus === 'PENDING' && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleFlag(attempt.id); }}
                             className="text-red-600 hover:underline"

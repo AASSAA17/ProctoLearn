@@ -228,7 +228,7 @@ test('module assignment completion stores the correct course relation', async ()
   const f = fixture({ moduleLesson: true });
   f.prisma.submission.groupBy = async () => [{ stepId: 'step' }];
   await f.lessons.checkAssignment('lesson', student, 'private answer');
-  assert.deepEqual(f.writes[0][1], { userId: 'student', courseId: 'course', lessonId: 'lesson' });
+  assert.deepEqual(f.writes[0][1], { userId: 'student', courseId: 'course', lessonId: 'lesson', completionSource: 'ASSIGNMENT' });
 });
 
 test('task lessons cannot be marked complete until all tasks have a successful submission', async () => {

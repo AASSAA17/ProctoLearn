@@ -7,8 +7,8 @@
   "license": "MIT",
   "scripts": {
     "build": "nest build",
-    "test": "node --require ts-node/register test/security.test.cjs && node --require ts-node/register test/sessions-recordings.test.cjs && node --test test/demo-seed.test.cjs && node --require ts-node/register test/access-lessons.test.cjs && node --require ts-node/register test/access-courses.test.cjs && node --require ts-node/register test/access-exams.test.cjs && node --require ts-node/register test/proctor-access.test.cjs",
-    "test:integration": "node --require ts-node/register test/integration/security.test.cjs && node --require ts-node/register test/integration/access.test.cjs",
+    "test": "node --require ts-node/register test/security.test.cjs && node --require ts-node/register test/sessions-recordings.test.cjs && node --test test/demo-seed.test.cjs && node --require ts-node/register test/access-lessons.test.cjs && node --require ts-node/register test/access-courses.test.cjs && node --require ts-node/register test/access-exams.test.cjs && node --require ts-node/register test/proctor-access.test.cjs && node --require ts-node/register test/admin-admission.test.cjs && node --require ts-node/register test/attempt-reliability.test.cjs && node --require ts-node/register test/review-policy.test.cjs",
+    "test:integration": "node --require ts-node/register test/integration/security.test.cjs && node --require ts-node/register test/integration/access.test.cjs && node --require ts-node/register test/integration/attempt-reliability.test.cjs && node --require ts-node/register test/integration/review-policy.test.cjs",
     "test:migrations": "node --test test/integration/migrations.test.cjs",
     "format": "prettier --write \"src/**/*.ts\"",
     "start": "nest start",

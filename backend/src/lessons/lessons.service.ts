@@ -67,9 +67,11 @@ export class LessonsService {
       orderBy: [{ module: { order: 'asc' } }, { order: 'asc' }],
     });
     const progress = await this.prisma.lessonProgress.findMany({ where: { courseId, userId } });
-    const progressMap = new Map(progress.map((p) => [p.lessonId, p.viewedAt]));
+    const progressMap = new Map(progress.map((p) => [p.lessonId, p]));
     return lessons.map((lesson) => ({
-      ...lessonSummary(lesson), completed: progressMap.has(lesson.id), viewedAt: progressMap.get(lesson.id) ?? null,
+      ...lessonSummary(lesson),
+      completed: progressMap.has(lesson.id) && (!lesson.assignmentAnswer || progressMap.get(lesson.id)?.completionSource === 'ASSIGNMENT'),
+      viewedAt: progressMap.get(lesson.id)?.viewedAt ?? null,
     }));
   }
 
@@ -94,7 +96,7 @@ export class LessonsService {
     }
     if (correct && !manager) {
       await this.checkCompletedTasks(lesson, viewer);
-      await this.complete(lessonId, course.id, viewer.id);
+      await this.complete(lessonId, course.id, viewer.id, 'ASSIGNMENT');
     }
     return { correct, feedback: correct ? 'Дұрыс! 🎉 Сабақ аяқталды.' : 'Қате. Қайта көріңіз және 15 секундтан кейін қайталаңыз.' };
   }
@@ -142,6 +144,8 @@ export class LessonsService {
 
   private async checkPreviousLessons(lesson: any, viewer: LessonViewer, manager: boolean) {
     if (manager || !lesson.courseId || lesson.order <= 1) return;
+    const enrollment = await this.prisma.enrollment.findUnique({ where: { userId_courseId: { userId: viewer.id, courseId: lesson.courseId } } });
+    if (enrollment?.examAccessGrantedAt) return;
     const previous = await this.prisma.lesson.findMany({
       where: { courseId: lesson.courseId, order: { lt: lesson.order } }, select: { id: true },
     });
@@ -151,10 +155,10 @@ export class LessonsService {
     if (count < previous.length) throw new ForbiddenException('Алдыңғы сабақтарды аяқтаңыз');
   }
 
-  private complete(lessonId: string, courseId: string, userId: string) {
+  private complete(lessonId: string, courseId: string, userId: string, completionSource = 'MATERIAL') {
     return this.prisma.lessonProgress.upsert({
       where: { userId_lessonId: { userId, lessonId } },
-      update: { viewedAt: new Date() }, create: { userId, courseId, lessonId },
+      update: { viewedAt: new Date(), completionSource }, create: { userId, courseId, lessonId, completionSource },
     });
   }
 }

@@ -2,7 +2,7 @@ import { Controller, Get, Post, Param, Body, Query, UseGuards, Patch } from '@ne
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AttemptsService } from './attempts.service';
-import { SubmitAnswersDto } from './dto/attempt.dto';
+import { SaveDraftDto, SubmitAnswersDto } from './dto/attempt.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -34,6 +34,17 @@ export class AttemptsController {
     @CurrentUser('id') userId: string,
   ) {
     return this.attemptsService.submitAnswers(attemptId, dto, userId);
+  }
+
+  @Get(':id/draft')
+  getDraft(@Param('id') attemptId: string, @CurrentUser('id') userId: string) {
+    return this.attemptsService.getDraft(attemptId, userId);
+  }
+
+  @Patch(':id/draft')
+  @Throttle({ default: { ttl: 60_000, limit: 120 } })
+  saveDraft(@Param('id') attemptId: string, @Body() dto: SaveDraftDto, @CurrentUser('id') userId: string) {
+    return this.attemptsService.saveDraft(attemptId, dto, userId);
   }
 
   @Get('my')

@@ -78,6 +78,9 @@ export class EnrollmentsService {
     if (!enrollment) throw new NotFoundException('Тіркелу табылмады');
     if (enrollment.completedAt) return { message: 'Курс бұрын аяқталған', enrollment };
 
+    const certificate = await this.prisma.certificate.findFirst({ where: { userId, courseId } });
+    if (!certificate) throw new ForbiddenException('Курс емтихан мен тексеру аяқталғаннан кейін жабылады');
+
     const updated = await this.prisma.enrollment.update({
       where: { userId_courseId: { userId, courseId } },
       data: { completedAt: new Date() },

@@ -24,11 +24,12 @@ function fixture(overrides = {}) {
   ];
   const attempt = {
     id: 'attempt', userId: 'student', status: 'IN_PROGRESS', trustScore: 100,
-    startedAt: new Date(), examId: 'exam',
+    startedAt: new Date(), examId: 'exam', finishedAt: null, answers: [], draftAnswers: [], draftRevision: 0, reviewStatus: 'PENDING',
     exam: { id: 'exam', duration: 30, passScore: 60, courseId: 'course', questions, _count: { questions: 2 } },
     user: { id: 'student', name: 'Test', email: 'test@example.invalid' },
     ...overrides,
   };
+  attempt.examSnapshot ??= structuredClone(attempt.exam);
   const prisma = {
     $transaction: async (work, options) => {
       assert.equal(options.isolationLevel, 'Serializable');
@@ -41,6 +42,8 @@ function fixture(overrides = {}) {
       updateMany: async (data) => { writes.push(['enrollment', data]); return { count: 1 }; },
     },
     course: { findMany: async () => [] },
+    lesson: { findMany: async () => [] },
+    lessonProgress: { findMany: async () => [] },
     examProctor: { findUnique: async ({ where }) => where.examId_proctorId.proctorId === 'proctor' ? { examId: 'exam', proctorId: 'proctor' } : null },
     attempt: {
       findUnique: async () => ({ ...attempt }),
@@ -49,11 +52,16 @@ function fixture(overrides = {}) {
       create: async () => { writes.push(['create']); return attempt; },
       update: async ({ data }) => { writes.push(['attempt', data]); Object.assign(attempt, data); return { ...attempt }; },
       updateMany: async ({ where, data }) => {
-        if (attempt.status !== where.status) return { count: 0 };
-        writes.push(['attempt', data]); Object.assign(attempt, data); return { count: 1 };
+        if (typeof where.status === 'string' && attempt.status !== where.status) return { count: 0 };
+        if (where.status?.in && !where.status.in.includes(attempt.status)) return { count: 0 };
+        if ('finishedAt' in where && attempt.finishedAt !== where.finishedAt) return { count: 0 };
+        if ('draftRevision' in where && attempt.draftRevision !== where.draftRevision) return { count: 0 };
+        writes.push(['attempt', data]);
+        for (const [key, value] of Object.entries(data)) attempt[key] = value?.increment ? attempt[key] + value.increment : value;
+        return { count: 1 };
       },
     },
-    answer: { createMany: async ({ data }) => { writes.push(['answers', data]); return { count: data.length }; } },
+    answer: { createMany: async ({ data }) => { writes.push(['answers', data]); attempt.answers.push(...data); return { count: data.length }; } },
     proctorEvent: { create: async ({ data }) => { writes.push(['event', data]); return data; } },
   };
   const certificates = { issue: async (_u, _c, tx) => { assert.equal(tx, prisma); writes.push(['certificate']); } };
@@ -83,19 +91,20 @@ test('expired submissions close the attempt without issuing a certificate', asyn
   await assert.rejects(f.service.submitAnswers('attempt', valid, 'student'), expired);
   assert.equal(f.attempt.status, 'FAILED');
   assert.equal(f.attempt.score, 0);
-  assert.deepEqual(f.writes.map(([kind]) => kind), ['attempt']);
+  assert.equal(f.writes.some(([kind]) => kind === 'certificate'), false);
 });
 test('deadline has a fixed five-second network allowance', () => {
   const start = new Date(0);
   assert.equal(attemptExpired(start, 1, 65_000), false);
   assert.equal(attemptExpired(start, 1, 65_001), true);
 });
-test('successful submission saves answers, grade, certificate and enrollment together', async () => {
+test('successful submission saves answers and grade but waits for review before issuing a certificate', async () => {
   const f = fixture();
   const result = await f.service.submitAnswers('attempt', valid, 'student');
   assert.equal(result.score, 100);
   assert.equal(result.passed, true);
-  assert.deepEqual(f.writes.map(([kind]) => kind), ['attempt', 'answers', 'certificate', 'enrollment']);
+  assert.equal(result.certificatePending, true);
+  assert.deepEqual(f.writes.map(([kind]) => kind), ['attempt', 'answers']);
 });
 test('empty submission gives zero, not a certificate', async () => {
   const f = fixture();
@@ -107,13 +116,16 @@ test('a second submission cannot write more answers or award again', async () =>
   const f = fixture();
   await f.service.submitAnswers('attempt', valid, 'student');
   const count = f.writes.length;
-  await assert.rejects(f.service.submitAnswers('attempt', valid, 'student'), BadRequestException);
+  assert.equal((await f.service.submitAnswers('attempt', valid, 'student')).score, 100);
+  await assert.rejects(f.service.submitAnswers('attempt', { answers: [] }, 'student'), ConflictException);
   assert.equal(f.writes.length, count);
 });
-test('flagged attempts cannot issue a certificate', async () => {
-  const f = fixture({ status: 'FLAGGED' });
-  await assert.rejects(f.service.submitAnswers('attempt', valid, 'student'), BadRequestException);
-  assert.deepEqual(f.writes, []);
+test('a proctor flag does not prevent submission and still cannot issue a certificate', async () => {
+  const f = fixture({ flaggedAt: new Date(), trustScore: 0 });
+  const result = await f.service.submitAnswers('attempt', valid, 'student');
+  assert.equal(result.passed, true);
+  assert.equal(result.reviewStatus, 'PENDING');
+  assert.equal(f.writes.some(([kind]) => kind === 'certificate'), false);
 });
 test('start requires enrollment and returns a server deadline on resume', async () => {
   const f = fixture();
@@ -161,7 +173,8 @@ test('screen sharing penalty is server-defined and score is clamped to zero', as
   const f = fixture({ trustScore: 5 });
   const result = await f.proctor.recordEvent('attempt', 'student', 'screen_share_stopped');
   assert.equal(result.trustScore, 0);
-  assert.equal(f.attempt.status, 'FLAGGED');
+  assert.equal(f.attempt.status, 'IN_PROGRESS');
+  assert.ok(f.attempt.flaggedAt instanceof Date);
 });
 test('completed or expired attempts reject proctor event mutation', async () => {
   for (const overrides of [{ status: 'FINISHED' }, { startedAt: new Date(0) }]) {
@@ -227,11 +240,12 @@ test('socket uses current DB role, not a stale role from JWT', async () => {
   gateway.handleDisconnect(client);
 });
 
-test('optional course suggestions cannot turn a committed result into an HTTP error', async () => {
+test('pending review result never suggests that a certificate has already been issued', async () => {
   const f = fixture();
   f.prisma.course.findMany = async () => { throw new Error('unavailable'); };
   const result = await f.service.submitAnswers('attempt', valid, 'student');
   assert.equal(result.passed, true);
   assert.deepEqual(result.availableCourses, []);
-  assert.equal(f.writes.filter(([kind]) => kind === 'certificate').length, 1);
+  assert.equal(result.certificatePending, true);
+  assert.equal(f.writes.filter(([kind]) => kind === 'certificate').length, 0);
 });

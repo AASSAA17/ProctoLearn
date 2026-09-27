@@ -4,6 +4,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateExamDto, UpdateExamDto, CreateQuestionDto, UpdateQuestionDto } from './dto/exam.dto';
 import { assertCourseReader, canManageCourse, LessonViewer } from '../lessons/lesson-access';
 import { serializable } from '../prisma/serializable';
+import { attemptExpired } from '../attempts/attempt-policy';
+import { finalizeExpiredAttempt, snapshotDuration } from '../attempts/attempt-state';
 
 @Injectable()
 export class ExamsService {
@@ -49,13 +51,19 @@ export class ExamsService {
   }
 
   private async editableExam(db: Prisma.TransactionClient, courseId: string, examId: string, viewer: LessonViewer) {
-    const exam = await db.exam.findUnique({ where: { id: examId }, include: { course: true } });
+    const exam = await db.exam.findUnique({ where: { id: examId }, include: { course: true, questions: true } });
     if (!exam || exam.courseId !== courseId) throw new NotFoundException('Емтихан табылмады');
     if (!canManageCourse(exam.course, viewer)) throw new ForbiddenException('Рұқсат жоқ');
-    const active = await db.attempt.count({
+    const active = await db.attempt.findMany({
       where: { examId, finishedAt: null, status: { in: ['IN_PROGRESS', 'FLAGGED'] } },
     });
-    if (active) throw new ConflictException('Емтиханды тапсыру жүріп жатыр. Аяқталғаннан кейін өзгертіңіз');
+    let hasActive = false;
+    for (const attempt of active) {
+      if (attemptExpired(attempt.startedAt, snapshotDuration({ ...attempt, exam }))) {
+        await finalizeExpiredAttempt(db, { ...attempt, exam });
+      } else hasActive = true;
+    }
+    if (hasActive) throw new ConflictException('Емтиханды тапсыру жүріп жатыр. Аяқталғаннан кейін өзгертіңіз');
     return exam;
   }
 

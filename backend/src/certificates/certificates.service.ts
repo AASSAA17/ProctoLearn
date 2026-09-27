@@ -1,10 +1,12 @@
 ﻿import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PDFDocument = require('pdfkit') as typeof import('pdfkit');
 import * as fs from 'fs';
+import { serializable } from '../prisma/serializable';
 
 // Font candidates: Windows paths first, then common Linux container paths
 function resolveFont(...candidates: string[]): string | null {
@@ -43,11 +45,62 @@ const hasScript = !!FONT_SCRIPT_PATH;
 export class CertificatesService {
   constructor(private prisma: PrismaService) {}
 
-  async issue(userId: string, courseId: string, db: Prisma.TransactionClient = this.prisma) {
+  async issue(userId: string, courseId: string, db: Prisma.TransactionClient = this.prisma, issuedVia: 'ADMIN_OVERRIDE' | 'PROCTORED_EXAM' = 'ADMIN_OVERRIDE') {
     const existing = await db.certificate.findFirst({ where: { userId, courseId } });
     if (existing) return existing;
     const verifyCode = uuidv4();
-    return db.certificate.create({ data: { userId, courseId, qrCode: verifyCode } });
+    return db.certificate.create({ data: { userId, courseId, qrCode: verifyCode, issuedVia } });
+  }
+
+  /** The only exam-driven issuance path. Review and issuance share a transaction. */
+  async issueForAttempt(attemptId: string, db?: Prisma.TransactionClient) {
+    if (!db) return serializable(this.prisma, (tx) => this.issueForAttempt(attemptId, tx));
+    const attempt = await db.attempt.findUnique({ where: { id: attemptId } });
+    if (!attempt) throw new NotFoundException('Талпыныс табылмады');
+    const snapshot = this.certificateSnapshot(attempt.examSnapshot);
+    if (attempt.status !== 'FINISHED' || !attempt.finishedAt || attempt.reviewStatus !== 'APPROVED'
+      || attempt.score === null || attempt.score < snapshot.passScore) {
+      throw new ConflictException('Сертификат үшін емтихан нәтижесі мен проктордың мақұлдауы қажет');
+    }
+    await this.assertEvidenceReady(attemptId, db);
+    const certificate = await this.issue(attempt.userId, snapshot.courseId, db, 'PROCTORED_EXAM');
+    await db.enrollment.updateMany({
+      where: { userId: attempt.userId, courseId: snapshot.courseId, completedAt: null },
+      data: { completedAt: new Date() },
+    });
+    return certificate;
+  }
+
+  /** Idempotent review reads do not reissue or alter an existing legacy certificate. */
+  async findForAttempt(attemptId: string, db: Prisma.TransactionClient = this.prisma) {
+    const attempt = await db.attempt.findUnique({ where: { id: attemptId } });
+    if (!attempt) throw new NotFoundException('Талпыныс табылмады');
+    const snapshot = this.certificateSnapshot(attempt.examSnapshot);
+    return db.certificate.findFirst({ where: { userId: attempt.userId, courseId: snapshot.courseId } });
+  }
+
+  private certificateSnapshot(value: Prisma.JsonValue | null): { courseId: string; passScore: number } {
+    if (!value || typeof value !== 'object' || Array.isArray(value)
+      || typeof value.courseId !== 'string' || !value.courseId
+      || typeof value.passScore !== 'number' || !Number.isInteger(value.passScore)
+      || value.passScore < 0 || value.passScore > 100) {
+      throw new ConflictException('Емтиханның сақталған ережелері жоқ немесе жарамсыз');
+    }
+    return { courseId: value.courseId, passScore: value.passScore };
+  }
+
+  private async assertEvidenceReady(attemptId: string, db: Prisma.TransactionClient) {
+    // EvidenceFile is created only after storage accepts a complete recording.
+    // The chunk-upload stage must additionally reject unfinished upload manifests
+    // here, before a review can issue a certificate.
+    const files = await db.evidenceFile.findMany({
+      where: { attemptId, type: { in: ['recording_camera', 'recording_screen'] } },
+      select: { type: true, url: true },
+    });
+    const types = new Set(files.filter((file) => !!file.url).map((file) => file.type));
+    if (!types.has('recording_camera') || !types.has('recording_screen')) {
+      throw new ConflictException('Камера мен экранның толық жазбалары қажет');
+    }
   }
 
   async findByUser(userId: string) {

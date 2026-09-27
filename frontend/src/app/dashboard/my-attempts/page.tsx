@@ -12,6 +12,9 @@ interface Attempt {
   trustScore: number;
   startedAt: string;
   finishedAt: string | null;
+  reviewStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewReason?: string | null;
+  flaggedAt?: string | null;
   exam: { id: string; title: string; passScore: number };
 }
 
@@ -27,7 +30,10 @@ export default function MyAttemptsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const statusLabel = (s: string) => {
+  const statusLabel = (attempt: Attempt) => {
+    const s = attempt.status;
+    if (attempt.finishedAt && attempt.reviewStatus === 'PENDING') return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Тексеруді күтуде</span>;
+    if (attempt.reviewStatus === 'REJECTED') return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">Тексеру қабылдамады</span>;
     if (s === 'FINISHED')    return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">✅ Сдан</span>;
     if (s === 'IN_PROGRESS') return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">⏳ Жүргізілуде</span>;
     if (s === 'FAILED')      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">❌ Сдан емес</span>;
@@ -63,9 +69,8 @@ export default function MyAttemptsPage() {
   }
 
   // Stats
-  const finished = attempts.filter(a => a.status === 'FINISHED');
-  const failed   = attempts.filter(a => a.status === 'FAILED');
-  const flagged  = attempts.filter(a => a.status === 'FLAGGED');
+  const finished = attempts.filter(a => a.status === 'FINISHED' && a.reviewStatus === 'APPROVED');
+  const pending = attempts.filter(a => a.finishedAt && a.reviewStatus === 'PENDING');
   const avgScore = finished.length > 0
     ? Math.round(finished.reduce((s, a) => s + (a.score ?? 0), 0) / finished.length)
     : null;
@@ -93,11 +98,11 @@ export default function MyAttemptsPage() {
             </div>
             <div className="card text-center py-4">
               <p className="text-3xl font-bold text-green-600">{finished.length}</p>
-              <p className="text-xs text-gray-500 mt-1">Сәтті өтті</p>
+              <p className="text-xs text-gray-500 mt-1">Расталған нәтиже</p>
             </div>
             <div className="card text-center py-4">
-              <p className="text-3xl font-bold text-red-500">{failed.length + flagged.length}</p>
-              <p className="text-xs text-gray-500 mt-1">Сәтсіз / Күмәнді</p>
+              <p className="text-3xl font-bold text-amber-600">{pending.length}</p>
+              <p className="text-xs text-gray-500 mt-1">Тексеруді күтуде</p>
             </div>
             <div className="card text-center py-4">
               <p className="text-3xl font-bold text-blue-600">{avgScore !== null ? `${avgScore}%` : '—'}</p>
@@ -121,7 +126,8 @@ export default function MyAttemptsPage() {
                     {/* Left: exam info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-2">
-                        {statusLabel(attempt.status)}
+                        {statusLabel(attempt)}
+                        {attempt.flaggedAt && <span className="text-xs text-amber-700">Қосымша тексеру</span>}
                         <h3 className="font-semibold text-gray-900 text-sm truncate">
                           {attempt.exam.title}
                         </h3>
@@ -135,7 +141,7 @@ export default function MyAttemptsPage() {
                               {attempt.score}%
                             </span>
                             <span className="text-xs text-gray-400">(өту: {attempt.exam.passScore}%)</span>
-                            {passed ? <span className="text-green-500 text-xs">✓ Өтті</span> : <span className="text-red-400 text-xs">✗ Өтпеді</span>}
+                            {passed ? <span className="text-green-500 text-xs">Өту балы жиналды</span> : <span className="text-red-400 text-xs">Өту балы жиналмады</span>}
                           </div>
                         )}
                         {/* Trust */}
@@ -144,6 +150,7 @@ export default function MyAttemptsPage() {
                           {trustBar(attempt.trustScore)}
                         </div>
                       </div>
+                      {attempt.reviewStatus === 'REJECTED' && attempt.reviewReason && <p className="mt-2 text-sm text-red-700">Тексеру себебі: {attempt.reviewReason}</p>}
                       {/* Date + duration */}
                       <div className="flex gap-4 mt-2 text-xs text-gray-400">
                         <span>📅 {new Date(attempt.startedAt).toLocaleDateString('kk-KZ', { day:'numeric', month:'long', year:'numeric' })}</span>

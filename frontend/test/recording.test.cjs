@@ -38,3 +38,42 @@ test('recorder error rejects instead of reporting successful recording', async (
   recorder.stop = () => queueMicrotask(() => recorder.dispatchEvent(new Event('error')));
   await assert.rejects(stopRecorder(recorder), /Recording failed/);
 });
+
+test('observed recorder waits for final data when natural stop already changed state to inactive', async () => {
+  const { observeRecorderStop } = compiled.exports;
+  const recorder = new EventTarget();
+  recorder.state = 'recording';
+  recorder.stop = () => assert.fail('already inactive recorder must not be stopped again');
+  const finish = observeRecorderStop(recorder);
+  const chunks = [];
+  recorder.addEventListener('dataavailable', () => chunks.push('natural final chunk'));
+  recorder.state = 'inactive';
+  let resolved = false;
+  const waiting = finish().then(() => { resolved = true; });
+  await Promise.resolve();
+  assert.equal(resolved, false);
+  recorder.dispatchEvent(new Event('dataavailable'));
+  recorder.dispatchEvent(new Event('stop'));
+  await waiting;
+  assert.deepEqual(chunks, ['natural final chunk']);
+});
+
+test('observed stop is idempotent and handles recordings that already finished', async () => {
+  const { observeRecorderStop } = compiled.exports;
+  const recorder = new EventTarget();
+  recorder.state = 'recording';
+  let stops = 0;
+  recorder.stop = () => { stops++; recorder.state = 'inactive'; queueMicrotask(() => recorder.dispatchEvent(new Event('stop'))); };
+  const finish = observeRecorderStop(recorder);
+  await Promise.all([finish(), finish()]);
+  await finish();
+  assert.equal(stops, 1);
+});
+
+test('a recorder that never produces its final stop event fails visibly instead of hanging submission forever', async () => {
+  const { observeRecorderStop } = compiled.exports;
+  const recorder = new EventTarget();
+  recorder.state = 'inactive';
+  const finish = observeRecorderStop(recorder, 5);
+  await assert.rejects(finish(), /did not finish/);
+});

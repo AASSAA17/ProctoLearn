@@ -30,6 +30,12 @@ enum AttemptStatus {
   FLAGGED
 }
 
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum CourseLevel {
   BEGINNER
   INTERMEDIATE
@@ -73,6 +79,7 @@ model LessonProgress {
   courseId  String
   lessonId  String
   viewedAt  DateTime @default(now())
+  completionSource String @default("LEGACY")
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
@@ -105,6 +112,8 @@ model Enrollment {
   courseId   String
   enrolledAt DateTime @default(now())
   completedAt DateTime?
+  examAccessGrantedAt DateTime?
+  examAccessGrantedBy String?
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
@@ -220,6 +229,16 @@ model Attempt {
   score      Int?
   trustScore Int           @default(100)
   status     AttemptStatus @default(IN_PROGRESS)
+  examSnapshot Json?
+  draftAnswers Json @default("[]")
+  draftRevision Int @default(0)
+  draftUpdatedAt DateTime?
+  submissionDigest String?
+  reviewStatus ReviewStatus @default(PENDING)
+  flaggedAt DateTime?
+  reviewedAt DateTime?
+  reviewedBy String?
+  reviewReason String?
   exam       Exam          @relation(fields: [examId], references: [id])
   user       User          @relation(fields: [userId], references: [id])
   events     ProctorEvent[]
@@ -272,6 +291,7 @@ model Certificate {
   courseId String
   issuedAt DateTime @default(now())
   qrCode   String   @unique
+  issuedVia String @default("LEGACY")
   user     User     @relation(fields: [userId], references: [id])
   course   Course   @relation(fields: [courseId], references: [id])
 

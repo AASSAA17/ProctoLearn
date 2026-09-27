@@ -67,18 +67,21 @@ test('PostgreSQL transaction and authorization regressions', async (t) => {
       assert.equal((await db.attempt.findUnique({ where: { id: attempt.id } })).trustScore, 80);
       assert.equal(await db.proctorEvent.count({ where: { attemptId: attempt.id } }), 2);
     });
-    await t.test('concurrent submissions persist exactly one result and certificate', async () => {
+    await t.test('concurrent identical submissions return one persisted result awaiting review', async () => {
       const results = await Promise.allSettled([
         service.submitAnswers(attempt.id, answers, studentId),
         service.submitAnswers(attempt.id, answers, studentId),
       ]);
-      assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1);
+      assert.equal(results.filter((r) => r.status === 'fulfilled').length, 2);
       assert.equal(await db.answer.count({ where: { attemptId: attempt.id } }), 2);
-      assert.equal(await db.certificate.count({ where: { userId: studentId, courseId } }), 1);
+      assert.equal(await db.certificate.count({ where: { userId: studentId, courseId } }), 0);
     });
-    await t.test('certificate failure rolls back grade and answers', async () => {
+    await t.test('answer persistence failure rolls back grade and submission digest', async () => {
       const next = await db.attempt.create({ data: { examId, userId: studentId } });
-      const failing = new AttemptsService(db, { issue: async () => { throw new Error('Simulated failure'); } }, new ConfigService({}));
+      const failingDb = { $transaction: (work, options) => db.$transaction((tx) => work(new Proxy(tx, {
+        get(target, key) { return key === 'answer' ? { createMany: async () => { throw new Error('Simulated failure'); } } : target[key]; },
+      })), options) };
+      const failing = new AttemptsService(failingDb, new CertificatesService(db), new ConfigService({}));
       await assert.rejects(failing.submitAnswers(next.id, answers, studentId), /Simulated failure/);
       assert.equal((await db.attempt.findUnique({ where: { id: next.id } })).status, 'IN_PROGRESS');
       assert.equal(await db.answer.count({ where: { attemptId: next.id } }), 0);

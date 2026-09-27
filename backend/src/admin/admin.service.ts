@@ -258,78 +258,37 @@ export class AdminService {
 
   /**
    * Пайдаланушыға толық курсты өткізіп, сертификат береді.
-   * Барлық сабақтарды оқылған деп белгілейді + enrollment-ты бітіреді + сертификат жасайды.
+   * Әкімші шешімін бөлек сақтайды; сабақтар мен тапсырмалардың тарихын өзгертпейді.
    */
-  async grantFullCertificate(userId: string, courseId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('Пайдаланушы табылмады');
-
-    const course = await this.prisma.course.findUnique({
-      where: { id: courseId },
-      include: { lessons: { select: { id: true } } },
-    });
-    if (!course) throw new NotFoundException('Курс табылмады');
-
-    // 1. Enrollment — тіркел немесе жаңарт
-    await this.prisma.enrollment.upsert({
-      where: { userId_courseId: { userId, courseId } },
-      create: { userId, courseId, completedAt: new Date() },
-      update: { completedAt: new Date() },
-    });
-
-    // 2. Барлық сабақтарды оқылған деп белгіле
-    for (const lesson of course.lessons) {
-      await this.prisma.lessonProgress.upsert({
-        where: { userId_lessonId: { userId, lessonId: lesson.id } },
-        create: { userId, courseId, lessonId: lesson.id },
-        update: { viewedAt: new Date() },
+  async grantFullCertificate(userId: string, courseId: string, adminId: string) {
+    return serializable(this.prisma, async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: userId } });
+      if (!user) throw new NotFoundException('Пайдаланушы табылмады');
+      const course = await tx.course.findUnique({ where: { id: courseId } });
+      if (!course) throw new NotFoundException('Курс табылмады');
+      const now = new Date();
+      await tx.enrollment.upsert({
+        where: { userId_courseId: { userId, courseId } },
+        create: { userId, courseId, completedAt: now, examAccessGrantedAt: now, examAccessGrantedBy: adminId },
+        update: { completedAt: now, examAccessGrantedAt: now, examAccessGrantedBy: adminId },
       });
-    }
-
-    // 3. Сертификат жасау
-    const certificate = await this.certificatesService.issue(userId, courseId);
-
-    return {
-      message: 'Сертификат сәтті берілді',
-      certificate,
-      lessonsMarked: course.lessons.length,
-    };
+      const certificate = await this.certificatesService.issue(userId, courseId, tx, 'ADMIN_OVERRIDE');
+      return { message: 'Сертификат әкімші шешімімен берілді', certificate };
+    });
   }
 
-  /**
-   * Пайдаланушыға сабақтарды өткізіп, тікелей экзаменге кіруге рұқсат береді.
-   * Барлық сабақтарды оқылған деп белгілейді, бірақ сертификат бермейді.
-   */
-  async grantExamAccess(userId: string, courseId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('Пайдаланушы табылмады');
-
-    const course = await this.prisma.course.findUnique({
-      where: { id: courseId },
-      include: { lessons: { select: { id: true } } },
-    });
-    if (!course) throw new NotFoundException('Курс табылмады');
-
-    // 1. Enrollment — тіркел немесе жаңарт (бітірмей)
-    await this.prisma.enrollment.upsert({
-      where: { userId_courseId: { userId, courseId } },
-      create: { userId, courseId },
-      update: {},
-    });
-
-    // 2. Барлық сабақтарды оқылған деп белгіле
-    for (const lesson of course.lessons) {
-      await this.prisma.lessonProgress.upsert({
-        where: { userId_lessonId: { userId, lessonId: lesson.id } },
-        create: { userId, courseId, lessonId: lesson.id },
-        update: { viewedAt: new Date() },
+  /** An explicit administrative exemption never fabricates lesson submissions. */
+  async grantExamAccess(userId: string, courseId: string, adminId: string) {
+    return serializable(this.prisma, async (tx) => {
+      if (!await tx.user.findUnique({ where: { id: userId } })) throw new NotFoundException('Пайдаланушы табылмады');
+      if (!await tx.course.findUnique({ where: { id: courseId } })) throw new NotFoundException('Курс табылмады');
+      const grant = { examAccessGrantedAt: new Date(), examAccessGrantedBy: adminId };
+      await tx.enrollment.upsert({
+        where: { userId_courseId: { userId, courseId } },
+        create: { userId, courseId, ...grant }, update: grant,
       });
-    }
-
-    return {
-      message: 'Экзаменге кіру рұқсаты берілді',
-      lessonsMarked: course.lessons.length,
-    };
+      return { message: 'Экзаменге кіру рұқсаты берілді' };
+    });
   }
 
   // ─── Excel есептері ────────────────────────────────────────────────────────

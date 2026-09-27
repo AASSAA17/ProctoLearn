@@ -29,7 +29,10 @@ function fixture({ enrolled = false, active = 0, history = 0, questionExam = 'ex
       update: async ({ data }) => { writes.push(['updateExam', data]); return data; },
       delete: async () => { writes.push(['deleteExam']); },
     },
-    attempt: { count: async ({ where }) => where.status ? active : history },
+    attempt: {
+      count: async () => history,
+      findMany: async () => Array.from({ length: active }, () => ({ startedAt: new Date(), examSnapshot: { duration: 30 } })),
+    },
     answer: { count: async () => answers },
     question: {
       findUnique: async () => ({ examId: questionExam }),

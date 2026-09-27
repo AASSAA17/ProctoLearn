@@ -21,10 +21,16 @@ interface Answer {
 interface Attempt {
   id: string;
   score: number | null;
+  correctCount: number;
+  totalQuestions: number;
   trustScore: number;
   status: string;
   startedAt: string;
   finishedAt: string | null;
+  reviewStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewReason?: string | null;
+  reviewedAt?: string | null;
+  flaggedAt?: string | null;
   exam: {
     id: string;
     title: string;
@@ -36,6 +42,13 @@ interface Attempt {
 }
 
 const EVENT_LABELS: Record<string, string> = {
+  tab_switch: 'Қойынды ауыстыру',
+  fullscreen_exit: 'Толық экраннан шығу',
+  face_not_detected: 'Камераның автоматты сигналы',
+  copy_paste: 'Көшіру',
+  paste: 'Қою',
+  screen_share_stopped: 'Экран бөлісуі тоқтады',
+  screen_share_denied: 'Экран бөлісуіне рұқсат берілмеді',
   TAB_SWITCH:       ' Қойынды ауыстыру',
   FULLSCREEN_EXIT:  ' Толық экраннан шығу',
   FACE_NOT_FOUND:   ' Бет анықталмады',
@@ -72,7 +85,7 @@ export default function AttemptReviewPage() {
   if (!attempt) return null;
 
   const passed = (attempt.score ?? 0) >= attempt.exam.passScore;
-  const correctCount = attempt.answers.filter((a) => a.isCorrect).length;
+  const correctCount = attempt.correctCount;
   const duration = attempt.finishedAt
     ? Math.round((new Date(attempt.finishedAt).getTime() - new Date(attempt.startedAt).getTime()) / 60000)
     : null;
@@ -100,11 +113,11 @@ export default function AttemptReviewPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${passed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                {passed ? '✅ Өтті' : '❌ Өтпеді'}
+                {passed ? 'Өту балы жиналды' : 'Өту балы жиналмады'}
               </span>
-              {attempt.status === 'FLAGGED' && (
+              {(attempt.flaggedAt || attempt.status === 'FLAGGED') && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">
-                   Күмәнді
+                   Қосымша тексеру
                 </span>
               )}
             </div>
@@ -125,7 +138,7 @@ export default function AttemptReviewPage() {
         {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-4 border-t border-gray-100">
           <div className="text-center">
-            <p className="text-xl font-bold text-gray-900">{correctCount}/{attempt.answers.length}</p>
+            <p className="text-xl font-bold text-gray-900">{correctCount}/{attempt.totalQuestions}</p>
             <p className="text-xs text-gray-500 mt-0.5">Дұрыс жауаптар</p>
           </div>
           <div className="text-center">
@@ -156,6 +169,16 @@ export default function AttemptReviewPage() {
           </div>
         </div>
       </div>
+
+      {attempt.finishedAt && (
+        <section className="card mb-6 space-y-2" aria-label="Нәтижені тексеру">
+          <h2 className="font-semibold">{attempt.reviewStatus === 'APPROVED' ? 'Нәтиже расталды' : attempt.reviewStatus === 'REJECTED' ? 'Тексеру қабылдамады' : 'Нәтиже тексеруді күтуде'}</h2>
+          {attempt.reviewStatus === 'PENDING' && <p className="text-sm text-gray-600">Жауаптар сақталған. Сертификат өту балы жиналып, жазбалар қабылданып, тексеруші мақұлдағаннан кейін беріледі.</p>}
+          {attempt.reviewReason && <p className="text-sm">Тексеру себебі: {attempt.reviewReason}</p>}
+          {attempt.reviewedAt && <p className="text-xs text-gray-500">{new Date(attempt.reviewedAt).toLocaleString('kk-KZ')}</p>}
+          {passed && attempt.reviewStatus === 'APPROVED' && <Link href="/dashboard/certificates" className="text-primary-700 underline text-sm">Сертификаттарды көру</Link>}
+        </section>
+      )}
 
       {/* Answers section */}
       <div className="mb-6">

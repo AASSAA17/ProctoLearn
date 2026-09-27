@@ -47,7 +47,7 @@ async function fixture(withGateway = false) {
   }]));
   const attempts = new Map(['a', 'b'].map((key) => [`attempt-${key}`, {
     id: `attempt-${key}`, examId: `exam-${key}`, userId: `student-${key}`,
-    status: 'IN_PROGRESS', startedAt: new Date(), trustScore: 100,
+    status: 'IN_PROGRESS', startedAt: new Date(), trustScore: 100, reviewStatus: 'PENDING', finishedAt: null,
   }]));
   const assignments = new Map([['exam-a:assigned', { examId: 'exam-a', proctorId: 'assigned' }]]);
   const signedObjects = [];
@@ -191,8 +191,10 @@ test('HTTP flag mutations cannot alter attempts outside the proctor assignment',
     assert.equal(f.attempts.get('attempt-b').status, 'IN_PROGRESS');
     assert.equal((await f.request('assigned', '/attempts/attempt-a/flag', 'PATCH')).status, 200);
     assert.equal((await f.request('admin', '/attempts/attempt-b/flag', 'PATCH')).status, 200);
-    assert.equal(f.attempts.get('attempt-a').status, 'FLAGGED');
-    assert.equal(f.attempts.get('attempt-b').status, 'FLAGGED');
+    assert.equal(f.attempts.get('attempt-a').status, 'IN_PROGRESS');
+    assert.equal(f.attempts.get('attempt-b').status, 'IN_PROGRESS');
+    assert.ok(f.attempts.get('attempt-a').flaggedAt instanceof Date);
+    assert.ok(f.attempts.get('attempt-b').flaggedAt instanceof Date);
   } finally { await f.close(); }
 });
 

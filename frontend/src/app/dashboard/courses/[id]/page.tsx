@@ -47,22 +47,25 @@ export default function CourseDetailPage() {
   const [stepProgress, setStepProgress] = useState<{ total: number; completed: number; percent: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCertificate, setHasCertificate] = useState(false);
+  const [examAccessGranted, setExamAccessGranted] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const load = async () => {
       try {
         setHasCertificate(false);
-        const [courseRes, progressRes, stepProgressRes, certificatesRes] = await Promise.allSettled([
+        const [courseRes, progressRes, stepProgressRes, certificatesRes, enrollmentRes] = await Promise.allSettled([
           api.get(`/courses/${id}`),
           api.get(`/courses/${id}/lessons/progress/my`),
           api.get(`/submissions/course/${id}/progress`),
           api.get<{ courseId: string }[]>('/certificates/my'),
+          api.get(`/enrollments/check/${id}`),
         ]);
         if (courseRes.status === 'fulfilled') setCourse(courseRes.value.data);
         else throw new Error('Course not found');
         if (progressRes.status === 'fulfilled') setProgress(progressRes.value.data);
         if (stepProgressRes.status === 'fulfilled') setStepProgress(stepProgressRes.value.data);
+        if (enrollmentRes.status === 'fulfilled') setExamAccessGranted(!!enrollmentRes.value.data.enrollment?.examAccessGrantedAt);
         if (certificatesRes.status === 'fulfilled') {
           setHasCertificate(certificatesRes.value.data.some((certificate) => certificate.courseId === id));
         }
@@ -338,9 +341,8 @@ export default function CourseDetailPage() {
           ) : (
             <ul className="space-y-3">
               {course.exams.map((exam) => {
-                const canTakeExam = hasModules
-                  ? allModuleLessonsDone
-                  : allLessonsCompleted;
+                const curriculum = [...course.lessons, ...(course.modules ?? []).flatMap((module) => module.lessons)];
+                const canTakeExam = examAccessGranted || hasCertificate || curriculum.every((lesson) => completedIds.has(lesson.id));
                 return (
                   <li key={exam.id} className="p-3 bg-gray-50 rounded-lg">
                     <p className="font-medium text-gray-800">{exam.title}</p>

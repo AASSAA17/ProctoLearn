@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { io, Socket } from 'socket.io-client';
 import api, { WS_URL } from '@/lib/api';
-import { stopRecorder } from '@/lib/recording';
+import { observeRecorderStop, stopRecorder } from '@/lib/recording';
+import { answerList, answerMap, DraftAnswer, DraftState, ExamDraft, ExamDraftSaver } from '@/lib/exam-draft';
 import toast from 'react-hot-toast';
-import { useAuthStore } from '@/store/auth.store';
 
 interface Question {
   id: string;
@@ -14,782 +15,413 @@ interface Question {
   type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TEXT';
   options: string[] | null;
 }
-
-interface Exam {
-  id: string;
-  title: string;
-  duration: number;
-  passScore: number;
-  questions: Question[];
-}
-
 interface Attempt {
   id: string;
   trustScore: number;
   startedAt: string;
   expiresAt: string;
   serverTime: string;
-  exam: Exam;
+  draft: ExamDraft;
+  exam: { id: string; title: string; duration: number; passScore: number; questions: Question[] };
+}
+interface ExamResult { passed: boolean; score: number; certificatePending?: boolean }
+const emptyDraft: DraftState = { status: 'saved', revision: 0, updatedAt: null, dirty: false };
+
+function selectedOptions(value: string | undefined): string[] {
+  if (!value) return [];
+  try { const parsed = JSON.parse(value); if (Array.isArray(parsed)) return parsed.filter((option) => typeof option === 'string'); } catch {}
+  return value.split(',').filter(Boolean);
 }
 
 export default function ExamPage() {
-  const { examId } = useParams();
+  const { examId } = useParams<{ examId: string }>();
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
-
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const answersRef = useRef<Record<string, string>>({});
+  const [draftState, setDraftState] = useState<DraftState>(emptyDraft);
+  const draftRef = useRef<ExamDraftSaver | null>(null);
+  const [starting, setStarting] = useState(false);
+  const startingRef = useRef(false);
+  const [startError, setStartError] = useState('');
   const [timeLeft, setTimeLeft] = useState(0);
   const [trustScore, setTrustScore] = useState(100);
-  const [loading, setLoading] = useState(true);
+  const [currentQ, setCurrentQ] = useState(0);
+  const [notice, setNotice] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
-  const examEndedRef = useRef(false);
-  const deadlineRef = useRef(0);
-  const [currentQ, setCurrentQ] = useState(0);
-  const [tabBlocked, setTabBlocked] = useState(false);
-  const tabSwitchCountRef = useRef(0);
-
-  // Post-exam results modal state
-  const [resultModal, setResultModal] = useState<{
-    passed: boolean;
-    score: number;
-    availableCourses: { id: string; title: string; description?: string; level: string; teacher: { name: string }; _count: { lessons: number; exams: number } }[];
-  } | null>(null);
-  const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
-
-  const socketRef = useRef<Socket | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  const faceCheckRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const screenStreamRef = useRef<MediaStream | null>(null);
-  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const [submitError, setSubmitError] = useState('');
+  const [submissionFrozen, setSubmissionFrozen] = useState(false);
+  const submissionRef = useRef<DraftAnswer[] | null>(null);
+  const [result, setResult] = useState<ExamResult | null>(null);
+  const [uploadError, setUploadError] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [loadingDraft, setLoadingDraft] = useState(false);
+  const mountedRef = useRef(false);
+  const endedRef = useRef(false);
   const attemptIdRef = useRef<string | null>(null);
-  // Ref to always point to the latest handleSubmit (avoids stale closure in timer)
-  const handleSubmitRef = useRef<() => Promise<void>>(() => Promise.resolve());
-  // Video recording refs
+  const deadlineRef = useRef(0);
+  const expirySubmittedRef = useRef(false);
+  const socketRef = useRef<Socket | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
   const cameraRecorderRef = useRef<MediaRecorder | null>(null);
   const screenRecorderRef = useRef<MediaRecorder | null>(null);
+  const cameraStopRef = useRef<(() => Promise<void>) | null>(null);
+  const screenStopRef = useRef<(() => Promise<void>) | null>(null);
   const cameraChunksRef = useRef<Blob[]>([]);
   const screenChunksRef = useRef<Blob[]>([]);
+  const uploadedRef = useRef(new Set<string>());
+  const uploadPromiseRef = useRef<Promise<void> | null>(null);
+  const handleSubmitRef = useRef<() => Promise<void>>(async () => {});
 
-  const sendEvent = useCallback((type: string, metadata?: Record<string, any>) => {
-    if (examEndedRef.current) return;
-    socketRef.current?.emit('proctor:event', {
-      attemptId: attemptIdRef.current ?? attempt?.id,
-      type,
-      metadata,
-    });
-  }, [attempt?.id]);
-
-  // Stop all media streams, recorders, and clear intervals
-  const stopAllMedia = useCallback(() => {
-    clearInterval(faceCheckRef.current);
-    clearInterval(timerRef.current);
-    // Stop recorders
-    if (cameraRecorderRef.current && cameraRecorderRef.current.state !== 'inactive') {
-      cameraRecorderRef.current.stop();
-    }
-    if (screenRecorderRef.current && screenRecorderRef.current.state !== 'inactive') {
-      screenRecorderRef.current.stop();
-    }
-    socketRef.current?.disconnect();
-    socketRef.current = null;
-    // Stop camera
-    cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
-    cameraStreamRef.current = null;
-    const video = videoRef.current;
-    if (video?.srcObject) {
-      (video.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
-      video.srcObject = null;
-    }
-    // Stop screen share
-    screenStreamRef.current?.getTracks().forEach((t) => t.stop());
-    screenStreamRef.current = null;
-    // Exit fullscreen
-    if (document.fullscreenElement) {
-      document.exitFullscreen?.().catch(() => {});
-    }
+  const sendEvent = useCallback((type: string, metadata?: Record<string, unknown>) => {
+    if (endedRef.current || !attemptIdRef.current) return;
+    socketRef.current?.emit('proctor:event', { attemptId: attemptIdRef.current, type, metadata });
   }, []);
 
-  // Setup camera + start recording
-  const setupCamera = async () => {
+  const stopAllMedia = useCallback(() => {
+    for (const recorder of [cameraRecorderRef.current, screenRecorderRef.current]) {
+      if (recorder && recorder.state !== 'inactive') { try { recorder.stop(); } catch {} }
+    }
+    for (const stream of [cameraStreamRef.current, screenStreamRef.current]) stream?.getTracks().forEach((track) => track.stop());
+    cameraStreamRef.current = null;
+    screenStreamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    socketRef.current?.disconnect();
+    socketRef.current = null;
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      endedRef.current = true;
+      draftRef.current?.dispose();
+      stopAllMedia();
+    };
+  }, [stopAllMedia]);
+
+  // Capture permissions are requested from the button click, before starting the server timer.
+  const begin = async () => {
+    if (startingRef.current || attemptIdRef.current) return;
+    startingRef.current = true;
+    setStarting(true);
+    setStartError('');
+    endedRef.current = false;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      cameraStreamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-      // Start camera recorder
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9'
-        : 'video/webm';
-      const recorder = new MediaRecorder(stream, { mimeType });
+      if (!navigator.mediaDevices?.getDisplayMedia || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+        throw new Error('Бұл браузер экран мен камера жазбасын қолдамайды. Жұмыс үстелі браузерін және HTTPS қолданыңыз.');
+      }
+      const screen = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      if (!mountedRef.current) { screen.getTracks().forEach((track) => track.stop()); return; }
+      screenStreamRef.current = screen;
+      const camera = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      if (!mountedRef.current) { camera.getTracks().forEach((track) => track.stop()); stopAllMedia(); return; }
+      cameraStreamRef.current = camera;
+      if (![screen, camera].every((stream) => stream.getVideoTracks().some((track) => track.readyState === 'live'))) {
+        throw new Error('Камера мен экран бөлісуі қосулы болуы керек.');
+      }
+      const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((mime) => MediaRecorder.isTypeSupported(mime));
+      if (!mimeType) throw new Error('Бұл браузер WebM жазбасын қолдамайды.');
       cameraChunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) cameraChunksRef.current.push(e.data); };
-      recorder.start(10000); // chunk every 10s
-      cameraRecorderRef.current = recorder;
-    } catch {
-      console.warn('Camera not available');
+      screenChunksRef.current = [];
+      uploadedRef.current.clear();
+      const record = (stream: MediaStream, chunks: React.RefObject<Blob[]>, stopped: React.RefObject<(() => Promise<void>) | null>) => {
+        const recorder = new MediaRecorder(stream, { mimeType });
+        stopped.current = observeRecorderStop(recorder);
+        recorder.ondataavailable = ({ data }) => { if (data.size) chunks.current.push(data); };
+        recorder.onerror = () => { if (mountedRef.current && !endedRef.current) setNotice('Жазба қатесі тіркелді. Жауаптарыңызды жіберуге болады; нәтиже тексеріледі.'); };
+        recorder.start(10000);
+        return recorder;
+      };
+      cameraRecorderRef.current = record(camera, cameraChunksRef, cameraStopRef);
+      screenRecorderRef.current = record(screen, screenChunksRef, screenStopRef);
+      const requestedAt = performance.now();
+      const { data } = await api.post<Attempt>(`/attempts/start/${examId}`);
+      if (!mountedRef.current) { stopAllMedia(); return; }
+      const safeDraft = data.draft ?? { answers: [], revision: 0, updatedAt: null };
+      answersRef.current = answerMap(safeDraft);
+      setAnswers(answersRef.current);
+      const saver = new ExamDraftSaver(safeDraft, async (value, signal) => {
+        const response = await api.patch<ExamDraft>(`/attempts/${data.id}/draft`, value, { signal, timeout: 15000 });
+        return response.data;
+      }, (state) => {
+        if (!mountedRef.current) return;
+        setDraftState(state);
+        if (state.status === 'closed') {
+          endedRef.current = true;
+          setSubmissionFrozen(true);
+          setSubmitError('Емтихан аяқталған немесе уақыты біткен. Сервердегі нәтиже сақталды; жазбалар жүктелгеннен кейін оны көре аласыз.');
+          draftRef.current?.dispose();
+          void uploadRecordings(data.id);
+        }
+      });
+      draftRef.current = saver;
+      setDraftState(saver.state);
+      attemptIdRef.current = data.id;
+      const remaining = Math.max(0, Date.parse(data.expiresAt) - Date.parse(data.serverTime) - (performance.now() - requestedAt));
+      deadlineRef.current = performance.now() + remaining;
+      setTimeLeft(Math.ceil(remaining / 1000));
+      setTrustScore(data.trustScore);
+      setAttempt(data);
+      const socket = io(`${WS_URL}/proctor`, { auth: { token: localStorage.getItem('accessToken') }, transports: ['websocket'] });
+      socketRef.current = socket;
+      socket.on('connect', () => socket.emit('proctor:start', { attemptId: data.id, role: 'student' }));
+      socket.on('proctor:event:recorded', ({ trustScore: score }) => { if (mountedRef.current) setTrustScore(score); });
+      socket.on('proctor:error', async ({ code, message }) => {
+        if (code === 'UNAUTHORIZED' && !endedRef.current) {
+          try {
+            await api.get('/auth/me');
+            if (endedRef.current || !mountedRef.current) return;
+            socket.auth = { token: localStorage.getItem('accessToken') };
+            socket.connect();
+          } catch { if (mountedRef.current) setNotice(message || 'Прокторинг байланысы үзілді.'); }
+        } else if (mountedRef.current) setNotice(message || 'Прокторинг қатесі');
+      });
+      socket.on('connect_error', () => { if (mountedRef.current && !endedRef.current) setNotice('Прокторинг байланысы үзілді. Жауаптарды сақтауды жалғастырыңыз.'); });
+      const screenEnded = () => {
+        if (endedRef.current || !mountedRef.current) return;
+        sendEvent('screen_share_stopped');
+        setNotice('Экран бөлісуі тоқтады. Бұл оқиға тексеріледі; жауаптарыңызды жіберуге болады.');
+      };
+      const screenTrack = screen.getVideoTracks()[0];
+      if (screenTrack?.readyState === 'ended') screenEnded();
+      else screenTrack?.addEventListener('ended', screenEnded, { once: true });
+      const cameraEnded = () => {
+        if (!endedRef.current && mountedRef.current) setNotice('Камера жазбасы тоқтады. Жауаптарыңызды жіберіңіз; нәтиже қосымша тексеріледі.');
+      };
+      const cameraTrack = camera.getVideoTracks()[0];
+      if (cameraTrack?.readyState === 'ended') cameraEnded();
+      else cameraTrack?.addEventListener('ended', cameraEnded, { once: true });
+    } catch (error: any) {
+      stopAllMedia();
+      if (mountedRef.current) setStartError(error?.response?.data?.message || (error?.name === 'NotAllowedError' ? 'Камера мен экранға рұқсат берілмеді. Жаңа емтихан таймері басталған жоқ.' : error?.message || 'Емтиханды бастау мүмкін болмады.'));
+    } finally {
+      startingRef.current = false;
+      if (mountedRef.current) setStarting(false);
     }
   };
 
-  // Setup screen sharing + start recording
-  const setupScreenShare = useCallback(async (attemptId: string) => {
-    try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-      screenStreamRef.current = stream;
-      // Start screen recorder
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9'
-        : 'video/webm';
-      const recorder = new MediaRecorder(stream, { mimeType });
-      screenChunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) screenChunksRef.current.push(e.data); };
-      recorder.start(10000);
-      screenRecorderRef.current = recorder;
-      // Detect if user stops sharing
-      stream.getVideoTracks()[0].addEventListener('ended', () => {
-        sendEvent('screen_share_stopped', { timestamp: new Date().toISOString() });
-        toast.error('Экран бөлісуді тоқтаттыңыз! -10 Trust Score', { duration: 4000 });
-        screenStreamRef.current = null;
-      });
-    } catch {
-      sendEvent('screen_share_denied', { timestamp: new Date().toISOString() });
-      toast.error('Экранды бөлісу талап етіледі', { duration: 4000 });
-    }
-  }, [sendEvent]);
-
-  // Wait for the final recorder chunk, then confirm both uploads.
-  const uploadRecordings = useCallback(async (attemptId: string) => {
-    try {
-      await Promise.all([stopRecorder(cameraRecorderRef.current), stopRecorder(screenRecorderRef.current)]);
-    } finally {
-      stopAllMedia();
-    }
-    const uploadBlob = async (chunks: Blob[], type: 'camera' | 'screen') => {
-      if (chunks.length === 0) return;
-        const blob = new Blob(chunks, { type: 'video/webm' });
-        const formData = new FormData();
-        formData.append('file', blob, `${type}.webm`);
-        formData.append('type', type);
-        await api.post(`/evidence/${attemptId}/recording`, formData, {
-          headers: { 'Content-Type': undefined },
-        });
-    };
-    const results = await Promise.allSettled([
-      uploadBlob([...cameraChunksRef.current], 'camera'),
-      uploadBlob([...screenChunksRef.current], 'screen'),
-    ]);
-    if (results.some((result) => result.status === 'rejected')) throw new Error('Recording upload failed');
-  }, [stopAllMedia]);
-
-  // The hidden video is mounted only after the loading screen disappears.
   useEffect(() => {
-    if (!loading && videoRef.current && cameraStreamRef.current) {
-      videoRef.current.srcObject = cameraStreamRef.current;
-    }
-  }, [loading]);
+    if (attempt && videoRef.current) videoRef.current.srcObject = cameraStreamRef.current;
+  }, [attempt]);
 
-  // Detect face in camera canvas
-  const checkFace = useCallback(() => {
-    if (!canvasRef.current || !videoRef.current) return;
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-    if (video.readyState < 2) return; // not ready
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    canvas.width = video.videoWidth || 320;
-    canvas.height = video.videoHeight || 240;
-    if (canvas.width === 0 || canvas.height === 0) return;
-
-    ctx.drawImage(video, 0, 0);
-
-    // Simple brightness heuristic: if very dark or blank, no face
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    let totalBrightness = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      totalBrightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
-    }
-    const avgBrightness = totalBrightness / (data.length / 4);
-
-    if (avgBrightness < 10) {
-      // Camera feed is basically black — likely no face / camera blocked
-      sendEvent('face_not_detected', { reason: 'dark_frame', brightness: avgBrightness });
-      toast.error('Камера кадры қараңғы! -20 Trust Score', { duration: 3000 });
-    }
-  }, [sendEvent]);
-
-  // Proctoring event listeners
   useEffect(() => {
     if (!attempt) return;
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        if (examEndedRef.current) return;
-        tabSwitchCountRef.current += 1;
-        sendEvent('tab_switch', { timestamp: new Date().toISOString(), count: tabSwitchCountRef.current });
-        toast.error('Қойынды ауыстыру тіркелді! -10 Trust Score', { duration: 3000 });
-        setTabBlocked(true);
+    const visibility = () => {
+      if (document.hidden && !endedRef.current) { sendEvent('tab_switch'); setNotice('Қойынды ауыстыру тіркелді. Оқиға тексеру кезінде қаралады.'); }
+    };
+    const copy = () => sendEvent('copy_paste', { action: 'copy' });
+    const paste = () => sendEvent('paste', { action: 'paste' });
+    const fullscreen = () => { if (!document.fullscreenElement) sendEvent('fullscreen_exit'); };
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!endedRef.current || uploadedRef.current.size < 2) {
+        event.preventDefault(); event.returnValue = '';
       }
     };
-
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = '';
-    };
-
-    // Back button → auto-submit the attempt
-    window.history.pushState(null, '', window.location.href);
-    const handlePopState = () => {
-      // Push state again so navigation is truly blocked, then submit
-      window.history.pushState(null, '', window.location.href);
-      void handleSubmitRef.current();
-    };
-
-    const handleCopy = () => {
-      if (examEndedRef.current) return;
-      sendEvent('copy_paste', { action: 'copy' });
-      toast.error('Көшіру тіркелді! -15 Trust Score', { duration: 3000 });
-    };
-
-    const handlePaste = () => {
-      if (examEndedRef.current) return;
-      sendEvent('paste', { action: 'paste' });
-      toast.error('Қоюу тіркелді! -15 Trust Score', { duration: 3000 });
-    };
-
-    const handleFullscreenChange = () => {
-      if (examEndedRef.current) return;
-      if (!document.fullscreenElement) {
-        sendEvent('fullscreen_exit');
-        toast.error('Толық экраннан шыктыңыз! -5 Trust Score', { duration: 3000 });
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('popstate', handlePopState);
-    document.addEventListener('copy', handleCopy);
-    document.addEventListener('paste', handlePaste);
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-
-    // Try to enter fullscreen
-    document.documentElement.requestFullscreen?.().catch(() => {});
-
+    const online = () => { if (!endedRef.current && draftRef.current?.state.status === 'offline') void draftRef.current.flush(); };
+    document.addEventListener('visibilitychange', visibility);
+    document.addEventListener('copy', copy);
+    document.addEventListener('paste', paste);
+    document.addEventListener('fullscreenchange', fullscreen);
+    window.addEventListener('beforeunload', beforeUnload);
+    window.addEventListener('online', online);
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
-      document.removeEventListener('copy', handleCopy);
-      document.removeEventListener('paste', handlePaste);
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('visibilitychange', visibility);
+      document.removeEventListener('copy', copy);
+      document.removeEventListener('paste', paste);
+      document.removeEventListener('fullscreenchange', fullscreen);
+      window.removeEventListener('beforeunload', beforeUnload);
+      window.removeEventListener('online', online);
     };
   }, [attempt, sendEvent]);
 
-  // Initialize exam
-  useEffect(() => {
-    const init = async () => {
+  const uploadRecordings = useCallback(async (attemptId: string) => {
+    if (uploadPromiseRef.current) return uploadPromiseRef.current;
+    const work = async () => {
+      if (mountedRef.current) { setUploading(true); setUploadError(false); }
       try {
-        const { data } = await api.post(`/attempts/start/${examId}`);
-        setAttempt(data);
-        attemptIdRef.current = data.id;
-        setTrustScore(data.trustScore);
-        // Persist timer: compute remaining time based on when the attempt started
-        const remainingMs = Math.max(0, Date.parse(data.expiresAt) - Date.parse(data.serverTime));
-        deadlineRef.current = performance.now() + remainingMs;
-        setTimeLeft(Math.ceil(remainingMs / 1000));
-
-        // Initialize socket
-        const token = localStorage.getItem('accessToken');
-        const socket = io(`${WS_URL}/proctor`, {
-          auth: { token },
-          transports: ['websocket'],
-        });
-
-        socket.on('connect', () => {
-          socket.emit('proctor:start', { attemptId: data.id, role: 'student' });
-        });
-
-        socket.on('proctor:event:recorded', ({ trustScore: ts }) => {
-          setTrustScore(ts);
-        });
-
-        socket.on('proctor:error', async ({ code, message }) => {
-          if (code === 'UNAUTHORIZED' && !examEndedRef.current) {
-            try {
-              await api.get('/auth/me'); // refresh interceptor renews an expired token
-              socket.auth = { token: localStorage.getItem('accessToken') };
-              socket.connect();
-            } catch { toast.error(message); }
-          } else { toast.error(message); }
-        });
-        socket.on('exception', ({ message }) => toast.error(message || 'Прокторинг қатесі'));
-        socket.on('connect_error', () => toast.error('Прокторинг байланысы үзілді'));
-
-        socketRef.current = socket;
-
-        await setupCamera();
-        await setupScreenShare(data.id);
-
-        // Face check every 15 seconds (no more screenshots)
-        faceCheckRef.current = setInterval(checkFace, 15000);
-      } catch (err: any) {
-        toast.error(err?.response?.data?.message || 'Емтиханды бастау қатесі');
-        router.push('/dashboard/courses');
+        try {
+          const finished = await Promise.allSettled([
+            cameraStopRef.current?.() ?? stopRecorder(cameraRecorderRef.current),
+            screenStopRef.current?.() ?? stopRecorder(screenRecorderRef.current),
+          ]);
+          if (finished.some(({ status }) => status === 'rejected')) throw new Error('Recording did not finish');
+        }
+        finally { stopAllMedia(); }
+        const upload = async (type: 'camera' | 'screen', chunks: Blob[]) => {
+          if (uploadedRef.current.has(type)) return;
+          if (!chunks.length) throw new Error('Recording is empty');
+          const form = new FormData();
+          form.append('file', new Blob(chunks, { type: 'video/webm' }), `${type}.webm`);
+          form.append('type', type);
+          await api.post(`/evidence/${attemptId}/recording`, form, { headers: { 'Content-Type': undefined }, timeout: 120000 });
+          uploadedRef.current.add(type);
+        };
+        const results = await Promise.allSettled([upload('camera', cameraChunksRef.current), upload('screen', screenChunksRef.current)]);
+        if (results.some(({ status }) => status === 'rejected')) throw new Error('Recording upload failed');
+        cameraChunksRef.current = [];
+        screenChunksRef.current = [];
+      } catch {
+        if (mountedRef.current) setUploadError(true);
       } finally {
-        setLoading(false);
+        if (mountedRef.current) setUploading(false);
       }
     };
+    uploadPromiseRef.current = work();
+    try { await uploadPromiseRef.current; } finally { uploadPromiseRef.current = null; }
+  }, [stopAllMedia]);
 
-    init();
+  const handleSubmit = useCallback(async () => {
+    if (!attempt || submittingRef.current || endedRef.current) return;
+    if (draftRef.current?.state.status === 'conflict' && !submissionRef.current) {
+      setSubmitError('Басқа қойынды жауаптарды өзгертті. Алдымен сервердегі нұсқаны жүктеңіз.');
+      return;
+    }
+    submittingRef.current = true;
+    setSubmitting(true);
+    setSubmitError('');
+    if (!submissionRef.current) submissionRef.current = answerList(answersRef.current);
+    setSubmissionFrozen(true);
+    // Submit carries the latest answers itself. Waiting on an offline autosave could miss the deadline.
+    draftRef.current?.dispose();
+    try {
+      const { data } = await api.post<ExamResult>(`/attempts/${attempt.id}/submit`, { answers: submissionRef.current }, { timeout: 20000 });
+      endedRef.current = true;
+      socketRef.current?.emit('proctor:end', { attemptId: attempt.id });
+      if (mountedRef.current) setResult(data);
+      await uploadRecordings(attempt.id);
+    } catch (error: any) {
+      const code = error?.response?.data?.code;
+      if (['EXAM_EXPIRED', 'ATTEMPT_CLOSED', 'SUBMISSION_CONFLICT'].includes(code)) {
+        endedRef.current = true;
+        if (mountedRef.current) setSubmitError(error?.response?.data?.message || 'Бұл емтихан жабылған. Нәтижені тексеріңіз.');
+        await uploadRecordings(attempt.id);
+      } else if (mountedRef.current) {
+        setSubmitError('Жіберу расталмады. Жауаптарыңыз осы бетте сақталған; сол жауаптарды қайта жіберіңіз.');
+      }
+    } finally {
+      submittingRef.current = false;
+      if (mountedRef.current) setSubmitting(false);
+    }
+  }, [attempt, uploadRecordings]);
+  handleSubmitRef.current = handleSubmit;
 
-    return () => {
-      stopAllMedia();
-    };
-  }, [examId]);
-
-  // Timer
   useEffect(() => {
-    if (!attempt || loading) return;
+    if (!attempt || result) return;
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((deadlineRef.current - performance.now()) / 1000));
       setTimeLeft(remaining);
-      if (remaining === 0) {
-        clearInterval(timerRef.current);
-        void handleSubmitRef.current();
-      }
+      if (!remaining && !expirySubmittedRef.current) { expirySubmittedRef.current = true; void handleSubmitRef.current(); }
     };
-    timerRef.current = setInterval(tick, 250);
+    tick();
+    const timer = setInterval(tick, 250);
+    return () => clearInterval(timer);
+  }, [attempt, result]);
 
-    return () => clearInterval(timerRef.current);
-  }, [attempt, loading]);
-
-  const handleExit = () => {
-    if (window.confirm('Емтиханнан шығуға сенімдісіз бе? Барлық берілген жауаптар жіберіледі.')) {
-      void handleSubmitRef.current();
-    }
+  const updateAnswer = (questionId: string, answer: string) => {
+    if (submissionRef.current || endedRef.current || !timeLeft || draftRef.current?.state.status === 'conflict') return;
+    const next = { ...answersRef.current, [questionId]: answer };
+    answersRef.current = next;
+    setAnswers(next);
+    draftRef.current?.update(next);
   };
 
-  const handleSubmit = useCallback(async () => {
-    if (!attempt || submittingRef.current) return;
-    submittingRef.current = true;
-    setSubmitting(true);
-
-    const answerList = Object.entries(answers).filter(([, answer]) => answer.trim()).map(([questionId, answer]) => ({
-      questionId,
-      answer,
-    }));
-
+  const reloadDraft = async () => {
+    if (!attempt || loadingDraft) return;
+    if (!window.confirm('Осы беттегі сақталмаған өзгерістер сервердегі соңғы жауаптармен ауыстырылады. Жалғастыру керек пе?')) return;
+    setLoadingDraft(true);
     try {
-      const { data } = await api.post(`/attempts/${attempt.id}/submit`, {
-        answers: answerList,
-      });
-
-      examEndedRef.current = true;
-      socketRef.current?.emit('proctor:end', { attemptId: attempt.id });
-      clearInterval(timerRef.current);
-      clearInterval(faceCheckRef.current);
-      setTabBlocked(false);
-      try {
-        await uploadRecordings(attempt.id);
-      } catch {
-        toast.error('Нәтиже сақталды, бірақ видео жүктелмеді. Прокторға хабарласыңыз', { duration: 8000 });
-      }
-
-      if (data.passed) {
-        toast.success(`Сіз өттіңіз! Балл: ${data.score}% 🎉`);
-        setResultModal({
-          passed: true,
-          score: data.score,
-          availableCourses: data.availableCourses ?? [],
-        });
-      } else {
-        toast.error(`Өтпедіңіз. Балл: ${data.score}%`);
-        setResultModal({
-          passed: false,
-          score: data.score,
-          availableCourses: [],
-        });
-      }
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Жіберу қатесі');
-      if (['EXAM_EXPIRED', 'ATTEMPT_CLOSED'].includes(error?.response?.data?.code)) {
-        examEndedRef.current = true;
-        try { await uploadRecordings(attempt.id); } catch { toast.error('Видео жүктелмеді. Прокторға хабарласыңыз'); }
-        router.push('/dashboard/my-attempts');
-        return;
-      }
-      submittingRef.current = false;
-      setSubmitting(false);
-    }
-  }, [attempt, submitting, answers, uploadRecordings, stopAllMedia, router]);
-
-  // Keep ref in sync so timer/event-listeners always call the latest version
-  useEffect(() => { handleSubmitRef.current = handleSubmit; });
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      const { data } = await api.get<ExamDraft>(`/attempts/${attempt.id}/draft`);
+      draftRef.current?.replaceFromServer(data);
+      answersRef.current = answerMap(data);
+      setAnswers(answersRef.current);
+      setSubmitError('');
+    } catch { toast.error('Сервердегі жауаптарды жүктеу мүмкін болмады.'); }
+    finally { if (mountedRef.current) setLoadingDraft(false); }
   };
 
-  const trustColor = (score: number) => {
-    if (score >= 80) return 'bg-green-500';
-    if (score >= 50) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
-
-  const handleEnrollCourse = async (courseId: string) => {
-    setEnrollingCourseId(courseId);
-    try {
-      await api.post(`/enrollments/courses/${courseId}`);
-      toast.success('Курсқа тіркелдіңіз!');
-      router.push(`/dashboard/courses/${courseId}`);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Тіркелу қатесі');
-    } finally {
-      setEnrollingCourseId(null);
-    }
-  };
-
-  const handleCloseResult = () => {
-    if (resultModal?.passed) {
-      router.push('/dashboard/certificates');
-    } else {
-      router.push('/dashboard/my-attempts');
-    }
-  };
-
-  const levelLabel = (l: string) =>
-    l === 'BEGINNER' ? '🟢 Бастаушы' : l === 'INTERMEDIATE' ? '🟡 Орта' : '🔴 Жоғары';
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-500">Емтихан жүктелуде...</p>
-        </div>
+  if (!attempt) return (
+    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="card max-w-xl w-full space-y-5">
+        <h1 className="text-2xl font-bold">Емтиханға дайындық</h1>
+        <p className="text-gray-600">Камера, микрофон және экран жазбасы қажет. Экранды таңдаңыз, содан кейін камераға рұқсат беріңіз. Жаңа емтихан осы тексерулерден кейін басталады.</p>
+        <p className="text-sm text-gray-500">Бұрын басталған емтиханның таймері жалғасады. Қайта ашқанда серверде сақталған жауаптар қалпына келеді.</p>
+        {startError && <p role="alert" className="text-red-700 bg-red-50 p-3 rounded-lg">{startError}</p>}
+        <button onClick={begin} disabled={starting} className="btn-primary w-full disabled:opacity-50">{starting ? 'Рұқсаттар тексерілуде...' : 'Камера мен экранды қосып, бастау / жалғастыру'}</button>
+        <Link href="/dashboard/courses" className="block text-center text-primary-700">Курстарға оралу</Link>
       </div>
-    );
-  }
-
-  if (!attempt) return null;
+    </main>
+  );
 
   const questions = attempt.exam.questions;
   const question = questions[currentQ];
+  const disabled = submissionFrozen || endedRef.current || !timeLeft || draftState.status === 'conflict' || loadingDraft;
+  const minutes = `${Math.floor(timeLeft / 60)}`.padStart(2, '0');
+  const seconds = `${timeLeft % 60}`.padStart(2, '0');
+  const draftLabels: Record<DraftState['status'], string> = {
+    saved: 'Жауаптар серверде сақталды', unsaved: 'Сақталмаған өзгерістер бар', saving: 'Жауаптар сақталуда...',
+    offline: 'Байланыс жоқ: соңғы өзгерістер сақталмады', conflict: 'Басқа қойынды жауаптарды өзгертті',
+    closed: 'Емтихан серверде аяқталған', error: 'Жауаптарды сақтау мүмкін болмады', stopped: 'Жауаптар жіберуге бекітілді',
+  };
 
   return (
-    <>
-      {/* Tab switch blocking overlay */}
-      {tabBlocked && (
-        <div className="fixed inset-0 bg-red-900/95 z-50 flex flex-col items-center justify-center">
-          <div className="text-center text-white p-8 max-w-md">
-            <div className="text-6xl mb-4">⚠️</div>
-            <h2 className="text-2xl font-bold mb-2">Қойынды ауыстыру тіркелді!</h2>
-            <p className="text-red-200 mb-2">Бұл оқиға проктор мен әкімшіге жіберілді.</p>
-            <p className="text-red-200 mb-6">Жалпы саны: {tabSwitchCountRef.current} рет</p>
-            <button
-              onClick={() => setTabBlocked(false)}
-              className="bg-white text-red-900 font-bold px-8 py-3 rounded-lg hover:bg-red-100 transition-colors"
-            >
-              Емтиханға оралу →
-            </button>
-          </div>
-        </div>
-      )}
-      <div className="min-h-screen bg-gray-50">
-      {/* Header bar */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div>
-            <h1 className="font-bold text-gray-900">{attempt.exam.title}</h1>
-            <p className="text-sm text-gray-500">
-              Сұрақ {currentQ + 1} / {questions.length}
-            </p>
-          </div>
-
+    <main className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div><h1 className="font-bold">{attempt.exam.title}</h1><p className="text-sm text-gray-500">Сұрақ {currentQ + 1} / {questions.length}</p></div>
           <div className="flex items-center gap-4">
-            {/* Trust Score */}
-            <div className="text-center">
-              <p className="text-xs text-gray-500 mb-1">Trust Score</p>
-              <div className="flex items-center gap-2">
-                <div className="w-24 h-3 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${trustColor(trustScore)}`}
-                    style={{ width: `${trustScore}%` }}
-                  />
-                </div>
-                <span className="text-sm font-bold">{trustScore}</span>
-              </div>
-            </div>
-
-            {/* Timer */}
-            <div className={`text-center ${timeLeft < 60 ? 'text-red-600' : 'text-gray-800'}`}>
-              <p className="text-xs text-gray-500">Қалған уақыт</p>
-              <p className="text-2xl font-mono font-bold">{formatTime(timeLeft)}</p>
-            </div>
-
-            {/* Exit button */}
-            <button
-              onClick={handleExit}
-              disabled={submitting}
-              className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors"
-            >
-              🚪 Шығу
-            </button>
+            <div className="text-center"><p className="text-xs text-gray-500">Trust Score</p><p className="font-bold">{trustScore}</p></div>
+            <div className={timeLeft < 60 ? 'text-red-600' : 'text-gray-800'}><p className="text-xs">Қалған уақыт</p><p className="font-mono text-2xl font-bold">{minutes}:{seconds}</p></div>
+            <button onClick={() => document.documentElement.requestFullscreen?.().catch(() => toast.error('Толық экран қолжетімсіз'))} className="btn-secondary text-sm">Толық экран</button>
+            <button disabled={submitting || endedRef.current || !!result || draftState.status === 'conflict'} onClick={() => { if (window.confirm('Жауаптарды жіберіп, емтиханды аяқтайсыз ба?')) void handleSubmit(); }} className="bg-red-600 text-white rounded-lg px-4 py-2 disabled:opacity-50">Аяқтау</button>
           </div>
         </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Question navigator */}
-          <div className="card">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Сұрақтар</h3>
-            <div className="grid grid-cols-4 gap-1">
-              {questions.map((q, i) => (
-                <button
-                  key={q.id}
-                  onClick={() => setCurrentQ(i)}
-                  className={`w-8 h-8 rounded text-xs font-medium transition-colors ${
-                    i === currentQ
-                      ? 'bg-primary-600 text-white'
-                      : answers[q.id]
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-            {/* Hidden camera */}
-            <video ref={videoRef} autoPlay muted className="hidden" />
-            <canvas ref={canvasRef} className="hidden" />
-          </div>
-
-          {/* Current question */}
-          <div className="lg:col-span-3 card">
-            <p className="text-sm text-gray-500 mb-2">
-              Сұрақ {currentQ + 1} / {questions.length}
-            </p>
-            {/* Question text — may contain code block */}
-            <div className="mb-6">
-              {question.text.includes('\n') || question.text.includes('```') ? (
-                <div>
-                  {question.text.split('```').map((part, i) =>
-                    i % 2 === 0 ? (
-                      <p key={i} className="text-xl font-semibold text-gray-900 whitespace-pre-line">{part}</p>
-                    ) : (
-                      <pre key={i} className="bg-gray-900 text-green-300 rounded-lg p-3 my-2 text-sm overflow-x-auto font-mono">{part.replace(/^[a-z]*\n/, '')}</pre>
-                    )
-                  )}
-                </div>
-              ) : (
-                <h2 className="text-xl font-semibold text-gray-900">{question.text}</h2>
-              )}
-            </div>
-
-            {question.type === 'SINGLE_CHOICE' && question.options && (
-              <div className="space-y-3">
-                {question.options.map((opt, idx) => {
-                  const isCode = opt.includes('\n') || opt.startsWith('<') || opt.startsWith('const ') || opt.startsWith('function ') || opt.startsWith('class ') || opt.startsWith('SELECT ') || opt.startsWith('INSERT ') || opt.startsWith('def ') || opt.startsWith('FROM ') || opt.startsWith('docker ') || opt.startsWith('git ') || opt.startsWith('npm ') || opt.startsWith('app.') || opt.startsWith('@') || opt.startsWith('services:');
-                  return (
-                    <label
-                      key={idx}
-                      className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                        answers[question.id] === opt
-                          ? 'border-primary-500 bg-primary-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name={`q-${question.id}`}
-                        value={opt}
-                        checked={answers[question.id] === opt}
-                        onChange={() => setAnswers((prev) => ({ ...prev, [question.id]: opt }))}
-                        className="text-primary-600 mt-1 flex-shrink-0"
-                      />
-                      {isCode ? (
-                        <pre className="text-sm font-mono bg-gray-900 text-green-300 rounded px-3 py-2 overflow-x-auto w-full">{opt}</pre>
-                      ) : (
-                        <span className="text-gray-800">{opt}</span>
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-
-            {question.type === 'MULTIPLE_CHOICE' && question.options && (
-              <div className="space-y-3">
-                {question.options.map((opt, idx) => {
-                  const selected = (answers[question.id] || '').split(',').includes(opt);
-                  return (
-                    <label
-                      key={idx}
-                      className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                        selected
-                          ? 'border-primary-500 bg-primary-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        value={opt}
-                        checked={selected}
-                        onChange={(e) => {
-                          const current = (answers[question.id] || '').split(',').filter(Boolean);
-                          const updated = e.target.checked
-                            ? [...current, opt]
-                            : current.filter((v) => v !== opt);
-                          setAnswers((prev) => ({ ...prev, [question.id]: updated.join(',') }));
-                        }}
-                        className="text-primary-600"
-                      />
-                      <span className="text-gray-800">{opt}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-
-            {question.type === 'TEXT' && (
-              <textarea
-                className="input min-h-[120px] resize-none"
-                placeholder="Жауабыңызды теріңіз..."
-                value={answers[question.id] || ''}
-                onChange={(e) =>
-                  setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))
-                }
-              />
-            )}
-
-            <div className="flex justify-between mt-8">
-              <button
-                onClick={() => setCurrentQ((prev) => Math.max(0, prev - 1))}
-                disabled={currentQ === 0}
-                className="btn-secondary"
-              >
-                ← Алдыңғы
-              </button>
-
-              {currentQ < questions.length - 1 ? (
-                <button
-                  onClick={() => setCurrentQ((prev) => prev + 1)}
-                  className="btn-primary"
-                >
-                  Келесі →
-                </button>
-              ) : (
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-medium disabled:opacity-50"
-                >
-                  {submitting ? 'Жіберілуде...' : '✓ Аяқтау'}
-                </button>
-              )}
-            </div>
-          </div>
+      </header>
+      <div className="max-w-5xl mx-auto p-4 space-y-4">
+        <div role="status" aria-live="polite" className="rounded-lg border bg-white p-3 text-sm flex flex-wrap items-center gap-3">
+          <span>{submissionFrozen ? 'Жауаптар жіберуге бекітілді' : draftLabels[draftState.status]}</span>
+          {!submissionFrozen && draftState.status === 'saved' && draftState.updatedAt && <time dateTime={draftState.updatedAt}>{new Date(draftState.updatedAt).toLocaleTimeString()}</time>}
+          {!submissionFrozen && ['offline', 'error'].includes(draftState.status) && <button className="text-primary-700 underline" onClick={() => void draftRef.current?.flush()}>Қайта сақтау</button>}
+          {draftState.status === 'conflict' && <button disabled={loadingDraft} className="text-primary-700 underline" onClick={() => void reloadDraft()}>Сервердегі нұсқаны жүктеу</button>}
         </div>
-      </div>
-    </div>
-
-    {/* Post-exam results modal */}
-    {resultModal && (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-          {/* Header */}
-          <div className={`p-6 rounded-t-2xl text-center ${resultModal.passed ? 'bg-gradient-to-r from-green-500 to-emerald-600' : 'bg-gradient-to-r from-red-500 to-rose-600'}`}>
-            <div className="text-5xl mb-2">{resultModal.passed ? '🎉' : '😔'}</div>
-            <h2 className="text-2xl font-bold text-white">
-              {resultModal.passed ? 'Құттықтаймыз!' : 'Өтпедіңіз'}
-            </h2>
-            <p className="text-white/90 text-lg mt-1">Балл: {resultModal.score}%</p>
+        {notice && <div role="status" className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">{notice}<button className="ml-3 underline" onClick={() => setNotice('')}>Жабу</button></div>}
+        {trustScore <= 0 && <p className="bg-amber-50 p-3 rounded-lg text-sm">Оқиғалар қосымша тексеруді қажет етеді. Жауаптарыңызды жіберуге болады; шешімді тексеруші қабылдайды.</p>}
+        {submitError && <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3"><p>{submitError}</p>{!endedRef.current ? <button className="btn-primary" disabled={submitting || draftState.status === 'conflict'} onClick={() => void handleSubmit()}>Сол жауаптарды қайта жіберу</button> : <button disabled={uploading || uploadError} className="text-primary-700 underline disabled:opacity-50" onClick={() => router.push('/dashboard/my-attempts')}>Нәтижелерді көру</button>}</div>}
+        {uploading && <p role="status" className="bg-blue-50 p-3 rounded-lg">Жауаптар сақталды. Камера мен экран жазбалары жүктелуде. Бетті жаппаңыз.</p>}
+        {uploadError && <div role="alert" className="bg-amber-50 p-4 rounded-lg space-y-2"><p>Жазбаларды жүктеу аяқталмады. Осы бетті жаппай қайта жүктеңіз; сертификат тексеруден кейін беріледі.</p><button disabled={uploading} onClick={() => void uploadRecordings(attempt.id)} className="btn-secondary">Жазбаларды қайта жүктеу</button></div>}
+        {result ? (
+          <section className="card max-w-2xl mx-auto space-y-4 text-center">
+            <h2 className="text-2xl font-bold">Жауаптар қабылданды</h2>
+            <p className="text-3xl font-semibold">{result.score}%</p>
+            <p>{result.passed ? 'Өту балы жиналды. Нәтиже мен жазбалар тексерушінің растауын күтеді.' : 'Өту балы жиналмады. Нәтижені жеке кабинеттен көре аласыз.'}</p>
+            {result.passed && <p className="text-sm text-gray-600">Сертификат тек тексеру мақұлданып, қажетті жазбалар қабылданғаннан кейін беріледі.</p>}
+            <button disabled={uploading || uploadError} onClick={() => router.push('/dashboard/my-attempts')} className="btn-primary disabled:opacity-50">Нәтижелерге өту</button>
+          </section>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <aside className="card"><h2 className="font-semibold mb-3">Сұрақтар</h2><div className="grid grid-cols-5 lg:grid-cols-4 gap-2">{questions.map((item, index) => <button key={item.id} aria-label={`${index + 1}-сұрақ`} aria-current={index === currentQ ? 'step' : undefined} onClick={() => setCurrentQ(index)} className={`h-9 rounded text-sm ${index === currentQ ? 'bg-primary-600 text-white' : answers[item.id] ? 'bg-green-100 text-green-800' : 'bg-gray-100'}`}>{index + 1}</button>)}</div><video ref={videoRef} autoPlay muted playsInline className="mt-4 rounded-lg w-full" /><p className="text-xs text-gray-500 mt-2">Камера және экран жазылады.</p></aside>
+            <section className="card lg:col-span-3">
+              {question ? <>
+                <h2 className="text-xl font-semibold whitespace-pre-wrap mb-6">{question.text}</h2>
+                <fieldset disabled={disabled} className="space-y-3 min-w-0">
+                  <legend className="sr-only">{question.text}</legend>
+                  {question.type === 'SINGLE_CHOICE' && question.options?.map((option, index) => <label key={index} className={`flex items-start gap-3 p-4 rounded-lg border-2 ${answers[question.id] === option ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}><input type="radio" name={`q-${question.id}`} checked={answers[question.id] === option} onChange={() => updateAnswer(question.id, option)} className="mt-1" /><span className="whitespace-pre-wrap break-words">{option}</span></label>)}
+                  {question.type === 'MULTIPLE_CHOICE' && question.options?.map((option, index) => {
+                    const selected = selectedOptions(answers[question.id]);
+                    return <label key={index} className={`flex items-start gap-3 p-4 rounded-lg border-2 ${selected.includes(option) ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}><input type="checkbox" checked={selected.includes(option)} onChange={(event) => { const next = event.target.checked ? [...selected, option] : selected.filter((item) => item !== option); updateAnswer(question.id, next.length ? JSON.stringify(next) : ''); }} className="mt-1" /><span className="whitespace-pre-wrap break-words">{option}</span></label>;
+                  })}
+                  {question.type === 'TEXT' && <textarea aria-label="Жауап" maxLength={10000} className="input min-h-[140px]" value={answers[question.id] ?? ''} onChange={(event) => updateAnswer(question.id, event.target.value)} placeholder="Жауабыңызды теріңіз..." />}
+                </fieldset>
+                <div className="flex flex-wrap justify-between gap-3 mt-8"><button className="btn-secondary" disabled={!currentQ} onClick={() => setCurrentQ((index) => Math.max(0, index - 1))}>← Алдыңғы</button>{currentQ < questions.length - 1 ? <button className="btn-primary" onClick={() => setCurrentQ((index) => index + 1)}>Келесі →</button> : <button disabled={submitting || draftState.status === 'conflict' || endedRef.current} className="btn-primary disabled:opacity-50" onClick={() => void handleSubmit()}>{submitting ? 'Жіберілуде...' : submissionFrozen ? 'Қайта жіберу' : 'Жауаптарды жіберу'}</button>}</div>
+              </> : <p>Емтихан сұрақтары табылмады.</p>}
+            </section>
           </div>
-
-          <div className="p-6">
-            {resultModal.passed && resultModal.availableCourses.length > 0 ? (
-              <>
-                <p className="text-gray-700 font-medium mb-4 text-center">
-                  Келесі курсты таңдаңыз:
-                </p>
-                <div className="space-y-3">
-                  {resultModal.availableCourses.map((course) => (
-                    <div
-                      key={course.id}
-                      className="border border-gray-200 rounded-xl p-4 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer group"
-                      onClick={() => handleEnrollCourse(course.id)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
-                            {course.title}
-                          </h3>
-                          {course.description && (
-                            <p className="text-sm text-gray-500 mt-1 line-clamp-2">{course.description}</p>
-                          )}
-                          <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
-                            <span>{levelLabel(course.level)}</span>
-                            <span>👤 {course.teacher.name}</span>
-                            <span>📖 {course._count.lessons} сабақ</span>
-                          </div>
-                        </div>
-                        <div className="ml-3 flex-shrink-0">
-                          {enrollingCourseId === course.id ? (
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                          ) : (
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors text-lg">
-                              →
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={handleCloseResult}
-                  className="w-full mt-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  Сертификаттарға өту →
-                </button>
-              </>
-            ) : resultModal.passed ? (
-              <>
-                <p className="text-center text-gray-600 mb-4">
-                  Барлық курстарды аяқтадыңыз! 🏆
-                </p>
-                <button
-                  onClick={handleCloseResult}
-                  className="w-full py-3 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors"
-                >
-                  Сертификаттарға өту
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="text-center text-gray-600 mb-4">
-                  Қайта тапсыруға болады. Алдымен сабақтарды қайта қараңыз.
-                </p>
-                <button
-                  onClick={handleCloseResult}
-                  className="w-full py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors"
-                >
-                  Нәтижелерді көру
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+        )}
       </div>
-    )}
-    </>
+    </main>
   );
 }
