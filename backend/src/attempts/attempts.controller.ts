@@ -8,6 +8,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
+import { Actor } from '../proctor/proctor-access';
 
 @ApiTags('Талпынулар')
 @ApiBearerAuth()
@@ -55,28 +56,29 @@ export class AttemptsController {
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page (default: 50, max: 200)' })
   @ApiOperation({ summary: 'Барлық талпынулар (проктор/мұғалім)' })
   getAll(
+    @CurrentUser() actor: Actor,
     @Query('examId') examId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     const pageNum = Math.max(1, parseInt(page || '1', 10) || 1);
     const limitNum = Math.min(200, Math.max(1, parseInt(limit || '50', 10) || 50));
-    return this.attemptsService.getAllAttempts(examId, pageNum, limitNum);
+    return this.attemptsService.getAllAttempts(actor, examId, pageNum, limitNum);
   }
 
   @Patch(':id/flag')
   @UseGuards(RolesGuard)
   @Roles(Role.PROCTOR, Role.ADMIN)
   @ApiOperation({ summary: 'Талпынуды белгілеу' })
-  flag(@Param('id') id: string) {
-    return this.attemptsService.flagAttempt(id);
+  flag(@Param('id') id: string, @CurrentUser() actor: Actor) {
+    return this.attemptsService.flagAttempt(id, actor);
   }
 
   @Get('exam/:examId/results')
   @UseGuards(RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Емтихан нәтижелері (мұғалім)' })
-  getByExam(@Param('examId') examId: string, @CurrentUser('id') teacherId: string) {
-    return this.attemptsService.getAttemptsByExam(examId, teacherId);
+  getByExam(@Param('examId') examId: string, @CurrentUser() actor: Actor) {
+    return this.attemptsService.getAttemptsByExam(examId, actor.id, actor.role);
   }
 }

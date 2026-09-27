@@ -7,6 +7,8 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import StepContent, { LearningStep } from '@/components/learning/StepContent';
+import { saveLearningProgress } from '@/lib/learning-progress';
 
 interface Lesson {
   id: string;
@@ -18,6 +20,7 @@ interface Lesson {
   order: number;
   courseId: string;
   completed?: boolean;
+  steps?: LearningStep[];
 }
 
 interface LessonNav {
@@ -41,20 +44,22 @@ export default function LessonViewerPage() {
   const [retryCountdown, setRetryCountdown] = useState(0);
   const [markingComplete, setMarkingComplete] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [completedStepIds, setCompletedStepIds] = useState<Set<string>>(new Set());
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [lessonRes, progressRes] = await Promise.allSettled([
+      const [lessonRes, progressRes, stepProgressRes] = await Promise.allSettled([
         api.get(`/courses/${courseId}/lessons/${lessonId}`),
         api.get(`/courses/${courseId}/lessons/progress/my`),
+        api.get(`/submissions/lesson/${lessonId}/progress`),
       ]);
 
       // Lesson data is required
       if (lessonRes.status === 'rejected') {
         const status = lessonRes.reason?.response?.status;
         if (status === 403) {
-          toast.error('Алдыңғы сабақтарды аяқтаңыз');
+          toast.error('Курсқа тіркеліп, алдыңғы сабақтарды аяқтаңыз');
         } else {
           toast.error('Сабақ жүктеу қатесі');
         }
@@ -62,6 +67,9 @@ export default function LessonViewerPage() {
         return;
       }
       setLesson(lessonRes.value.data);
+      if (stepProgressRes.status === 'fulfilled') {
+        setCompletedStepIds(new Set(stepProgressRes.value.data.filter((step: { completed: boolean }) => step.completed).map((step: { id: string }) => step.id)));
+      }
 
       // Progress is optional — load what we can
       if (progressRes.status === 'fulfilled') {
@@ -79,6 +87,9 @@ export default function LessonViewerPage() {
   }, [courseId, lessonId]);
 
   useEffect(() => {
+    setLoading(true);
+    setIsCompleted(false);
+    setCompletedStepIds(new Set());
     load();
     // Reset assignment state when lesson changes
     setUserAnswer('');
@@ -135,6 +146,18 @@ export default function LessonViewerPage() {
     }
   };
 
+  const handleStepComplete = async (step: LearningStep) => {
+    if (!lesson) return;
+    const saved = await saveLearningProgress(api, courseId, lesson, step);
+    setCompletedStepIds(new Set(saved.completedStepIds));
+    if (saved.lessonCompleted) {
+      setIsCompleted(true);
+      const { data } = await api.get(`/courses/${courseId}/lessons/progress/my`);
+      setLessons(data);
+    }
+    toast.success(saved.lessonCompleted ? 'Сабақ аяқталды! 🎉' : 'Прогресс сақталды');
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -144,6 +167,7 @@ export default function LessonViewerPage() {
   }
 
   if (!lesson) return null;
+  const hasPendingTasks = (lesson.steps ?? []).some((step) => step.type === 'TASK' && !completedStepIds.has(step.id));
 
   const currentIndex = lessons.findIndex((l) => l.id === lessonId);
   const prevLesson = currentIndex > 0 ? lessons[currentIndex - 1] : null;
@@ -315,7 +339,17 @@ export default function LessonViewerPage() {
             </div>
 
             {/* ─────────── ASSIGNMENT BLOCK ─────────── */}
-            {lesson.assignment && (
+            {(lesson.steps ?? []).length > 0 && (
+              <section aria-label="Сабақ қадамдары" className="space-y-6 mb-8">
+                {lesson.steps!.map((step) => (
+                  <div key={step.id}>
+                    <h2 className="font-semibold mb-3">{step.order}-қадам {completedStepIds.has(step.id) ? '✓' : ''}</h2>
+                    <StepContent step={step} onComplete={() => handleStepComplete(step)} />
+                  </div>
+                ))}
+              </section>
+            )}
+            {(lesson.assignment || lesson.hasAssignment) && (
               <div className="mt-2">
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-4">
                   <div className="flex items-center gap-2 mb-3">
@@ -326,7 +360,7 @@ export default function LessonViewerPage() {
                 </div>
 
                 {/* If not yet completed — show submission form */}
-                {!isCompleted ? (
+                {!isCompleted && lesson.hasAssignment ? (
                   <div className="bg-white border border-gray-200 rounded-xl p-5">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Жауабыңызды жазыңыз:
@@ -358,7 +392,7 @@ export default function LessonViewerPage() {
 
                     <button
                       onClick={handleCheckAssignment}
-                      disabled={!userAnswer.trim() || checkingAnswer || retryCountdown > 0}
+                      disabled={!userAnswer.trim() || checkingAnswer || retryCountdown > 0 || hasPendingTasks}
                       className="mt-4 w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {checkingAnswer ? (
@@ -372,8 +406,9 @@ export default function LessonViewerPage() {
                         '✅ Жауапты тексеру'
                       )}
                     </button>
+                    {hasPendingTasks && <p className="mt-2 text-sm text-amber-700">Алдымен жоғарыдағы тапсырма қадамдарын орындаңыз.</p>}
                   </div>
-                ) : (
+                ) : isCompleted ? (
                   /* Already completed */
                   <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-4 flex items-center gap-3">
                     <span className="text-3xl">🎉</span>
@@ -382,16 +417,16 @@ export default function LessonViewerPage() {
                       <p className="text-green-600 text-sm">Сабақ сәтті аяқталды. Келесі сабаққа өте аласыз.</p>
                     </div>
                   </div>
-                )}
+                ) : null}
               </div>
             )}
 
             {/* ─── Mark complete button for reading-only lessons ─── */}
-            {!lesson.assignment && !isCompleted && (
+            {!lesson.hasAssignment && !isCompleted && (
               <div className="mt-6 border-t border-gray-100 pt-6">
                 <button
                   onClick={handleMarkComplete}
-                  disabled={markingComplete}
+                  disabled={markingComplete || hasPendingTasks}
                   className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {markingComplete ? (
@@ -407,7 +442,7 @@ export default function LessonViewerPage() {
             )}
 
             {/* ─── Already completed (no assignment) ─── */}
-            {!lesson.assignment && isCompleted && (
+            {!lesson.hasAssignment && isCompleted && (
               <div className="mt-6 border-t border-gray-100 pt-6">
                 <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center gap-2 text-green-700">
                   <span>✅</span>

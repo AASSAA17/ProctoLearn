@@ -1,15 +1,17 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateModuleDto, UpdateModuleDto, ReorderModuleDto } from './dto/module.dto';
+import { lessonSummary } from '../lessons/lesson-access';
+import { serializable } from '../prisma/serializable';
 
 @Injectable()
 export class ModulesService {
   constructor(private prisma: PrismaService) {}
 
-  async create(courseId: string, dto: CreateModuleDto, teacherId: string) {
+  async create(courseId: string, dto: CreateModuleDto, teacherId: string, role = 'TEACHER') {
     const course = await this.prisma.course.findUnique({ where: { id: courseId } });
     if (!course) throw new NotFoundException('Курс табылмады');
-    if (course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
+    if (role !== 'ADMIN' && course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
 
     return this.prisma.courseModule.create({
       data: { title: dto.title, order: dto.order, courseId },
@@ -18,7 +20,7 @@ export class ModulesService {
   }
 
   async findByCourse(courseId: string) {
-    return this.prisma.courseModule.findMany({
+    const modules = await this.prisma.courseModule.findMany({
       where: { courseId },
       orderBy: { order: 'asc' },
       include: {
@@ -28,6 +30,9 @@ export class ModulesService {
         },
       },
     });
+    return modules.map((module) => ({
+      ...module, lessons: module.lessons.map((lesson) => lessonSummary(lesson)),
+    }));
   }
 
   async findById(id: string) {
@@ -41,38 +46,49 @@ export class ModulesService {
       },
     });
     if (!mod) throw new NotFoundException('Бөлім табылмады');
-    return mod;
+    return { ...mod, lessons: mod.lessons.map((lesson) => lessonSummary(lesson)) };
   }
 
-  async update(id: string, dto: UpdateModuleDto, teacherId: string) {
+  async update(id: string, dto: UpdateModuleDto, teacherId: string, role = 'TEACHER') {
     const mod = await this.prisma.courseModule.findUnique({
       where: { id },
       include: { course: true },
     });
     if (!mod) throw new NotFoundException('Бөлім табылмады');
-    if (mod.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
+    if (role !== 'ADMIN' && mod.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
 
     return this.prisma.courseModule.update({ where: { id }, data: dto });
   }
 
-  async remove(id: string, teacherId: string) {
+  async remove(id: string, teacherId: string, role = 'TEACHER') {
     const mod = await this.prisma.courseModule.findUnique({
       where: { id },
       include: { course: true },
     });
     if (!mod) throw new NotFoundException('Бөлім табылмады');
-    if (mod.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
+    if (role !== 'ADMIN' && mod.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
 
     await this.prisma.courseModule.delete({ where: { id } });
     return { message: 'Бөлім жойылды' };
   }
 
-  async reorder(dto: ReorderModuleDto, teacherId: string) {
-    // Verify all modules belong to courses owned by this teacher
-    const updates = dto.items.map(({ id, order }) =>
-      this.prisma.courseModule.update({ where: { id }, data: { order } }),
-    );
-    await this.prisma.$transaction(updates);
+  async reorder(dto: ReorderModuleDto, teacherId: string, role = 'TEACHER') {
+    const ids = dto.items.map(({ id }) => id);
+    if (!ids.length || ids.length > 200 || new Set(ids).size !== ids.length) {
+      throw new BadRequestException('Бөлімдер тізімі жарамсыз');
+    }
+    await serializable(this.prisma, async (tx) => {
+      const modules = await tx.courseModule.findMany({
+        where: { id: { in: ids } }, include: { course: { select: { teacherId: true } } },
+      });
+      if (modules.length !== ids.length) throw new NotFoundException('Бөлім табылмады');
+      if (role !== 'ADMIN' && modules.some((module) => module.course.teacherId !== teacherId)) {
+        throw new ForbiddenException('Рұқсат жоқ');
+      }
+      for (const { id, order } of dto.items) {
+        await tx.courseModule.update({ where: { id }, data: { order } });
+      }
+    });
     return { message: 'Ретті жаңартылды' };
   }
 }

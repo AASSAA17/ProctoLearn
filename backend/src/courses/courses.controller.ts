@@ -9,6 +9,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Role, CourseLevel } from '@prisma/client';
+import { LessonViewer } from '../lessons/lesson-access';
 @ApiTags('Курстар')
 @Controller('courses')
 export class CoursesController {
@@ -36,8 +37,8 @@ export class CoursesController {
     @Query('teacherId') teacherId?: string,
   ) {
     return this.coursesService.findAll(
-      page ? Math.max(1, parseInt(page)) : 1,
-      limit ? Math.min(100, Math.max(1, parseInt(limit))) : 20,
+      Math.max(1, parseInt(page || '1', 10) || 1),
+      Math.min(100, Math.max(1, parseInt(limit || '20', 10) || 20)),
       level,
       teacherId,
     );
@@ -47,6 +48,14 @@ export class CoursesController {
   @ApiOperation({ summary: 'Курсты ID бойынша алу (жалпыға қолжетімді)' })
   findById(@Param('id') id: string) {
     return this.coursesService.findById(id);
+  }
+
+  @Get(':id/material')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Курс материалдары (тіркелген студент немесе курс иесі)' })
+  getMaterial(@Param('id') id: string, @CurrentUser() viewer: LessonViewer) {
+    return this.coursesService.getMaterial(id, viewer);
   }
 
   @Patch(':id')

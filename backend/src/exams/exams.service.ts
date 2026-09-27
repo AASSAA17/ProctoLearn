@@ -1,135 +1,118 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateExamDto, UpdateExamDto, CreateQuestionDto, UpdateQuestionDto } from './dto/exam.dto';
+import { assertCourseReader, canManageCourse, LessonViewer } from '../lessons/lesson-access';
+import { serializable } from '../prisma/serializable';
 
 @Injectable()
 export class ExamsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(courseId: string, dto: CreateExamDto, teacherId: string) {
+  async create(courseId: string, dto: CreateExamDto, viewer: LessonViewer) {
     const course = await this.prisma.course.findUnique({ where: { id: courseId } });
     if (!course) throw new NotFoundException('Курс табылмады');
-    if (course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
-
+    if (!canManageCourse(course, viewer)) throw new ForbiddenException('Рұқсат жоқ');
     const { questions, ...examData } = dto;
-
     return this.prisma.exam.create({
       data: {
-        ...examData,
-        courseId,
-        questions: {
-          create: questions.map((q) => ({
-            text: q.text,
-            type: q.type,
-            options: q.options ? q.options : undefined,
-            answer: q.answer,
-          })),
-        },
+        ...examData, courseId,
+        questions: { create: questions.map((question) => ({
+          text: question.text, type: question.type, options: question.options, answer: question.answer,
+        })) },
       },
       include: { questions: true },
     });
   }
 
-  async findByCourse(courseId: string) {
+  async findByCourse(courseId: string, viewer: LessonViewer) {
+    const course = await this.prisma.course.findUnique({ where: { id: courseId } });
+    if (!course) throw new NotFoundException('Курс табылмады');
+    const manager = await assertCourseReader(this.prisma, course, viewer);
     return this.prisma.exam.findMany({
       where: { courseId },
-      include: { _count: { select: { questions: true, attempts: true } } },
+      include: { _count: { select: { questions: true, attempts: manager } } },
     });
   }
 
-  async findById(id: string) {
-    const exam = await this.prisma.exam.findUnique({
-      where: { id },
-      include: {
-        questions: {
-          select: {
-            id: true,
-            text: true,
-            type: true,
-            options: true,
-            // answer is omitted intentionally for students
-          },
-        },
-      },
+  async findById(courseId: string, id: string, viewer: LessonViewer) {
+    const exam = await this.prisma.exam.findUnique({ where: { id }, include: { course: true } });
+    if (!exam || exam.courseId !== courseId) throw new NotFoundException('Емтихан табылмады');
+    const manager = await assertCourseReader(this.prisma, exam.course, viewer);
+    const questions = await this.prisma.question.findMany({
+      where: { examId: id },
+      select: { id: true, text: true, type: true, options: true, answer: manager },
+      orderBy: { id: 'asc' },
     });
-    if (!exam) throw new NotFoundException('Емтихан табылмады');
+    const { course, ...detail } = exam;
+    return { ...detail, questions };
+  }
+
+  private async editableExam(db: Prisma.TransactionClient, courseId: string, examId: string, viewer: LessonViewer) {
+    const exam = await db.exam.findUnique({ where: { id: examId }, include: { course: true } });
+    if (!exam || exam.courseId !== courseId) throw new NotFoundException('Емтихан табылмады');
+    if (!canManageCourse(exam.course, viewer)) throw new ForbiddenException('Рұқсат жоқ');
+    const active = await db.attempt.count({
+      where: { examId, finishedAt: null, status: { in: ['IN_PROGRESS', 'FLAGGED'] } },
+    });
+    if (active) throw new ConflictException('Емтиханды тапсыру жүріп жатыр. Аяқталғаннан кейін өзгертіңіз');
     return exam;
   }
 
-  async findByIdWithAnswers(id: string) {
-    const exam = await this.prisma.exam.findUnique({
-      where: { id },
-      include: { questions: true },
-    });
-    if (!exam) throw new NotFoundException('Емтихан табылмады');
-    return exam;
+  private async assertQuestion(db: Prisma.TransactionClient, examId: string, questionId: string) {
+    const question = await db.question.findUnique({ where: { id: questionId }, select: { examId: true } });
+    if (!question || question.examId !== examId) throw new NotFoundException('Сұрақ табылмады');
   }
 
-  async remove(id: string, teacherId: string) {
-    const exam = await this.prisma.exam.findUnique({
-      where: { id },
-      include: { course: true },
-    });
-    if (!exam) throw new NotFoundException('Емтихан табылмады');
-    if (exam.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
-    await this.prisma.exam.delete({ where: { id } });
-    return { message: 'Емтихан жойылды' };
-  }
-
-  async update(id: string, dto: UpdateExamDto, teacherId: string) {
-    const exam = await this.prisma.exam.findUnique({
-      where: { id },
-      include: { course: true },
-    });
-    if (!exam) throw new NotFoundException('Емтихан табылмады');
-    if (exam.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
-    return this.prisma.exam.update({ where: { id }, data: dto });
-  }
-
-  async addQuestion(examId: string, dto: CreateQuestionDto, teacherId: string) {
-    const exam = await this.prisma.exam.findUnique({
-      where: { id: examId },
-      include: { course: true },
-    });
-    if (!exam) throw new NotFoundException('Емтихан табылмады');
-    if (exam.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
-    return this.prisma.question.create({
-      data: {
-        examId,
-        text: dto.text,
-        type: dto.type,
-        options: dto.options ?? undefined,
-        answer: dto.answer,
-      },
+  async remove(courseId: string, id: string, viewer: LessonViewer) {
+    return serializable(this.prisma, async (db) => {
+      await this.editableExam(db, courseId, id, viewer);
+      if (await db.attempt.count({ where: { examId: id } })) {
+        throw new ConflictException('Нәтижелері бар емтиханды жоюға болмайды');
+      }
+      await db.exam.delete({ where: { id } });
+      return { message: 'Емтихан жойылды' };
     });
   }
 
-  async updateQuestion(questionId: string, dto: UpdateQuestionDto, teacherId: string) {
-    const question = await this.prisma.question.findUnique({
-      where: { id: questionId },
-      include: { exam: { include: { course: true } } },
+  async update(courseId: string, id: string, dto: UpdateExamDto, viewer: LessonViewer) {
+    return serializable(this.prisma, async (db) => {
+      await this.editableExam(db, courseId, id, viewer);
+      return db.exam.update({ where: { id }, data: dto });
     });
-    if (!question) throw new NotFoundException('Сұрақ табылмады');
-    if (question.exam.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
-    return this.prisma.question.update({
-      where: { id: questionId },
-      data: {
+  }
+
+  async addQuestion(courseId: string, examId: string, dto: CreateQuestionDto, viewer: LessonViewer) {
+    return serializable(this.prisma, async (db) => {
+      await this.editableExam(db, courseId, examId, viewer);
+      return db.question.create({ data: {
+        examId, text: dto.text, type: dto.type, options: dto.options, answer: dto.answer,
+      } });
+    });
+  }
+
+  async updateQuestion(courseId: string, examId: string, questionId: string, dto: UpdateQuestionDto, viewer: LessonViewer) {
+    return serializable(this.prisma, async (db) => {
+      await this.editableExam(db, courseId, examId, viewer);
+      await this.assertQuestion(db, examId, questionId);
+      return db.question.update({ where: { id: questionId }, data: {
         ...(dto.text !== undefined && { text: dto.text }),
         ...(dto.type !== undefined && { type: dto.type }),
         ...(dto.options !== undefined && { options: dto.options }),
         ...(dto.answer !== undefined && { answer: dto.answer }),
-      },
+      } });
     });
   }
 
-  async removeQuestion(questionId: string, teacherId: string) {
-    const question = await this.prisma.question.findUnique({
-      where: { id: questionId },
-      include: { exam: { include: { course: true } } },
+  async removeQuestion(courseId: string, examId: string, questionId: string, viewer: LessonViewer) {
+    return serializable(this.prisma, async (db) => {
+      await this.editableExam(db, courseId, examId, viewer);
+      await this.assertQuestion(db, examId, questionId);
+      if (await db.answer.count({ where: { questionId } })) {
+        throw new ConflictException('Сақталған жауаптары бар сұрақты жоюға болмайды');
+      }
+      await db.question.delete({ where: { id: questionId } });
+      return { message: 'Сұрақ жойылды' };
     });
-    if (!question) throw new NotFoundException('Сұрақ табылмады');
-    if (question.exam.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
-    await this.prisma.question.delete({ where: { id: questionId } });
-    return { message: 'Сұрақ жойылды' };
   }
 }

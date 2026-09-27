@@ -24,8 +24,9 @@ export class ModulesController {
     @Param('courseId') courseId: string,
     @Body() dto: CreateModuleDto,
     @CurrentUser('id') teacherId: string,
+    @CurrentUser('role') role: string,
   ) {
-    return this.modulesService.create(courseId, dto, teacherId);
+    return this.modulesService.create(courseId, dto, teacherId, role);
   }
 
   @Get('courses/:courseId/modules')
@@ -45,8 +46,8 @@ export class ModulesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Бөлімдерді қайта реттеу' })
-  reorder(@Body() dto: ReorderModuleDto, @CurrentUser('id') teacherId: string) {
-    return this.modulesService.reorder(dto, teacherId);
+  reorder(@Body() dto: ReorderModuleDto, @CurrentUser('id') teacherId: string, @CurrentUser('role') role: string) {
+    return this.modulesService.reorder(dto, teacherId, role);
   }
 
   @Patch('modules/:id')
@@ -58,8 +59,9 @@ export class ModulesController {
     @Param('id') id: string,
     @Body() dto: UpdateModuleDto,
     @CurrentUser('id') teacherId: string,
+    @CurrentUser('role') role: string,
   ) {
-    return this.modulesService.update(id, dto, teacherId);
+    return this.modulesService.update(id, dto, teacherId, role);
   }
 
   @Delete('modules/:id')
@@ -67,7 +69,7 @@ export class ModulesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Бөлімді жою' })
-  remove(@Param('id') id: string, @CurrentUser('id') teacherId: string) {
-    return this.modulesService.remove(id, teacherId);
+  remove(@Param('id') id: string, @CurrentUser('id') teacherId: string, @CurrentUser('role') role: string) {
+    return this.modulesService.remove(id, teacherId, role);
   }
 }

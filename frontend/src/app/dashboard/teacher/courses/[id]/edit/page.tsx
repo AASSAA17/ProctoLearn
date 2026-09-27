@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import ProctorAssignments from '@/components/ProctorAssignments';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Step {
@@ -536,7 +537,7 @@ export default function EditCoursePage() {
 
   const loadCourse = useCallback(async () => {
     try {
-      const { data } = await api.get(`/courses/${courseId}`);
+      const { data } = await api.get(`/courses/${courseId}/material`);
       setCourse(data);
       setModuleForm((p) => ({ ...p, order: (data.modules?.length ?? 0) + 1 }));
     } catch {
@@ -804,6 +805,7 @@ export default function EditCoursePage() {
 
             {expandedExam === exam.id && (
               <div className="border-t border-gray-100 px-5 py-4 space-y-3">
+                <ProctorAssignments examId={exam.id} />
                 {/* Existing questions */}
                 {examQuestions.length === 0 && !addingQuestion && (
                   <p className="text-gray-400 text-sm text-center py-4">Сұрақтар жоқ</p>

@@ -1,5 +1,5 @@
 import {
-  ArrayMinSize, ArrayMaxSize, IsArray, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Max, Min, ValidateNested,
+  ArrayMinSize, ArrayMaxSize, IsArray, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Max, Min, MaxLength, ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -9,6 +9,7 @@ export class CreateQuestionDto {
   @ApiProperty({ example: '2 + 2 неге тең?' })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(20000)
   text: string;
 
   @ApiProperty({ enum: QuestionType })
@@ -17,11 +18,16 @@ export class CreateQuestionDto {
 
   @ApiPropertyOptional({ example: ['2', '3', '4', '5'] })
   @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  @MaxLength(10000, { each: true })
   options?: string[];
 
   @ApiProperty({ example: '4' })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(10000)
   answer: string;
 }
 
@@ -30,6 +36,7 @@ export class UpdateQuestionDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(20000)
   text?: string;
 
   @ApiPropertyOptional({ enum: QuestionType })
@@ -39,11 +46,17 @@ export class UpdateQuestionDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  @MaxLength(10000, { each: true })
   options?: string[];
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(10000)
   answer?: string;
 }
 
@@ -56,6 +69,7 @@ export class CreateExamDto {
   @ApiProperty({ example: 60, description: 'Минуттармен' })
   @IsInt()
   @Min(1)
+  @Max(1440)
   duration: number;
 
   @ApiPropertyOptional({ example: 60 })
@@ -67,7 +81,7 @@ export class CreateExamDto {
 
   @ApiProperty({ type: [CreateQuestionDto] })
   @IsArray()
-  @ArrayMinSize(1)
+  @ArrayMinSize(0)
   @ArrayMaxSize(1000)
   @ValidateNested({ each: true })
   @Type(() => CreateQuestionDto)
@@ -85,6 +99,7 @@ export class UpdateExamDto {
   @IsOptional()
   @IsInt()
   @Min(1)
+  @Max(1440)
   duration?: number;
 
   @ApiPropertyOptional()

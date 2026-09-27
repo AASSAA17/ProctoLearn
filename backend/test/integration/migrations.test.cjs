@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const { readdirSync } = require('node:fs');
 const { PrismaClient } = require('@prisma/client');
 
 // Refuse application/production URLs, even when DATABASE_URL is set.
@@ -52,7 +53,8 @@ async function isolatedSchema(work) {
 
 async function verifyHistory(db) {
   const rows = await db.$queryRaw`SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY migration_name`;
-  assert.deepEqual(rows.map((r) => r.migration_name), [baseline, '20260926010000_session_version']);
+  const expected = readdirSync(path.join(backend, 'prisma/migrations'), { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
+  assert.deepEqual(rows.map((r) => r.migration_name), expected);
 }
 
 function verifyNoDrift(url) {

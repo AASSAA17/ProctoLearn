@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { attemptExpired, expiredAttemptError } from '../attempts/attempt-policy';
 import { serializable } from '../prisma/serializable';
 import { TRUST_SCORE_DEDUCTIONS } from './proctor.dto';
+import { Actor, assertProctorAccess } from './proctor-access';
 
 @Injectable()
 export class ProctorService {
@@ -42,6 +43,7 @@ export class ProctorService {
   }
 
   async assertSessionAccess(attemptId: string, userId: string, role: string, asProctor: boolean) {
+    if (asProctor) return assertProctorAccess(this.prisma, attemptId, { id: userId, role });
     if (asProctor && !['PROCTOR', 'ADMIN'].includes(role)) throw new ForbiddenException('Рұқсат жоқ');
     if (!asProctor && role !== 'STUDENT') throw new ForbiddenException('Рұқсат жоқ');
     const attempt = await this.prisma.attempt.findUnique({ where: { id: attemptId } });
@@ -57,7 +59,8 @@ export class ProctorService {
     return { trustScore: attempt.trustScore, status: attempt.status };
   }
 
-  async getSessionSummary(attemptId: string) {
+  async getSessionSummary(attemptId: string, actor: Actor) {
+    await assertProctorAccess(this.prisma, attemptId, actor);
     const attempt = await this.prisma.attempt.findUnique({
       where: { id: attemptId },
       include: {
@@ -69,5 +72,39 @@ export class ProctorService {
     });
     if (!attempt) throw new NotFoundException('Талпыныс табылмады');
     return attempt;
+  }
+
+  private async assertAssignmentManager(examId: string, actor: Actor) {
+    const exam = await this.prisma.exam.findUnique({ where: { id: examId }, include: { course: true } });
+    if (!exam) throw new NotFoundException('Емтихан табылмады');
+    if (actor.role !== 'ADMIN' && !(actor.role === 'TEACHER' && exam.course.teacherId === actor.id)) throw new ForbiddenException('Рұқсат жоқ');
+  }
+
+  async listAssignments(examId: string, actor: Actor) {
+    await this.assertAssignmentManager(examId, actor);
+    return this.prisma.examProctor.findMany({ where: { examId }, include: { proctor: { select: { id: true, name: true } } } });
+  }
+
+  async listCandidates(examId: string, actor: Actor) {
+    await this.assertAssignmentManager(examId, actor);
+    return this.prisma.user.findMany({
+      where: { role: 'PROCTOR' },
+      select: { id: true, name: true },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      take: 100,
+    });
+  }
+
+  async assign(examId: string, proctorId: string, actor: Actor) {
+    await this.assertAssignmentManager(examId, actor);
+    const user = await this.prisma.user.findUnique({ where: { id: proctorId }, select: { role: true } });
+    if (user?.role !== 'PROCTOR') throw new BadRequestException('Проктор рөлі қажет');
+    return this.prisma.examProctor.upsert({ where: { examId_proctorId: { examId, proctorId } }, create: { examId, proctorId }, update: {} });
+  }
+
+  async unassign(examId: string, proctorId: string, actor: Actor) {
+    await this.assertAssignmentManager(examId, actor);
+    await this.prisma.examProctor.deleteMany({ where: { examId, proctorId } });
+    return { success: true };
   }
 }

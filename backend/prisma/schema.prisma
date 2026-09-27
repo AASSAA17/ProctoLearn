@@ -62,6 +62,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   enrollments         Enrollment[]
   submissions         Submission[]
+  proctorAssignments  ExamProctor[]
 
   @@map("users")
 }
@@ -179,9 +180,22 @@ model Exam {
   course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
   questions Question[]
   attempts  Attempt[]
+  proctorAssignments ExamProctor[]
   createdAt DateTime   @default(now())
 
   @@map("exams")
+}
+
+model ExamProctor {
+  examId    String
+  proctorId String
+  createdAt DateTime @default(now())
+  exam      Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  proctor   User @relation(fields: [proctorId], references: [id], onDelete: Cascade)
+
+  @@id([examId, proctorId])
+  @@index([proctorId])
+  @@map("exam_proctors")
 }
 
 model Question {

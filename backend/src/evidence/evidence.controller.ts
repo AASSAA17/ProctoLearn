@@ -13,6 +13,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { RecordingOwnerGuard } from './recording-owner.guard';
+import { Actor } from '../proctor/proctor-access';
 
 const ALLOWED_MIME_TYPES = ['video/webm', 'video/mp4', 'video/ogg', 'video/x-matroska'];
 const MAX_FILE_SIZE = 200 * 1024 * 1024; // 200 MB
@@ -30,8 +31,8 @@ export class EvidenceController {
   @UseGuards(RolesGuard)
   @Roles(Role.PROCTOR, Role.ADMIN)
   @ApiOperation({ summary: 'Талпыныстың дәлелдемелерін алу (проктор/админ)' })
-  getByAttempt(@Param('attemptId') attemptId: string) {
-    return this.evidenceService.getEvidenceByAttempt(attemptId);
+  getByAttempt(@Param('attemptId') attemptId: string, @CurrentUser() actor: Actor) {
+    return this.evidenceService.getEvidenceByAttempt(attemptId, actor);
   }
 
   @Post(':attemptId/recording')

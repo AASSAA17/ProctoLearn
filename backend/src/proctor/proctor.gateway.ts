@@ -53,6 +53,17 @@ export class ProctorGateway implements OnGatewayConnection, OnGatewayDisconnect 
       if (!user || !Number.isInteger(payload.ver) || user.tokenVersion !== payload.ver) throw new Error('Revoked session');
       if (client.data.role && client.data.role !== user.role) throw new Error('Role changed');
       client.data.role = user.role;
+      client.data.userId = user.id;
+      client.data.tokenVersion = user.tokenVersion;
+      client.data.expiresAt = payload.exp * 1000;
+      for (const [attemptId, asProctor] of Object.entries(client.data.subscriptions || {})) {
+        try {
+          await this.proctorService.assertSessionAccess(attemptId, user.id, user.role, Boolean(asProctor));
+        } catch {
+          await client.leave(`attempt:${attemptId}`);
+          delete client.data.subscriptions[attemptId];
+        }
+      }
       if (!client.data.expiryTimer) {
         client.data.expiryTimer = setTimeout(() => {
           client.emit('proctor:error', { message: 'Сессия аяқталды', code: 'UNAUTHORIZED' });
@@ -93,11 +104,30 @@ export class ProctorGateway implements OnGatewayConnection, OnGatewayDisconnect 
     }
   }
 
+  // Check recipients at delivery time: revoking an assignment must also revoke
+  // an already joined socket, including between the periodic session checks.
+  private async emitToSession(attemptId: string, event: string, payload: unknown) {
+    const sockets = await this.server.in(`attempt:${attemptId}`).fetchSockets();
+    await Promise.all(sockets.map(async (socket) => {
+      try {
+        const user = await this.prisma.user.findUnique({ where: { id: socket.data.userId }, select: { id: true, role: true, tokenVersion: true } });
+        if (!user || user.tokenVersion !== socket.data.tokenVersion || user.role !== socket.data.role || Date.now() >= socket.data.expiresAt) throw new Error('Revoked session');
+        await this.proctorService.assertSessionAccess(attemptId, user.id, user.role, socket.data.subscriptions?.[attemptId] === true);
+        socket.emit(event, payload);
+      } catch {
+        await socket.leave(`attempt:${attemptId}`);
+        if (socket.data.subscriptions) delete socket.data.subscriptions[attemptId];
+      }
+    }));
+  }
+
   @SubscribeMessage('proctor:start')
   async handleStart(@ConnectedSocket() client: Socket, @MessageBody() data: StartSessionDto) {
     return this.safely(async () => {
       const user = await this.authenticate(client);
       await this.proctorService.assertSessionAccess(data.attemptId, user.id, user.role, data.role === 'proctor');
+      client.data.subscriptions ??= {};
+      client.data.subscriptions[data.attemptId] = data.role === 'proctor';
       await client.join(`attempt:${data.attemptId}`);
       client.emit('proctor:started', data);
     });
@@ -109,7 +139,7 @@ export class ProctorGateway implements OnGatewayConnection, OnGatewayDisconnect 
       const user = await this.authenticate(client);
       if (user.role !== 'STUDENT') throw new WsException('Рұқсат жоқ');
       const result = await this.proctorService.recordEvent(data.attemptId, user.id, data.type, data.metadata);
-      this.server.to(`attempt:${data.attemptId}`).emit('proctor:event:recorded', result);
+      await this.emitToSession(data.attemptId, 'proctor:event:recorded', result);
     });
   }
 
@@ -118,7 +148,7 @@ export class ProctorGateway implements OnGatewayConnection, OnGatewayDisconnect 
     return this.safely(async () => {
       const user = await this.authenticate(client);
       const result = await this.proctorService.endSession(data.attemptId, user.id, user.role);
-      this.server.to(`attempt:${data.attemptId}`).emit('proctor:ended', { attemptId: data.attemptId, ...result });
+      await this.emitToSession(data.attemptId, 'proctor:ended', { attemptId: data.attemptId, ...result });
     });
   }
 }

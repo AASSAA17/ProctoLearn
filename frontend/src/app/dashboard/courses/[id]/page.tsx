@@ -93,7 +93,9 @@ export default function CourseDetailPage() {
   // Total lessons across all modules
   const totalModuleLessons = (course.modules ?? []).reduce((sum, m) => sum + m.lessons.length, 0);
   // First lesson in first module
-  const firstModuleLesson = hasModules ? (course.modules[0]?.lessons[0] ?? null) : null;
+  const firstModuleLesson = hasModules
+    ? ((course.modules ?? []).flatMap((module) => module.lessons).find((lesson) => !completedIds.has(lesson.id)) ?? course.modules[0]?.lessons[0] ?? null)
+    : null;
 
   // All lessons from modules for progress tracking
   const allModuleLessonIds = (course.modules ?? []).flatMap((m) => m.lessons.map((l) => l.id));

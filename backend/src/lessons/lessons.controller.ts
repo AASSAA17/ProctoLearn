@@ -1,16 +1,17 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { LessonsService } from './lessons.service';
-import { CreateLessonDto } from './dto/lesson.dto';
+import { CreateLessonDto, UpdateLessonDto } from './dto/lesson.dto';
+import { LessonViewer } from './lesson-access';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, MaxLength } from 'class-validator';
 
 class CheckAssignmentDto {
-  @IsString() @IsNotEmpty()
+  @IsString() @IsNotEmpty() @MaxLength(10000)
   answer: string;
 }
 
@@ -25,18 +26,14 @@ export class LessonsController {
   @UseGuards(RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Сабақ жасау' })
-  create(
-    @Param('courseId') courseId: string,
-    @Body() dto: CreateLessonDto,
-    @CurrentUser('id') teacherId: string,
-  ) {
-    return this.lessonsService.create(courseId, dto, teacherId);
+  create(@Param('courseId') courseId: string, @Body() dto: CreateLessonDto, @CurrentUser() viewer: LessonViewer) {
+    return this.lessonsService.create(courseId, dto, viewer);
   }
 
   @Get()
   @ApiOperation({ summary: 'Курстың барлық сабақтары' })
-  findByCourse(@Param('courseId') courseId: string) {
-    return this.lessonsService.findByCourse(courseId);
+  findByCourse(@Param('courseId') courseId: string, @CurrentUser() viewer: LessonViewer) {
+    return this.lessonsService.findByCourse(courseId, viewer);
   }
 
   @Get('progress/my')
@@ -47,48 +44,39 @@ export class LessonsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Сабақты ID бойынша алу' })
-  findById(@Param('id') id: string, @CurrentUser('id') userId: string) {
-    return this.lessonsService.findById(id, userId);
+  findById(@Param('courseId') courseId: string, @Param('id') id: string, @CurrentUser() viewer: LessonViewer) {
+    return this.lessonsService.findById(id, viewer, courseId);
   }
 
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Сабақты жаңарту' })
-  update(
-    @Param('id') id: string,
-    @Body() dto: Partial<CreateLessonDto>,
-    @CurrentUser('id') teacherId: string,
-  ) {
-    return this.lessonsService.update(id, dto, teacherId);
+  update(@Param('courseId') courseId: string, @Param('id') id: string, @Body() dto: UpdateLessonDto, @CurrentUser() viewer: LessonViewer) {
+    return this.lessonsService.update(id, dto, viewer, courseId);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Сабақты жою' })
-  remove(@Param('id') id: string, @CurrentUser('id') teacherId: string) {
-    return this.lessonsService.remove(id, teacherId);
+  remove(@Param('courseId') courseId: string, @Param('id') id: string, @CurrentUser() viewer: LessonViewer) {
+    return this.lessonsService.remove(id, viewer, courseId);
   }
 
   @Post(':id/check-assignment')
   @ApiOperation({ summary: 'Тапсырма жауабын тексеру' })
-  checkAssignment(
-    @Param('id') lessonId: string,
-    @CurrentUser('id') userId: string,
-    @Body() dto: CheckAssignmentDto,
-  ) {
-    return this.lessonsService.checkAssignment(lessonId, userId, dto.answer);
+  checkAssignment(@Param('courseId') courseId: string, @Param('id') lessonId: string, @CurrentUser() viewer: LessonViewer, @Body() dto: CheckAssignmentDto) {
+    return this.lessonsService.checkAssignment(lessonId, viewer, dto.answer, courseId);
   }
 
   @Post(':id/complete')
   @ApiOperation({ summary: 'Сабақты аяқтандыру (оқу сабақтары үшін)' })
-  markCompleted(@Param('id') lessonId: string, @CurrentUser('id') userId: string) {
-    return this.lessonsService.markCompleted(lessonId, userId);
+  markCompleted(@Param('courseId') courseId: string, @Param('id') lessonId: string, @CurrentUser() viewer: LessonViewer) {
+    return this.lessonsService.markCompleted(lessonId, viewer, courseId);
   }
 }
 
-// ─── Module-based lessons ────────────────────────────────────────────────────
 @ApiTags('Сабақтар')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -100,22 +88,17 @@ export class ModuleLessonsController {
   @UseGuards(RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Бөлімге сабақ қосу' })
-  create(
-    @Param('moduleId') moduleId: string,
-    @Body() dto: CreateLessonDto,
-    @CurrentUser('id') teacherId: string,
-  ) {
-    return this.lessonsService.createForModule(moduleId, dto, teacherId);
+  create(@Param('moduleId') moduleId: string, @Body() dto: CreateLessonDto, @CurrentUser() viewer: LessonViewer) {
+    return this.lessonsService.createForModule(moduleId, dto, viewer);
   }
 
   @Get()
   @ApiOperation({ summary: 'Бөлімнің барлық сабақтары' })
-  findByModule(@Param('moduleId') moduleId: string) {
-    return this.lessonsService.findByModule(moduleId);
+  findByModule(@Param('moduleId') moduleId: string, @CurrentUser() viewer: LessonViewer) {
+    return this.lessonsService.findByModule(moduleId, viewer);
   }
 }
 
-// ─── Standalone lesson routes (no courseId prefix) ────────────────────────────
 @ApiTags('Сабақтар')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -125,27 +108,23 @@ export class StandaloneLessonsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Сабақты ID бойынша алу (модуль сабақтары үшін)' })
-  findById(@Param('id') id: string, @CurrentUser('id') userId: string) {
-    return this.lessonsService.findById(id, userId);
+  findById(@Param('id') id: string, @CurrentUser() viewer: LessonViewer) {
+    return this.lessonsService.findById(id, viewer);
   }
 
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Сабақты жаңарту' })
-  update(
-    @Param('id') id: string,
-    @Body() dto: Partial<CreateLessonDto>,
-    @CurrentUser('id') teacherId: string,
-  ) {
-    return this.lessonsService.update(id, dto, teacherId);
+  update(@Param('id') id: string, @Body() dto: UpdateLessonDto, @CurrentUser() viewer: LessonViewer) {
+    return this.lessonsService.update(id, dto, viewer);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Сабақты жою' })
-  remove(@Param('id') id: string, @CurrentUser('id') teacherId: string) {
-    return this.lessonsService.remove(id, teacherId);
+  remove(@Param('id') id: string, @CurrentUser() viewer: LessonViewer) {
+    return this.lessonsService.remove(id, viewer);
   }
 }

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsInt, IsOptional, Min } from 'class-validator';
+import { IsNotEmpty, IsString, IsInt, IsOptional, Min, IsArray, ArrayMinSize, ArrayMaxSize, ArrayUnique, ValidateNested, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -29,7 +29,24 @@ export class UpdateModuleDto {
   order?: number;
 }
 
+export class ReorderModuleItemDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(128)
+  id: string;
+
+  @IsInt()
+  @Min(1)
+  order: number;
+}
+
 export class ReorderModuleDto {
   @ApiProperty({ example: [{ id: 'uuid', order: 1 }] })
-  items: { id: string; order: number }[];
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(200)
+  @ArrayUnique((item: ReorderModuleItemDto) => item?.id)
+  @ValidateNested({ each: true })
+  @Type(() => ReorderModuleItemDto)
+  items: ReorderModuleItemDto[];
 }

@@ -15,7 +15,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  @Roles(Role.ADMIN, Role.PROCTOR)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Барлық пайдаланушылар тізімі' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -41,7 +41,7 @@ export class UsersController {
   }
 
   @Get(':id')
-  @Roles(Role.ADMIN, Role.PROCTOR)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Пайдаланушыны ID бойынша алу (Admin/Proctor ғана)' })
   findById(@Param('id') id: string) {
     return this.usersService.findById(id);

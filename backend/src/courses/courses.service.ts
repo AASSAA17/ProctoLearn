@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCourseDto, UpdateCourseDto } from './dto/course.dto';
 import { CourseLevel } from '@prisma/client';
+import { canManageCourse, lessonSummary, LessonViewer, sanitizeLesson } from '../lessons/lesson-access';
 
 @Injectable()
 export class CoursesService {
@@ -36,6 +37,41 @@ export class CoursesService {
   }
 
   async findById(id: string) {
+    const course = await this.loadCourse(id);
+    return {
+      ...course,
+      lessons: course.lessons.map((lesson) => lessonSummary(lesson)),
+      modules: course.modules.map((module) => ({
+        ...module,
+        lessons: module.lessons.map((lesson) => lessonSummary(lesson)),
+      })),
+    };
+  }
+
+  async getMaterial(id: string, viewer: LessonViewer) {
+    const courseAccess = await this.prisma.course.findUnique({
+      where: { id }, select: { teacherId: true },
+    });
+    if (!courseAccess) throw new NotFoundException('Курс табылмады');
+    const managesCourse = canManageCourse(courseAccess, viewer);
+    if (!managesCourse) {
+      const enrollment = await this.prisma.enrollment.findUnique({
+        where: { userId_courseId: { userId: viewer.id, courseId: id } },
+      });
+      if (!enrollment) throw new ForbiddenException('Алдымен курсқа тіркеліңіз');
+    }
+    const course = await this.loadCourse(id);
+    return {
+      ...course,
+      lessons: course.lessons.map((lesson) => sanitizeLesson(lesson, managesCourse)),
+      modules: course.modules.map((module) => ({
+        ...module,
+        lessons: module.lessons.map((lesson) => sanitizeLesson(lesson, managesCourse)),
+      })),
+    };
+  }
+
+  private async loadCourse(id: string) {
     const course = await this.prisma.course.findUnique({
       where: { id },
       include: {

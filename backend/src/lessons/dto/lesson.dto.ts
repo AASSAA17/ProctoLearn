@@ -1,5 +1,5 @@
 import { IsInt, IsNotEmpty, IsOptional, IsString, IsUrl, Min } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 
 export class CreateLessonDto {
   @ApiProperty({ example: '1-сабақ: Кіріспе' })
@@ -22,8 +22,15 @@ export class CreateLessonDto {
   @IsString()
   assignment?: string;
 
+  @ApiPropertyOptional({ description: 'Server-side grading answer, visible only to the course author and administrators' })
+  @IsOptional()
+  @IsString()
+  assignmentAnswer?: string;
+
   @ApiProperty({ example: 1 })
   @IsInt()
   @Min(1)
   order: number;
 }
+
+export class UpdateLessonDto extends PartialType(CreateLessonDto) {}

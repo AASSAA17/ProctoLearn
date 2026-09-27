@@ -7,6 +7,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
+import { LessonViewer } from '../lessons/lesson-access';
 
 @ApiTags('Емтихандар')
 @ApiBearerAuth()
@@ -22,29 +23,29 @@ export class ExamsController {
   create(
     @Param('courseId') courseId: string,
     @Body() dto: CreateExamDto,
-    @CurrentUser('id') teacherId: string,
+    @CurrentUser() viewer: LessonViewer,
   ) {
-    return this.examsService.create(courseId, dto, teacherId);
+    return this.examsService.create(courseId, dto, viewer);
   }
 
   @Get()
   @ApiOperation({ summary: 'Курстың емтихандары' })
-  findByCourse(@Param('courseId') courseId: string) {
-    return this.examsService.findByCourse(courseId);
+  findByCourse(@Param('courseId') courseId: string, @CurrentUser() viewer: LessonViewer) {
+    return this.examsService.findByCourse(courseId, viewer);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Емтиханды ID бойынша алу' })
-  findById(@Param('id') id: string) {
-    return this.examsService.findById(id);
+  findById(@Param('courseId') courseId: string, @Param('id') id: string, @CurrentUser() viewer: LessonViewer) {
+    return this.examsService.findById(courseId, id, viewer);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Емтиханды жою' })
-  remove(@Param('id') id: string, @CurrentUser('id') teacherId: string) {
-    return this.examsService.remove(id, teacherId);
+  remove(@Param('courseId') courseId: string, @Param('id') id: string, @CurrentUser() viewer: LessonViewer) {
+    return this.examsService.remove(courseId, id, viewer);
   }
 
   @Patch(':id')
@@ -52,11 +53,12 @@ export class ExamsController {
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Емтиханды жаңарту' })
   update(
+    @Param('courseId') courseId: string,
     @Param('id') id: string,
     @Body() dto: UpdateExamDto,
-    @CurrentUser('id') teacherId: string,
+    @CurrentUser() viewer: LessonViewer,
   ) {
-    return this.examsService.update(id, dto, teacherId);
+    return this.examsService.update(courseId, id, dto, viewer);
   }
 
   @Post(':id/questions')
@@ -64,11 +66,12 @@ export class ExamsController {
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Сұрақ қосу' })
   addQuestion(
+    @Param('courseId') courseId: string,
     @Param('id') examId: string,
     @Body() dto: CreateQuestionDto,
-    @CurrentUser('id') teacherId: string,
+    @CurrentUser() viewer: LessonViewer,
   ) {
-    return this.examsService.addQuestion(examId, dto, teacherId);
+    return this.examsService.addQuestion(courseId, examId, dto, viewer);
   }
 
   @Patch(':examId/questions/:questionId')
@@ -76,11 +79,13 @@ export class ExamsController {
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Сұрақты жаңарту' })
   updateQuestion(
+    @Param('courseId') courseId: string,
+    @Param('examId') examId: string,
     @Param('questionId') questionId: string,
     @Body() dto: UpdateQuestionDto,
-    @CurrentUser('id') teacherId: string,
+    @CurrentUser() viewer: LessonViewer,
   ) {
-    return this.examsService.updateQuestion(questionId, dto, teacherId);
+    return this.examsService.updateQuestion(courseId, examId, questionId, dto, viewer);
   }
 
   @Delete(':examId/questions/:questionId')
@@ -88,9 +93,11 @@ export class ExamsController {
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Сұрақты жою' })
   removeQuestion(
+    @Param('courseId') courseId: string,
+    @Param('examId') examId: string,
     @Param('questionId') questionId: string,
-    @CurrentUser('id') teacherId: string,
+    @CurrentUser() viewer: LessonViewer,
   ) {
-    return this.examsService.removeQuestion(questionId, teacherId);
+    return this.examsService.removeQuestion(courseId, examId, questionId, viewer);
   }
 }

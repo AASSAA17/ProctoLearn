@@ -12,6 +12,7 @@ import { QuestionType } from '@prisma/client';
 import { CertificatesService } from '../certificates/certificates.service';
 import { attemptDeadline, attemptExpired, expiredAttemptError, validateAnswerIds } from './attempt-policy';
 import { serializable } from '../prisma/serializable';
+import { Actor, assertProctorAccess, attemptScope } from '../proctor/proctor-access';
 
 @Injectable()
 export class AttemptsService {
@@ -259,7 +260,7 @@ export class AttemptsService {
         answers: {
           include: {
             question: {
-              select: { id: true, text: true, type: true, options: true, answer: true },
+              select: { id: true, text: true, type: true, options: true },
             },
           },
         },
@@ -283,9 +284,9 @@ export class AttemptsService {
     });
   }
 
-  async getAllAttempts(examId?: string, page = 1, limit = 50) {
+  async getAllAttempts(actor: Actor, examId?: string, page = 1, limit = 50) {
     const skip = (page - 1) * limit;
-    const where = examId ? { examId } : undefined;
+    const where = { ...attemptScope(actor), ...(examId ? { examId } : {}) };
 
     const [data, total] = await Promise.all([
       this.prisma.attempt.findMany({
@@ -308,21 +309,22 @@ export class AttemptsService {
     };
   }
 
-  async flagAttempt(attemptId: string) {
+  async flagAttempt(attemptId: string, actor: Actor) {
+    await assertProctorAccess(this.prisma, attemptId, actor);
     return this.prisma.attempt.update({
       where: { id: attemptId },
       data: { status: 'FLAGGED' },
     });
   }
 
-  async getAttemptsByExam(examId: string, teacherId: string) {
+  async getAttemptsByExam(examId: string, teacherId: string, role = 'TEACHER') {
     // Validate teacher ownership
     const exam = await this.prisma.exam.findUnique({
       where: { id: examId },
       include: { course: true },
     });
     if (!exam) throw new NotFoundException('Емтихан табылмады');
-    if (exam.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
+    if (role !== 'ADMIN' && exam.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
 
     return this.prisma.attempt.findMany({
       where: { examId, status: { not: 'IN_PROGRESS' } },

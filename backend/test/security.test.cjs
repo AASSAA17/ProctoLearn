@@ -41,6 +41,7 @@ function fixture(overrides = {}) {
       updateMany: async (data) => { writes.push(['enrollment', data]); return { count: 1 }; },
     },
     course: { findMany: async () => [] },
+    examProctor: { findUnique: async ({ where }) => where.examId_proctorId.proctorId === 'proctor' ? { examId: 'exam', proctorId: 'proctor' } : null },
     attempt: {
       findUnique: async () => ({ ...attempt }),
       findFirst: async () => ({ ...attempt }),

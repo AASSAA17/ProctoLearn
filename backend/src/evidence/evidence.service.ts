@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MinioService } from '../minio/minio.service';
 import { randomUUID } from 'crypto';
 import { recordingFormat } from './recording-format';
+import { Actor, assertProctorAccess } from '../proctor/proctor-access';
 
 @Injectable()
 export class EvidenceService {
@@ -42,9 +43,8 @@ export class EvidenceService {
     }
   }
 
-  async getEvidenceByAttempt(attemptId: string) {
-    const attempt = await this.prisma.attempt.findUnique({ where: { id: attemptId } });
-    if (!attempt) throw new NotFoundException('Талпыныс табылмады');
+  async getEvidenceByAttempt(attemptId: string, actor: Actor) {
+    await assertProctorAccess(this.prisma, attemptId, actor);
 
     const files = await this.prisma.evidenceFile.findMany({
       where: { attemptId },
@@ -55,7 +55,7 @@ export class EvidenceService {
     return Promise.all(
       files.map(async (f) => ({
         ...f,
-        url: await this.minio.getPresignedUrl(f.url, 3600),
+        url: await this.minio.getPresignedUrl(f.url, 300),
       })),
     );
   }
