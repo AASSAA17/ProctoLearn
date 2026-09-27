@@ -4,41 +4,17 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import * as path from 'path';
-import * as fs from 'fs';
 import { collectDefaultMetrics, register } from 'prom-client';
 
 let metricsInitialized = false;
 
-function checkEnv() {
-  const logger = new Logger('Bootstrap');
-  const REQUIRED = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'];
-  const INSECURE_DEFAULTS: Record<string, string> = {
-    JWT_ACCESS_SECRET: 'access_secret',
-    JWT_REFRESH_SECRET: 'refresh_secret',
-  };
-  for (const key of REQUIRED) {
-    if (!process.env[key]) {
-      logger.error(`⛔  Missing env var ${key} — server will use an INSECURE default!`);
-    } else if (process.env[key] === INSECURE_DEFAULTS[key]) {
-      logger.warn(`⚠️  ${key} is set to the insecure default value — change it in production!`);
-    }
-  }
-}
-
 async function bootstrap() {
-  checkEnv();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   if (!metricsInitialized) {
     collectDefaultMetrics();
     metricsInitialized = true;
   }
-
-  // Serve uploaded recordings statically
-  const uploadsDir = path.join(process.cwd(), 'uploads');
-  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-  app.useStaticAssets(uploadsDir, { prefix: '/uploads' });
 
   app.useGlobalPipes(
     new ValidationPipe({

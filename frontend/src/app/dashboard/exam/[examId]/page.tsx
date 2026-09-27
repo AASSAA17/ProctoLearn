@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
-import api, { API_URL, WS_URL } from '@/lib/api';
+import api, { WS_URL } from '@/lib/api';
+import { stopRecorder } from '@/lib/recording';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -26,6 +27,8 @@ interface Attempt {
   id: string;
   trustScore: number;
   startedAt: string;
+  expiresAt: string;
+  serverTime: string;
   exam: Exam;
 }
 
@@ -40,6 +43,9 @@ export default function ExamPage() {
   const [trustScore, setTrustScore] = useState(100);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const examEndedRef = useRef(false);
+  const deadlineRef = useRef(0);
   const [currentQ, setCurrentQ] = useState(0);
   const [tabBlocked, setTabBlocked] = useState(false);
   const tabSwitchCountRef = useRef(0);
@@ -58,6 +64,7 @@ export default function ExamPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
   const attemptIdRef = useRef<string | null>(null);
   // Ref to always point to the latest handleSubmit (avoids stale closure in timer)
   const handleSubmitRef = useRef<() => Promise<void>>(() => Promise.resolve());
@@ -68,6 +75,7 @@ export default function ExamPage() {
   const screenChunksRef = useRef<Blob[]>([]);
 
   const sendEvent = useCallback((type: string, metadata?: Record<string, any>) => {
+    if (examEndedRef.current) return;
     socketRef.current?.emit('proctor:event', {
       attemptId: attemptIdRef.current ?? attempt?.id,
       type,
@@ -89,6 +97,8 @@ export default function ExamPage() {
     socketRef.current?.disconnect();
     socketRef.current = null;
     // Stop camera
+    cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
+    cameraStreamRef.current = null;
     const video = videoRef.current;
     if (video?.srcObject) {
       (video.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
@@ -107,6 +117,7 @@ export default function ExamPage() {
   const setupCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      cameraStreamRef.current = stream;
       if (videoRef.current) videoRef.current.srcObject = stream;
       // Start camera recorder
       const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
@@ -148,25 +159,36 @@ export default function ExamPage() {
     }
   }, [sendEvent]);
 
-  // Upload recordings (fire-and-forget)
-  const uploadRecordings = useCallback((attemptId: string) => {
+  // Wait for the final recorder chunk, then confirm both uploads.
+  const uploadRecordings = useCallback(async (attemptId: string) => {
+    try {
+      await Promise.all([stopRecorder(cameraRecorderRef.current), stopRecorder(screenRecorderRef.current)]);
+    } finally {
+      stopAllMedia();
+    }
     const uploadBlob = async (chunks: Blob[], type: 'camera' | 'screen') => {
       if (chunks.length === 0) return;
-      try {
         const blob = new Blob(chunks, { type: 'video/webm' });
         const formData = new FormData();
         formData.append('file', blob, `${type}.webm`);
         formData.append('type', type);
-        await fetch(`${API_URL}/evidence/${attemptId}/recording`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
-          body: formData,
+        await api.post(`/evidence/${attemptId}/recording`, formData, {
+          headers: { 'Content-Type': undefined },
         });
-      } catch { /* silent */ }
     };
-    void uploadBlob([...cameraChunksRef.current], 'camera');
-    void uploadBlob([...screenChunksRef.current], 'screen');
-  }, []);
+    const results = await Promise.allSettled([
+      uploadBlob([...cameraChunksRef.current], 'camera'),
+      uploadBlob([...screenChunksRef.current], 'screen'),
+    ]);
+    if (results.some((result) => result.status === 'rejected')) throw new Error('Recording upload failed');
+  }, [stopAllMedia]);
+
+  // The hidden video is mounted only after the loading screen disappears.
+  useEffect(() => {
+    if (!loading && videoRef.current && cameraStreamRef.current) {
+      videoRef.current.srcObject = cameraStreamRef.current;
+    }
+  }, [loading]);
 
   // Detect face in camera canvas
   const checkFace = useCallback(() => {
@@ -195,7 +217,7 @@ export default function ExamPage() {
     if (avgBrightness < 10) {
       // Camera feed is basically black — likely no face / camera blocked
       sendEvent('face_not_detected', { reason: 'dark_frame', brightness: avgBrightness });
-      toast.error('Бет анықталмады! -5 Trust Score', { duration: 3000 });
+      toast.error('Камера кадры қараңғы! -20 Trust Score', { duration: 3000 });
     }
   }, [sendEvent]);
 
@@ -205,6 +227,7 @@ export default function ExamPage() {
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
+        if (examEndedRef.current) return;
         tabSwitchCountRef.current += 1;
         sendEvent('tab_switch', { timestamp: new Date().toISOString(), count: tabSwitchCountRef.current });
         toast.error('Қойынды ауыстыру тіркелді! -10 Trust Score', { duration: 3000 });
@@ -226,16 +249,19 @@ export default function ExamPage() {
     };
 
     const handleCopy = () => {
+      if (examEndedRef.current) return;
       sendEvent('copy_paste', { action: 'copy' });
       toast.error('Көшіру тіркелді! -15 Trust Score', { duration: 3000 });
     };
 
     const handlePaste = () => {
+      if (examEndedRef.current) return;
       sendEvent('paste', { action: 'paste' });
       toast.error('Қоюу тіркелді! -15 Trust Score', { duration: 3000 });
     };
 
     const handleFullscreenChange = () => {
+      if (examEndedRef.current) return;
       if (!document.fullscreenElement) {
         sendEvent('fullscreen_exit');
         toast.error('Толық экраннан шыктыңыз! -5 Trust Score', { duration: 3000 });
@@ -271,8 +297,9 @@ export default function ExamPage() {
         attemptIdRef.current = data.id;
         setTrustScore(data.trustScore);
         // Persist timer: compute remaining time based on when the attempt started
-        const elapsed = Math.floor((Date.now() - new Date(data.startedAt as string).getTime()) / 1000);
-        setTimeLeft(Math.max(0, data.exam.duration * 60 - elapsed));
+        const remainingMs = Math.max(0, Date.parse(data.expiresAt) - Date.parse(data.serverTime));
+        deadlineRef.current = performance.now() + remainingMs;
+        setTimeLeft(Math.ceil(remainingMs / 1000));
 
         // Initialize socket
         const token = localStorage.getItem('accessToken');
@@ -289,6 +316,18 @@ export default function ExamPage() {
           setTrustScore(ts);
         });
 
+        socket.on('proctor:error', async ({ code, message }) => {
+          if (code === 'UNAUTHORIZED' && !examEndedRef.current) {
+            try {
+              await api.get('/auth/me'); // refresh interceptor renews an expired token
+              socket.auth = { token: localStorage.getItem('accessToken') };
+              socket.connect();
+            } catch { toast.error(message); }
+          } else { toast.error(message); }
+        });
+        socket.on('exception', ({ message }) => toast.error(message || 'Прокторинг қатесі'));
+        socket.on('connect_error', () => toast.error('Прокторинг байланысы үзілді'));
+
         socketRef.current = socket;
 
         await setupCamera();
@@ -297,7 +336,7 @@ export default function ExamPage() {
         // Face check every 15 seconds (no more screenshots)
         faceCheckRef.current = setInterval(checkFace, 15000);
       } catch (err: any) {
-        toast.error('Емтиханды бастау қатесі');
+        toast.error(err?.response?.data?.message || 'Емтиханды бастау қатесі');
         router.push('/dashboard/courses');
       } finally {
         setLoading(false);
@@ -313,21 +352,19 @@ export default function ExamPage() {
 
   // Timer
   useEffect(() => {
-    if (!attempt || timeLeft <= 0) return;
-
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          handleSubmitRef.current();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    if (!attempt || loading) return;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((deadlineRef.current - performance.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining === 0) {
+        clearInterval(timerRef.current);
+        void handleSubmitRef.current();
+      }
+    };
+    timerRef.current = setInterval(tick, 250);
 
     return () => clearInterval(timerRef.current);
-  }, [attempt]);
+  }, [attempt, loading]);
 
   const handleExit = () => {
     if (window.confirm('Емтиханнан шығуға сенімдісіз бе? Барлық берілген жауаптар жіберіледі.')) {
@@ -336,25 +373,30 @@ export default function ExamPage() {
   };
 
   const handleSubmit = useCallback(async () => {
-    if (!attempt || submitting) return;
+    if (!attempt || submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
 
-    const answerList = Object.entries(answers).map(([questionId, answer]) => ({
+    const answerList = Object.entries(answers).filter(([, answer]) => answer.trim()).map(([questionId, answer]) => ({
       questionId,
       answer,
     }));
 
     try {
-      socketRef.current?.emit('proctor:end', { attemptId: attempt.id });
       const { data } = await api.post(`/attempts/${attempt.id}/submit`, {
         answers: answerList,
       });
 
-      // Upload recordings (fire-and-forget)
-      uploadRecordings(attempt.id);
-
-      // Stop camera and screen share immediately before navigating
-      stopAllMedia();
+      examEndedRef.current = true;
+      socketRef.current?.emit('proctor:end', { attemptId: attempt.id });
+      clearInterval(timerRef.current);
+      clearInterval(faceCheckRef.current);
+      setTabBlocked(false);
+      try {
+        await uploadRecordings(attempt.id);
+      } catch {
+        toast.error('Нәтиже сақталды, бірақ видео жүктелмеді. Прокторға хабарласыңыз', { duration: 8000 });
+      }
 
       if (data.passed) {
         toast.success(`Сіз өттіңіз! Балл: ${data.score}% 🎉`);
@@ -371,8 +413,15 @@ export default function ExamPage() {
           availableCourses: [],
         });
       }
-    } catch {
-      toast.error('Жіберу қатесі');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Жіберу қатесі');
+      if (['EXAM_EXPIRED', 'ATTEMPT_CLOSED'].includes(error?.response?.data?.code)) {
+        examEndedRef.current = true;
+        try { await uploadRecordings(attempt.id); } catch { toast.error('Видео жүктелмеді. Прокторға хабарласыңыз'); }
+        router.push('/dashboard/my-attempts');
+        return;
+      }
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }, [attempt, submitting, answers, uploadRecordings, stopAllMedia, router]);

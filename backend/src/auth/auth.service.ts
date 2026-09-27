@@ -12,6 +12,8 @@ import { RegisterDto, LoginDto, ChangePasswordDto, ForgotPasswordDto, ResetPassw
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { MailService } from '../mail/mail.service';
+import { tokenDigest } from './token-digest';
+import { serializable } from '../prisma/serializable';
 
 @Injectable()
 export class AuthService {
@@ -41,11 +43,11 @@ export class AuthService {
         phone: dto.phone?.trim() || null,
         password: hashedPassword,
       },
-      select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true, mustChangePassword: true },
+      select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true, mustChangePassword: true, tokenVersion: true },
     });
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
-    await this.saveRefreshToken(user.id, tokens.refreshToken);
+    const tokens = await this.generateTokens(user.id, user.email, user.role, user.tokenVersion);
+    await this.saveRefreshToken(user.id, tokens.refreshToken, user.tokenVersion);
 
     return { user, ...tokens };
   }
@@ -65,8 +67,8 @@ export class AuthService {
       throw new UnauthorizedException('Email немесе пароль қате');
     }
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
-    await this.saveRefreshToken(user.id, tokens.refreshToken);
+    const tokens = await this.generateTokens(user.id, user.email, user.role, user.tokenVersion);
+    await this.saveRefreshToken(user.id, tokens.refreshToken, user.tokenVersion);
 
     const { password, refreshToken, ...userWithoutSecrets } = user;
     return { user: userWithoutSecrets, ...tokens };
@@ -75,25 +77,32 @@ export class AuthService {
   async refresh(token: string) {
     try {
       const payload = this.jwtService.verify(token, {
-        secret: this.configService.get('JWT_REFRESH_SECRET', 'refresh_secret'),
+        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       });
+      if (typeof payload.sub !== 'string' || !Number.isInteger(payload.ver) || typeof payload.jti !== 'string') {
+        throw new UnauthorizedException();
+      }
 
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
       });
 
-      if (!user || !user.refreshToken) {
+      if (!user || !user.refreshToken || payload.ver !== user.tokenVersion) {
         throw new UnauthorizedException('Жарамсыз refresh token');
       }
 
-      // Compare raw token against stored bcrypt hash
-      const isValid = await bcrypt.compare(token, user.refreshToken);
-      if (!isValid) {
+      const digest = tokenDigest(token);
+      if (digest !== user.refreshToken) {
         throw new UnauthorizedException('Жарамсыз refresh token');
       }
 
-      const tokens = await this.generateTokens(user.id, user.email, user.role);
-      await this.saveRefreshToken(user.id, tokens.refreshToken);
+      const tokens = await this.generateTokens(user.id, user.email, user.role, user.tokenVersion);
+      // One use only, including concurrent refreshes and concurrent session revocation.
+      const rotated = await this.prisma.user.updateMany({
+        where: { id: user.id, refreshToken: digest, tokenVersion: user.tokenVersion },
+        data: { refreshToken: tokenDigest(tokens.refreshToken) },
+      });
+      if (rotated.count !== 1) throw new UnauthorizedException();
 
       return tokens;
     } catch {
@@ -104,7 +113,7 @@ export class AuthService {
   async logout(userId: string) {
     await this.prisma.user.update({
       where: { id: userId },
-      data: { refreshToken: null },
+      data: { refreshToken: null, tokenVersion: { increment: 1 }, isOnline: false },
     });
     return { message: 'Сәтті шықтыңыз' };
   }
@@ -117,23 +126,27 @@ export class AuthService {
     if (!valid) throw new BadRequestException('Ағымдағы пароль қате');
 
     const hashed = await bcrypt.hash(dto.newPassword, 12);
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { password: hashed, mustChangePassword: false },
+    await serializable(this.prisma, async (tx) => {
+      const changed = await tx.user.updateMany({
+        where: { id: userId, password: user.password, tokenVersion: user.tokenVersion },
+        data: { password: hashed, mustChangePassword: false, refreshToken: null, tokenVersion: { increment: 1 } },
+      });
+      if (changed.count !== 1) throw new UnauthorizedException();
+      await tx.passwordResetToken.deleteMany({ where: { userId } });
     });
     return { message: 'Пароль сәтті өзгертілді' };
   }
 
-  private async generateTokens(userId: string, email: string, role: string) {
-    const payload = { sub: userId, email, role };
+  private async generateTokens(userId: string, email: string, role: string, version: number) {
+    const payload = { sub: userId, email, role, ver: version };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
-        secret: this.configService.get('JWT_ACCESS_SECRET', 'access_secret'),
+        secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
         expiresIn: this.configService.get('JWT_ACCESS_EXPIRES_IN', '15m'),
       }),
-      this.jwtService.signAsync(payload, {
-        secret: this.configService.get('JWT_REFRESH_SECRET', 'refresh_secret'),
+      this.jwtService.signAsync({ ...payload, jti: crypto.randomUUID() }, {
+        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
         expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN', '7d'),
       }),
     ]);
@@ -141,13 +154,12 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  private async saveRefreshToken(userId: string, refreshToken: string) {
-    // Store a bcrypt hash instead of the raw token — DB leak doesn't expose active sessions
-    const hashed = await bcrypt.hash(refreshToken, 10);
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { refreshToken: hashed },
+  private async saveRefreshToken(userId: string, refreshToken: string, version: number) {
+    const saved = await this.prisma.user.updateMany({
+      where: { id: userId, tokenVersion: version },
+      data: { refreshToken: tokenDigest(refreshToken) },
     });
+    if (saved.count !== 1) throw new UnauthorizedException();
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
@@ -162,7 +174,7 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     await this.prisma.passwordResetToken.create({
-      data: { token, userId: user.id, expiresAt },
+      data: { token: tokenDigest(token), userId: user.id, expiresAt },
     });
 
     await this.mailService.sendPasswordReset(user.email, user.name, token);
@@ -171,21 +183,18 @@ export class AuthService {
   }
 
   async resetPassword(dto: ResetPasswordDto) {
-    const record = await this.prisma.passwordResetToken.findUnique({
-      where: { token: dto.token },
-      include: { user: true },
-    });
-
-    if (!record || record.expiresAt < new Date()) {
-      throw new BadRequestException('Сілтеме жарамсыз немесе мерзімі өткен');
-    }
-
     const hashed = await bcrypt.hash(dto.newPassword, 12);
-    await this.prisma.user.update({
-      where: { id: record.userId },
-      data: { password: hashed, mustChangePassword: false },
+    await serializable(this.prisma, async (tx) => {
+      const record = await tx.passwordResetToken.findUnique({ where: { token: tokenDigest(dto.token) } });
+      if (!record || record.expiresAt <= new Date()) {
+        throw new BadRequestException('Сілтеме жарамсыз немесе мерзімі өткен');
+      }
+      await tx.user.update({
+        where: { id: record.userId },
+        data: { password: hashed, mustChangePassword: false, refreshToken: null, tokenVersion: { increment: 1 } },
+      });
+      await tx.passwordResetToken.deleteMany({ where: { userId: record.userId } });
     });
-    await this.prisma.passwordResetToken.delete({ where: { token: dto.token } });
 
     return { message: 'Пароль сәтті өзгертілді' };
   }

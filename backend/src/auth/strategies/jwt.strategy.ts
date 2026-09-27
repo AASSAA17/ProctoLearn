@@ -13,17 +13,18 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get('JWT_ACCESS_SECRET', 'access_secret'),
+      secretOrKey: configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
     });
   }
 
-  async validate(payload: { sub: string; email: string; role: string }) {
+  async validate(payload: { sub: string; email: string; role: string; ver: number }) {
+    if (typeof payload.sub !== 'string' || !Number.isInteger(payload.ver)) throw new UnauthorizedException();
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, name: true, email: true, role: true, mustChangePassword: true },
+      select: { id: true, name: true, email: true, role: true, mustChangePassword: true, tokenVersion: true },
     });
 
-    if (!user) {
+    if (!user || user.tokenVersion !== payload.ver) {
       throw new UnauthorizedException('Пайдаланушы табылмады');
     }
 

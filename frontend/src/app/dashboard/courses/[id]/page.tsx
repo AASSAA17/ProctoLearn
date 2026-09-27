@@ -46,20 +46,26 @@ export default function CourseDetailPage() {
   const [progress, setProgress] = useState<LessonProgress[]>([]);
   const [stepProgress, setStepProgress] = useState<{ total: number; completed: number; percent: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasCertificate, setHasCertificate] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [courseRes, progressRes, stepProgressRes] = await Promise.allSettled([
+        setHasCertificate(false);
+        const [courseRes, progressRes, stepProgressRes, certificatesRes] = await Promise.allSettled([
           api.get(`/courses/${id}`),
           api.get(`/courses/${id}/lessons/progress/my`),
           api.get(`/submissions/course/${id}/progress`),
+          api.get<{ courseId: string }[]>('/certificates/my'),
         ]);
         if (courseRes.status === 'fulfilled') setCourse(courseRes.value.data);
         else throw new Error('Course not found');
         if (progressRes.status === 'fulfilled') setProgress(progressRes.value.data);
         if (stepProgressRes.status === 'fulfilled') setStepProgress(stepProgressRes.value.data);
+        if (certificatesRes.status === 'fulfilled') {
+          setHasCertificate(certificatesRes.value.data.some((certificate) => certificate.courseId === id));
+        }
       } catch {
         toast.error('Курс табылмады');
         router.push('/dashboard/courses');

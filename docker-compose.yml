@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your private environment}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - '127.0.0.1:5432:5432'
@@ -29,7 +29,7 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in your private environment}
     ports:
       - '127.0.0.1:9000:9000'
       - '127.0.0.1:9001:9001'
@@ -54,8 +54,9 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your private environment}@postgres:5432/${POSTGRES_DB}
       MINIO_ENDPOINT: minio
+      NODE_ENV: production
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-llama3-8b-8192}
     ports:
@@ -87,6 +88,8 @@ services:
     container_name: proctolearn_web
     restart: unless-stopped
     env_file: .env
+    environment:
+      NODE_ENV: production
     ports:
       - '127.0.0.1:3000:3000'
     depends_on:

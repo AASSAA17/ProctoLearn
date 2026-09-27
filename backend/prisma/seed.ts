@@ -1,36 +1,39 @@
 ﻿import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+const { demoSeedPassword } = require('./demo-seed.cjs');
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('Бастапқы деректерді жүктеу...');
 
+  // Validate every credential before the first database mutation.
+  const passwords = Object.fromEntries(['ADMIN', 'TEACHER', 'STUDENT', 'PROCTOR'].map(role => [role, demoSeedPassword(`DEMO_${role}_PASSWORD`)]));
   const hash = async (pw: string) => bcrypt.hash(pw, 12);
 
   // ── Users ────────────────────────────────────────────────────
   await prisma.user.upsert({
     where: { email: 'admin@proctolearn.kz' },
     update: {},
-    create: { name: 'Администратор', email: 'admin@proctolearn.kz', phone: '+77001110000', password: await hash('Admin@12'), role: 'ADMIN' },
+    create: { name: 'Администратор', email: 'admin@proctolearn.kz', phone: '+77001110000', password: await hash(passwords.ADMIN as string), role: 'ADMIN' },
   });
 
   const teacher = await prisma.user.upsert({
     where: { email: 'teacher@proctolearn.kz' },
     update: {},
-    create: { name: 'Системный преподаватель', email: 'teacher@proctolearn.kz', phone: '+77002220000', password: await hash('Teach@12'), role: 'TEACHER' },
+    create: { name: 'Системный преподаватель', email: 'teacher@proctolearn.kz', phone: '+77002220000', password: await hash(passwords.TEACHER as string), role: 'TEACHER' },
   });
 
   await prisma.user.upsert({
     where: { email: 'student@proctolearn.kz' },
     update: {},
-    create: { name: 'Студент Алибек', email: 'student@proctolearn.kz', phone: '+77003330000', password: await hash('Stud@123'), role: 'STUDENT' },
+    create: { name: 'Студент Алибек', email: 'student@proctolearn.kz', phone: '+77003330000', password: await hash(passwords.STUDENT as string), role: 'STUDENT' },
   });
 
   await prisma.user.upsert({
     where: { email: 'proctor@proctolearn.kz' },
     update: {},
-    create: { name: 'Проктор Бауыржан', email: 'proctor@proctolearn.kz', phone: '+77004440000', password: await hash('Proct@12'), role: 'PROCTOR' },
+    create: { name: 'Проктор Бауыржан', email: 'proctor@proctolearn.kz', phone: '+77004440000', password: await hash(passwords.PROCTOR as string), role: 'PROCTOR' },
   });
 
   // ── Courses + Lessons ────────────────────────────────────────
@@ -842,4 +845,4 @@ async function main() {
   console.log('Деректер сәтті жүктелді!');
 }
 
-main().catch(console.error).finally(() => prisma.$disconnect());
+main().catch((error) => { console.error(error.message); process.exitCode = 1; }).finally(() => prisma.$disconnect());

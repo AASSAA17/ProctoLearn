@@ -34,7 +34,7 @@ save_output "$BASE/06-vcs/git_log_${TIMESTAMP}.txt" git -C "$PROJECT_ROOT" log -
 save_output "$BASE/06-vcs/git_contributors_${TIMESTAMP}.txt" git -C "$PROJECT_ROOT" shortlog -sn
 save_output "$BASE/09-iac/terraform_files_${TIMESTAMP}.txt" find "$PROJECT_ROOT/infra/terraform" -type f
 save_output "$BASE/09-iac/ansible_files_${TIMESTAMP}.txt" find "$PROJECT_ROOT/infra/ansible" -type f
-save_output "$BASE/07-observability/monitoring_compose_config_${TIMESTAMP}.txt" docker compose -f "$PROJECT_ROOT/monitoring-project/docker-compose.yml" config
+save_output "$BASE/07-observability/monitoring_compose_config_${TIMESTAMP}.txt" docker compose -f "$PROJECT_ROOT/monitoring-project/docker-compose.yml" config --services
 save_output "$BASE/04-app/api_health_${TIMESTAMP}.txt" curl -sf http://localhost:4000/health
 save_output "$BASE/08-ai-layer/n8n_workflow_${TIMESTAMP}.txt" cat "$PROJECT_ROOT/n8n/workflows/exam-submit-notify.json"
 

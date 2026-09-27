@@ -8,6 +8,7 @@
 
 import { PrismaClient, CourseLevel, StepType } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+const { demoSeedPassword } = require('./demo-seed.cjs');
 
 const prisma = new PrismaClient();
 
@@ -242,6 +243,7 @@ async function createCourse(
 
 // ─── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
+  const teacherPassword = demoSeedPassword('DEMO_TEACHER_PASSWORD');
   console.log('🚀 Stepik курстарды тұқым ретінде жүктеу басталды...');
 
   // Ensure teacher user exists
@@ -252,7 +254,7 @@ async function main() {
       name: 'Жүйелік мұғалім',
       email: 'teacher@proctolearn.kz',
       phone: '+77002220000',
-      password: await bcrypt.hash('Teach@12', 12),
+      password: await bcrypt.hash(teacherPassword, 12),
       role: 'TEACHER',
     },
   });

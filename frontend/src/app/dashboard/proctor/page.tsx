@@ -57,7 +57,21 @@ export default function ProctorDashboardPage() {
       toast.success('Жаңа скриншот сақталды', { duration: 2000 });
     });
 
+    let active = true;
+    socket.on('proctor:error', async ({ code, message }) => {
+      if (code === 'UNAUTHORIZED') {
+        try {
+          await api.get('/auth/me');
+          if (!active) return;
+          socket.auth = { token: localStorage.getItem('accessToken') };
+          socket.connect();
+        } catch { if (active) toast.error(message); }
+      } else { toast.error(message); }
+    });
+    socket.on('exception', ({ message }) => toast.error(message || 'Прокторинг қатесі'));
+
     return () => {
+      active = false;
       socket.disconnect();
     };
   }, [selected]);

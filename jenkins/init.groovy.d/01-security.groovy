@@ -5,7 +5,10 @@ import hudson.security.FullControlOnceLoggedInAuthorizationStrategy
 
 def jenkins = Jenkins.get()
 def adminId = System.getenv('JENKINS_ADMIN_ID') ?: 'admin'
-def adminPassword = System.getenv('JENKINS_ADMIN_PASSWORD') ?: 'admin123'
+def adminPassword = System.getenv('JENKINS_ADMIN_PASSWORD')
+if (!adminPassword || adminPassword.length() < 16) {
+  throw new IllegalStateException('JENKINS_ADMIN_PASSWORD must contain at least 16 characters')
+}
 def adminEmail = System.getenv('JENKINS_ADMIN_EMAIL') ?: 'admin@proctolearn.local'
 
 def securityRealm = new HudsonPrivateSecurityRealm(false)

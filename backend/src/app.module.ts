@@ -23,10 +23,11 @@ import { AiModule } from './ai/ai.module';
 import { ActivityInterceptor } from './common/interceptors/activity.interceptor';
 import { GraphiteMetricsInterceptor } from '@/common/interceptors/graphite-metrics.interceptor';
 import { GraphiteService } from './common/services/graphite.service';
+import { validateEnvironment } from './common/config/environment';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
     ThrottlerModule.forRoot([
       {
         name: 'default',

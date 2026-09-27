@@ -6,6 +6,7 @@ import * as Minio from 'minio';
 export class MinioService implements OnModuleInit {
   private readonly logger = new Logger(MinioService.name);
   private client: Minio.Client;
+  private publicClient: Minio.Client;
   private bucket: string;
 
   constructor(private configService: ConfigService) {
@@ -13,10 +14,29 @@ export class MinioService implements OnModuleInit {
       endPoint: this.configService.get('MINIO_ENDPOINT', 'localhost'),
       port: parseInt(this.configService.get('MINIO_PORT', '9000')),
       useSSL: this.configService.get('MINIO_USE_SSL') === 'true',
-      accessKey: this.configService.get('MINIO_ROOT_USER', 'minioadmin'),
-      secretKey: this.configService.get('MINIO_ROOT_PASSWORD', 'minioadmin_secret'),
+      accessKey: this.configService.getOrThrow('MINIO_ROOT_USER'),
+      secretKey: this.configService.getOrThrow('MINIO_ROOT_PASSWORD'),
+      region: this.configService.get('MINIO_REGION', 'us-east-1'),
     });
     this.bucket = this.configService.get('MINIO_BUCKET', 'proctolearn-evidence');
+    const publicUrl = this.configService.get<string>('MINIO_PUBLIC_URL');
+    this.publicClient = this.client;
+    if (publicUrl) {
+      const url = new URL(publicUrl);
+      if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
+        throw new Error('MINIO_PUBLIC_URL must be an HTTP(S) origin without a path or credentials');
+      }
+      this.publicClient = new Minio.Client({
+        endPoint: url.hostname,
+        port: Number(url.port || (url.protocol === 'https:' ? 443 : 80)),
+        useSSL: url.protocol === 'https:',
+        accessKey: this.configService.getOrThrow('MINIO_ROOT_USER'),
+        secretKey: this.configService.getOrThrow('MINIO_ROOT_PASSWORD'),
+        region: this.configService.get('MINIO_REGION', 'us-east-1'),
+      });
+    } else if (this.configService.get('NODE_ENV') === 'production') {
+      throw new Error('MINIO_PUBLIC_URL is required in production for browser playback');
+    }
   }
 
   async onModuleInit() {
@@ -27,7 +47,7 @@ export class MinioService implements OnModuleInit {
     try {
       const exists = await this.client.bucketExists(this.bucket);
       if (!exists) {
-        await this.client.makeBucket(this.bucket, 'us-east-1');
+        await this.client.makeBucket(this.bucket, this.configService.get('MINIO_REGION', 'us-east-1'));
         this.logger.log(`MinIO: Bucket "${this.bucket}" created`);
       } else {
         this.logger.log(`MinIO: Bucket "${this.bucket}" already exists`);
@@ -45,11 +65,14 @@ export class MinioService implements OnModuleInit {
     return this.getUrl(objectName);
   }
 
-  async uploadBuffer(buffer: Buffer, objectName: string, contentType: string): Promise<string> {
-    await this.client.putObject(this.bucket, objectName, buffer, buffer.length, {
+  async uploadFile(filePath: string, objectName: string, contentType: string): Promise<void> {
+    await this.client.fPutObject(this.bucket, objectName, filePath, {
       'Content-Type': contentType,
     });
-    return this.getUrl(objectName);
+  }
+
+  async removeObject(objectName: string): Promise<void> {
+    await this.client.removeObject(this.bucket, objectName);
   }
 
   getUrl(objectName: string): string {
@@ -61,6 +84,6 @@ export class MinioService implements OnModuleInit {
   }
 
   async getPresignedUrl(objectName: string, expiry = 3600): Promise<string> {
-    return this.client.presignedGetObject(this.bucket, objectName, expiry);
+    return this.publicClient.presignedGetObject(this.bucket, objectName, expiry);
   }
 }

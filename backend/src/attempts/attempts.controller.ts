@@ -17,6 +17,8 @@ export class AttemptsController {
   constructor(private readonly attemptsService: AttemptsService) {}
 
   @Post('start/:examId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.STUDENT)
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @ApiOperation({ summary: 'Емтиханды бастау (студент)' })
   start(@Param('examId') examId: string, @CurrentUser('id') userId: string) {

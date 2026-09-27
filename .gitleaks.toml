@@ -1,0 +1,18 @@
+title = "ProctoLearn secrets policy"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "runtime-hardcoded-credential"
+description = "Literal credential in an environment template or Compose configuration"
+path = '''(?i)(^|/)(\.env\.example|docker-compose[^/]*\.ya?ml)$'''
+regex = '''(?i)(?:[A-Z0-9_]*(?:PASSWORD|PASSWD|SECRET|TOKEN|ENCRYPTION_KEY|API_KEY|ADMIN_PASS))[ \t]*[:=][ \t]*["']?([A-Za-z0-9][A-Za-z0-9_./+!=-]{3,})'''
+secretGroup = 1
+
+[[rules]]
+id = "runtime-fallback-credential"
+description = "Nonempty credential fallback in Compose configuration"
+path = '''(?i)(^|/)docker-compose[^/]*\.ya?ml$'''
+regex = '''\$\{[A-Z0-9_]*(?:PASSWORD|PASSWD|SECRET|TOKEN|ENCRYPTION_KEY|API_KEY|ADMIN_PASS):-([^}\s]+)\}'''
+secretGroup = 1

@@ -1,5 +1,6 @@
 ﻿import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PDFDocument = require('pdfkit') as typeof import('pdfkit');
@@ -42,11 +43,11 @@ const hasScript = !!FONT_SCRIPT_PATH;
 export class CertificatesService {
   constructor(private prisma: PrismaService) {}
 
-  async issue(userId: string, courseId: string) {
-    const existing = await this.prisma.certificate.findFirst({ where: { userId, courseId } });
+  async issue(userId: string, courseId: string, db: Prisma.TransactionClient = this.prisma) {
+    const existing = await db.certificate.findFirst({ where: { userId, courseId } });
     if (existing) return existing;
     const verifyCode = uuidv4();
-    return this.prisma.certificate.create({ data: { userId, courseId, qrCode: verifyCode } });
+    return db.certificate.create({ data: { userId, courseId, qrCode: verifyCode } });
   }
 
   async findByUser(userId: string) {

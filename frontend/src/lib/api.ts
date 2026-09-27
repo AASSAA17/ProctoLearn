@@ -8,6 +8,22 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// Concurrent uploads must rotate the stored refresh token only once.
+let refreshPromise: Promise<string> | null = null;
+function refreshAccessToken(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!refreshToken) throw new Error('No refresh token');
+      const { data } = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      return data.accessToken as string;
+    })().finally(() => { refreshPromise = null; });
+  }
+  return refreshPromise;
+}
+
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('accessToken');
@@ -23,17 +39,15 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isAuthRequest = /\/auth\/(login|register|refresh)$/.test(originalRequest?.url || '');
+    if (typeof window !== 'undefined' && originalRequest && error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
       originalRequest._retry = true;
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) throw new Error('No refresh token');
-
-        const { data } = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
-
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+        const currentToken = localStorage.getItem('accessToken');
+        const token = currentToken && originalRequest.headers.Authorization !== `Bearer ${currentToken}`
+          ? currentToken
+          : await refreshAccessToken();
+        originalRequest.headers.Authorization = `Bearer ${token}`;
         return api(originalRequest);
       } catch {
         localStorage.removeItem('accessToken');

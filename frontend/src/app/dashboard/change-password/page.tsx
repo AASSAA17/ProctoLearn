@@ -19,7 +19,7 @@ const STRENGTH_COLORS = ['', 'bg-red-500', 'bg-yellow-400', 'bg-green-500'];
 const STRENGTH_TEXT = ['', 'text-red-600', 'text-yellow-600', 'text-green-600'];
 
 export default function ChangePasswordPage() {
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const router = useRouter();
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
@@ -38,8 +38,11 @@ export default function ChangePasswordPage() {
         currentPassword: form.currentPassword,
         newPassword: form.newPassword,
       });
-      toast.success('Құпиясөз сәтті өзгертілді!');
-      router.push('/dashboard');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      setUser(null);
+      toast.success('Құпиясөз өзгертілді. Жаңа құпиясөзбен қайта кіріңіз.');
+      router.replace('/auth/login');
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Құпиясөз өзгерту қатесі');
     } finally {

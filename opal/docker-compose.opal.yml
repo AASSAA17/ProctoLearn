@@ -17,7 +17,7 @@ services:
     image: permitio/opal-server:latest
     container_name: proctolearn_opal_server
     environment:
-      OPAL_MASTER_TOKEN: ${OPAL_MASTER_TOKEN:-proctolearn-opal-token}
+      OPAL_MASTER_TOKEN: ${OPAL_MASTER_TOKEN:?Set OPAL_MASTER_TOKEN in your private environment}
       OPAL_POLICY_REPO_URL: https://github.com/AASSAA17/ProctoLearn
       OPAL_POLICY_REPO_POLLING_INTERVAL: 20
       OPAL_BROADCAST_URI: redis://opal_redis:6379
@@ -31,7 +31,7 @@ services:
     container_name: proctolearn_opal_client
     environment:
       OPAL_SERVER_URL: http://opal_server:7002
-      OPAL_CLIENT_TOKEN: ${OPAL_CLIENT_TOKEN:-proctolearn-opal-token}
+      OPAL_CLIENT_TOKEN: ${OPAL_CLIENT_TOKEN:?Set OPAL_CLIENT_TOKEN in your private environment}
       OPAL_POLICY_STORE_URL: http://opa:8181
       OPAL_DATA_UPDATER_ENABLED: "false"
     depends_on:
