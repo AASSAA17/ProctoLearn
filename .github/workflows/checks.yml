@@ -58,29 +58,36 @@ jobs:
       - run: npm run test:migrations
       - run: npx --no-install prisma migrate deploy
       - run: npm run test:integration
-      # Archived MinIO is an isolated compatibility fixture, not a production recommendation.
-      - name: Start S3 compatibility fixture
+      # Upstream removed public images. Compile the pinned security release for this fixture only.
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.24.8'
+          cache: false
+      - name: Build isolated S3 compatibility fixture
         run: |
-          docker run --detach --name proctolearn-storage-test \
-            -p 127.0.0.1:19000:9000 \
-            -e MINIO_ROOT_USER=integration-user \
-            -e MINIO_ROOT_PASSWORD=integration-storage-only \
-            minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e server /data
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:19000/minio/health/ready; then exit 0; fi
-            sleep 2
-          done
-          docker logs proctolearn-storage-test
-          exit 1
-      - run: npm run test:storage
+          GOBIN="$RUNNER_TEMP/s3-bin" go install github.com/minio/minio@9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a
+      - name: Verify real object storage
         env:
+          MINIO_ROOT_USER: integration-user
+          MINIO_ROOT_PASSWORD: integration-storage-only
           TEST_MINIO_ENDPOINT: 127.0.0.1
           TEST_MINIO_PORT: 19000
           TEST_MINIO_ROOT_USER: integration-user
           TEST_MINIO_ROOT_PASSWORD: integration-storage-only
-      - name: Stop S3 compatibility fixture
-        if: always()
-        run: docker rm --force proctolearn-storage-test || true
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/s3-bin/minio" server "$RUNNER_TEMP/s3-data" --address 127.0.0.1:19000 --console-address 127.0.0.1:19001 > "$RUNNER_TEMP/s3.log" 2>&1 &
+          storage_pid=$!
+          trap 'kill "$storage_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:19000/minio/health/ready; then
+              npm run test:storage
+              exit 0
+            fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/s3.log"
+          exit 1
   frontend:
     runs-on: ubuntu-latest
     defaults:
