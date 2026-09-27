@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import api, { API_URL } from '@/lib/api';
+import api from '@/lib/api';
+import { downloadFile } from '@/lib/download';
 import toast from 'react-hot-toast';
 
 interface User {
@@ -80,15 +81,9 @@ export default function AdminUsersPage() {
     finally { setResetting(null); }
   };
 
-  const downloadExcel = () => {
-    const token = localStorage.getItem('accessToken');
-    fetch(`${API_URL}/admin/export/users`,
-      { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.blob()).then(blob => {
-        const u = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = u; a.download = 'пайдаланушылар.xlsx'; a.click();
-        URL.revokeObjectURL(u);
-      });
+  const downloadExcel = async () => {
+    try { await downloadFile('/admin/export/users', 'пайдаланушылар.xlsx'); }
+    catch { toast.error('Excel файлын жүктеу мүмкін болмады.'); }
   };
 
   const openGrantModal = (user: User) => {

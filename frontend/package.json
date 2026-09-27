@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "typecheck": "tsc --noEmit --incremental false",
-    "test": "node test/recording.test.cjs && node test/learning-progress.test.cjs && node test/exam-draft.test.cjs && node test/durable-recording.test.cjs",
+    "test": "node test/recording.test.cjs && node test/learning-progress.test.cjs && node test/exam-draft.test.cjs && node test/durable-recording.test.cjs && node test/session-coordinator.test.cjs",
     "start": "next start",
     "lint": "next lint"
   },

@@ -302,7 +302,7 @@ test('real HTTP routes enforce JWT, enrollment, roles, parent relations and PATC
   const jwt = new JwtService({ secret });
   const request = (path, actor, method = 'GET', body) => fetch(`${base}${path}`, {
     method,
-    headers: { 'Content-Type': 'application/json', ...(actor ? { Authorization: `Bearer ${jwt.sign({ sub: actor.id, role: actor.role, ver: 0 })}` } : {}) },
+    headers: { 'Content-Type': 'application/json', ...(actor ? { Cookie: `pl-access=${jwt.sign({ sub: actor.id, role: actor.role, ver: 0 }, { expiresIn: '5m' })}` } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
   for (const path of ['/steps/step', '/lessons/lesson/steps']) {

@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomBytes } = require('node:crypto');
 const { EventEmitter } = require('node:events');
+const WebSocket = require('ws');
 require('reflect-metadata');
 const { Test } = require('@nestjs/testing');
 const { PassportModule } = require('@nestjs/passport');
@@ -106,7 +107,7 @@ async function fixture(withGateway = false) {
   const origin = await app.getUrl();
   const token = (id) => jwt.sign({ sub: id, ver: users.get(id).tokenVersion }, { secret, expiresIn: '5m' });
   const request = async (id, path, method = 'GET') => {
-    const response = await fetch(`${origin}${path}`, { method, headers: id ? { Authorization: `Bearer ${token(id)}` } : {} });
+    const response = await fetch(`${origin}${path}`, { method, headers: id ? { Cookie: `pl-access=${token(id)}` } : {} });
     return { status: response.status, body: await response.json() };
   };
   return { app, origin, request, token, users, attempts, assignments, signedObjects, close: () => app.close() };
@@ -205,7 +206,7 @@ test('HTTP flag mutations cannot alter attempts outside the proctor assignment',
 async function connectSocket(f, actor) {
   const bus = new EventEmitter();
   const received = [];
-  const socket = new WebSocket(`${f.origin.replace('http:', 'ws:')}/socket.io/?EIO=4&transport=websocket`);
+  const socket = new WebSocket(`${f.origin.replace('http:', 'ws:')}/socket.io/?EIO=4&transport=websocket`, { headers: { Origin: 'http://localhost:3000', Cookie: `pl-access=${f.token(actor)}` } });
   const next = (event, timeout = 2500) => new Promise((resolve, reject) => {
     const timer = setTimeout(() => { bus.off(event, done); reject(new Error(`Timed out waiting for ${actor}:${event}`)); }, timeout);
     const done = (data) => { clearTimeout(timer); resolve(data); };
@@ -214,7 +215,7 @@ async function connectSocket(f, actor) {
   const ready = next('ready');
   socket.addEventListener('message', ({ data }) => {
     const packet = String(data);
-    if (packet.startsWith('0')) socket.send(`40/proctor,${JSON.stringify({ token: f.token(actor) })}`);
+    if (packet.startsWith('0')) socket.send('40/proctor,{}');
     else if (packet === '2') socket.send('3');
     else if (packet.startsWith('40/proctor,')) bus.emit('ready');
     else if (packet.startsWith('42/proctor,')) {

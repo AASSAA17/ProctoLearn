@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import api, { API_URL } from '@/lib/api';
+import toast from 'react-hot-toast';
+import api from '@/lib/api';
+import { downloadFile } from '@/lib/download';
 import { useAuthStore } from '@/store/auth.store';
 import { useRouter } from 'next/navigation';
 
@@ -37,23 +39,9 @@ export default function AdminPage() {
   if (loading) return <div className="text-center py-16 text-gray-400">Жүктелуде...</div>;
   if (!stats) return null;
 
-  const downloadExcel = (type: 'users' | 'courses') => {
-    const token = localStorage.getItem('accessToken');
-    const url = `${API_URL}/admin/export/${type}`;
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${type}.xlsx`;
-    // Pass token via window.open (or fetch)
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.blob())
-      .then((blob) => {
-        const u = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = u;
-        link.download = `${type === 'users' ? 'пайдаланушылар' : 'курстар'}.xlsx`;
-        link.click();
-        URL.revokeObjectURL(u);
-      });
+  const downloadExcel = async (type: 'users' | 'courses') => {
+    try { await downloadFile(`/admin/export/${type}`, `${type === 'users' ? 'пайдаланушылар' : 'курстар'}.xlsx`); }
+    catch { toast.error('Excel файлын жүктеу мүмкін болмады.'); }
   };
 
   return (

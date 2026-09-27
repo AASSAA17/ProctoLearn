@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import api, { API_URL } from '@/lib/api';
+import toast from 'react-hot-toast';
+import api from '@/lib/api';
+import { downloadFile } from '@/lib/download';
 
 interface CourseStat {
   id: string; title: string; teacher: { name: string };
@@ -18,15 +20,9 @@ export default function AdminCoursesPage() {
     api.get('/admin/courses/stats').then(r => setCourses(r.data)).finally(() => setLoading(false));
   }, []);
 
-  const downloadExcel = () => {
-    const token = localStorage.getItem('accessToken');
-    fetch(`${API_URL}/admin/export/courses`,
-      { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.blob()).then(blob => {
-        const u = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = u; a.download = 'курстар.xlsx'; a.click();
-        URL.revokeObjectURL(u);
-      });
+  const downloadExcel = async () => {
+    try { await downloadFile('/admin/export/courses', 'курстар.xlsx'); }
+    catch { toast.error('Excel файлын жүктеу мүмкін болмады.'); }
   };
 
   return (

@@ -1,5 +1,6 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength, Matches } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { NewPassword } from './password-policy';
 
 export class RegisterDto {
   @ApiProperty({ example: 'Алибек Сейтов' })
@@ -17,12 +18,8 @@ export class RegisterDto {
   @Matches(/^\+7\d{10}$/, { message: 'Телефон +7XXXXXXXXXX форматында болуы керек (11 цифр)' })
   phone?: string;
 
-  @ApiProperty({ example: 'Pass@12', minLength: 6 })
-  @IsString()
-  @MinLength(6, { message: 'Пароль кемінде 6 таңба болуы керек' })
-  @Matches(/^(?=.*\d.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?].*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).*$/, {
-    message: 'Пароль кемінде 2 цифр және 2 арнайы таңба болуы керек',
-  })
+  @ApiProperty({ example: 'Pass!!12', minLength: 6, maxLength: 72 })
+  @NewPassword()
   password: string;
 }
 
@@ -37,12 +34,8 @@ export class LoginDto {
   password: string;
 }
 
-export class RefreshTokenDto {
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  refreshToken: string;
-}
+// Refresh credentials are accepted only from the HttpOnly cookie; body fields are forbidden.
+export class RefreshTokenDto {}
 
 export class ChangePasswordDto {
   @ApiProperty({ example: 'OldPass@12' })
@@ -50,12 +43,8 @@ export class ChangePasswordDto {
   @IsNotEmpty()
   currentPassword: string;
 
-  @ApiProperty({ example: 'NewPass@12', minLength: 6 })
-  @IsString()
-  @MinLength(6, { message: 'Пароль кемінде 6 таңба болуы керек' })
-  @Matches(/^(?=.*\d.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?].*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).*$/, {
-    message: 'Пароль кемінде 2 цифр және 2 арнайы таңба болуы керек',
-  })
+  @ApiProperty({ example: 'NewPass!!12', minLength: 6, maxLength: 72 })
+  @NewPassword()
   newPassword: string;
 }
 
@@ -71,9 +60,8 @@ export class ResetPasswordDto {
   @IsNotEmpty()
   token: string;
 
-  @ApiProperty({ example: 'NewPass@12', minLength: 6 })
-  @IsString()
-  @MinLength(6, { message: 'Пароль кемінде 6 таңба болуы керек' })
+  @ApiProperty({ example: 'NewPass!!12', minLength: 6, maxLength: 72 })
+  @NewPassword()
   newPassword: string;
 }
 

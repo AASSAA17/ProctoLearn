@@ -1,7 +1,7 @@
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCookieAuth } from '@nestjs/swagger';
 import { ModulesService } from './modules.service';
 import { CreateModuleDto, UpdateModuleDto, ReorderModuleDto } from './dto/module.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -16,7 +16,7 @@ export class ModulesController {
   constructor(private readonly modulesService: ModulesService) {}
 
   @Post('courses/:courseId/modules')
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Бөлім жасау' })
@@ -42,7 +42,7 @@ export class ModulesController {
   }
 
   @Patch('modules/reorder')
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Бөлімдерді қайта реттеу' })
@@ -51,7 +51,7 @@ export class ModulesController {
   }
 
   @Patch('modules/:id')
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Бөлімді жаңарту' })
@@ -65,7 +65,7 @@ export class ModulesController {
   }
 
   @Delete('modules/:id')
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Бөлімді жою' })

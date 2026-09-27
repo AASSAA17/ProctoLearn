@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCookieAuth } from '@nestjs/swagger';
 import { ExamsService } from './exams.service';
 import { CreateExamDto, UpdateExamDto, CreateQuestionDto, UpdateQuestionDto } from './dto/exam.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -10,7 +10,7 @@ import { Role } from '@prisma/client';
 import { LessonViewer } from '../lessons/lesson-access';
 
 @ApiTags('Емтихандар')
-@ApiBearerAuth()
+@ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('courses/:courseId/exams')
 export class ExamsController {

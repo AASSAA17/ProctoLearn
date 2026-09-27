@@ -75,39 +75,35 @@ export class AuthService {
   }
 
   async refresh(token: string) {
+    let payload: any;
     try {
-      const payload = this.jwtService.verify(token, {
+      payload = this.jwtService.verify(token, {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       });
-      if (typeof payload.sub !== 'string' || !Number.isInteger(payload.ver) || typeof payload.jti !== 'string') {
-        throw new UnauthorizedException();
-      }
-
-      const user = await this.prisma.user.findUnique({
-        where: { id: payload.sub },
-      });
-
-      if (!user || !user.refreshToken || payload.ver !== user.tokenVersion) {
-        throw new UnauthorizedException('Жарамсыз refresh token');
-      }
-
-      const digest = tokenDigest(token);
-      if (digest !== user.refreshToken) {
-        throw new UnauthorizedException('Жарамсыз refresh token');
-      }
-
-      const tokens = await this.generateTokens(user.id, user.email, user.role, user.tokenVersion);
-      // One use only, including concurrent refreshes and concurrent session revocation.
-      const rotated = await this.prisma.user.updateMany({
-        where: { id: user.id, refreshToken: digest, tokenVersion: user.tokenVersion },
-        data: { refreshToken: tokenDigest(tokens.refreshToken) },
-      });
-      if (rotated.count !== 1) throw new UnauthorizedException();
-
-      return tokens;
     } catch {
       throw new UnauthorizedException('Жарамсыз refresh token');
     }
+    if (typeof payload.sub !== 'string' || !Number.isInteger(payload.ver) || typeof payload.jti !== 'string') {
+      throw new UnauthorizedException();
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+    if (!user || !user.refreshToken || payload.ver !== user.tokenVersion) {
+      throw new UnauthorizedException('Жарамсыз refresh token');
+    }
+
+    const digest = tokenDigest(token);
+    if (digest !== user.refreshToken) throw new UnauthorizedException('Жарамсыз refresh token');
+
+    const tokens = await this.generateTokens(user.id, user.email, user.role, user.tokenVersion);
+    // One use only, including concurrent refreshes and concurrent session revocation.
+    const rotated = await this.prisma.user.updateMany({
+      where: { id: user.id, refreshToken: digest, tokenVersion: user.tokenVersion },
+      data: { refreshToken: tokenDigest(tokens.refreshToken) },
+    });
+    if (rotated.count !== 1) throw new UnauthorizedException();
+
+    return tokens;
   }
 
   async logout(userId: string) {
@@ -115,6 +111,29 @@ export class AuthService {
       where: { id: userId },
       data: { refreshToken: null, tokenVersion: { increment: 1 }, isOnline: false },
     });
+    return { message: 'Сәтті шықтыңыз' };
+  }
+
+  /** Explicit logout can clear expired cookies, but revocation always requires a verified identity. */
+  async logoutSession(accessToken: string | null, refreshToken: string | null) {
+    for (const candidate of [
+      { token: accessToken, key: 'JWT_ACCESS_SECRET', refresh: false },
+      { token: refreshToken, key: 'JWT_REFRESH_SECRET', refresh: true },
+    ]) {
+      if (!candidate.token) continue;
+      let payload: any;
+      try { payload = this.jwtService.verify(candidate.token, { secret: this.configService.getOrThrow<string>(candidate.key) }); }
+      catch { continue; }
+      if (typeof payload.sub !== 'string' || !Number.isInteger(payload.ver)) continue;
+      const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+      if (!user || user.tokenVersion !== payload.ver || (candidate.refresh && user.refreshToken !== tokenDigest(candidate.token))) continue;
+      await this.prisma.user.updateMany({
+        // Once identity is verified, a concurrent refresh must not prevent session revocation.
+        where: { id: user.id, tokenVersion: user.tokenVersion },
+        data: { refreshToken: null, tokenVersion: { increment: 1 }, isOnline: false },
+      });
+      break;
+    }
     return { message: 'Сәтті шықтыңыз' };
   }
 

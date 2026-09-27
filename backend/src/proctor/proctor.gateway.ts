@@ -9,14 +9,21 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProctorService } from './proctor.service';
 import { ProctorEventDto, SessionDto, StartSessionDto } from './proctor.dto';
+import { accessTokenFromRequest } from '../auth/auth-cookies';
+import { configuredOrigins, getFrontendOrigins, isAllowedOrigin } from '../common/config/origins';
+
+// Engine.IO's allowRequest also covers WebSocket upgrades; CORS alone only
+// protects polling. Browser cookies must never authorize a foreign page.
+function allowedHandshakeOrigin(origin: string | undefined): boolean {
+  return isAllowedOrigin(origin, configuredOrigins(process.env.FRONTEND_URL, process.env.NODE_ENV === 'production'));
+}
 
 @WebSocketGateway({
   maxHttpBufferSize: 64 * 1024,
+  allowRequest: (request, callback) => callback(null, allowedHandshakeOrigin(request.headers.origin)),
   cors: {
     origin: (origin: string, callback: (err: Error | null, allow?: boolean) => void) => {
-      const allowed = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',').map((s) => s.trim());
-      if (process.env.NODE_ENV !== 'production') allowed.push('http://localhost:3000', 'http://localhost:3001');
-      if (!origin || allowed.includes(origin)) return callback(null, true);
+      if (allowedHandshakeOrigin(origin)) return callback(null, true);
       return callback(new Error('CORS not allowed'));
     },
     credentials: true,
@@ -41,7 +48,8 @@ export class ProctorGateway implements OnGatewayConnection, OnGatewayDisconnect 
   // Revalidate expiry and the current DB role on EVERY message, not just connection.
   private async authenticate(client: Socket) {
     try {
-      const token = client.handshake.auth?.token;
+      if (!isAllowedOrigin(client.handshake.headers.origin, getFrontendOrigins(this.configService))) throw new Error('Invalid origin');
+      const token = accessTokenFromRequest(client.handshake, this.configService);
       if (typeof token !== 'string') throw new Error('Missing token');
       const payload = this.jwtService.verify(token, {
         secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),

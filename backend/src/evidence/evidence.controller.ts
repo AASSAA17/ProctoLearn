@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Post, Put, UseGuards, UseInterceptors, UploadedFile, Body, BadRequestException, GoneException, ParseIntPipe } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCookieAuth, ApiConsumes } from '@nestjs/swagger';
 import { diskStorage } from 'multer';
 import { mkdirSync } from 'fs';
 import { unlink } from 'fs/promises';
@@ -23,7 +23,7 @@ export const RECORDING_DIRECTORY = join(tmpdir(), 'proctolearn-recording-chunks'
 mkdirSync(RECORDING_DIRECTORY, { recursive: true, mode: 0o700 });
 
 @ApiTags('Дәлелдемелер')
-@ApiBearerAuth()
+@ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('evidence')
 export class EvidenceController {

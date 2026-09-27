@@ -5,6 +5,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { collectDefaultMetrics, register } from 'prom-client';
+import { ConfigService } from '@nestjs/config';
+import { getFrontendOrigins } from './common/config/origins';
 
 let metricsInitialized = false;
 
@@ -24,11 +26,7 @@ async function bootstrap() {
     }),
   );
 
-  const allowedOrigins = [
-    'http://localhost:3000',
-    ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3001'] : []),
-    ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map((s) => s.trim()) : []),
-  ].filter(Boolean);
+  const allowedOrigins = getFrontendOrigins(app.get(ConfigService));
 
   app.enableCors({
     origin: allowedOrigins,
@@ -42,7 +40,7 @@ async function bootstrap() {
       .setTitle('ProctoLearn API')
       .setDescription('Онлайн оқыту платформасы API құжаттамасы')
       .setVersion('1.0')
-      .addBearerAuth()
+      .addCookieAuth('pl-access')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);

@@ -52,9 +52,8 @@ export default function ProctorDashboardPage() {
   useEffect(() => {
     if (!selected) return;
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     const socket = io(`${WS_URL}/proctor`, {
-      auth: { token },
+      withCredentials: true,
       transports: ['websocket'],
     });
 
@@ -79,8 +78,7 @@ export default function ProctorDashboardPage() {
         try {
           await api.get('/auth/me');
           if (!active) return;
-          socket.auth = { token: localStorage.getItem('accessToken') };
-          socket.connect();
+          socket.disconnect().connect();
         } catch { if (active) toast.error(message); }
       } else { toast.error(message); }
     });

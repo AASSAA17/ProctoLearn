@@ -1,10 +1,11 @@
-﻿'use client';
+'use client';
 
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import toast from 'react-hot-toast';
+import { analyzePassword } from '@/lib/password-policy';
 
 function EyeIcon({ open }: { open: boolean }) {
   return (
@@ -23,13 +24,7 @@ function EyeIcon({ open }: { open: boolean }) {
   );
 }
 
-function analyzePassword(pw: string) {
-  const digits = (pw.match(/\d/g) || []).length;
-  const specials = (pw.match(/[!@#$%^&*()\-_=+\[\]{};':"|,.<>\/?]/g) || []).length;
-  const checks = { length: pw.length >= 6, digits: digits >= 2, specials: specials >= 2 };
-  const score = Object.values(checks).filter(Boolean).length;
-  return { checks, score, digits, specials };
-}
+
 
 const STRENGTH_LABELS = ['', 'Әлсіз', 'Орташа', 'Күшті'];
 const STRENGTH_COLORS = ['', 'bg-red-500', 'bg-yellow-400', 'bg-green-500'];
@@ -46,7 +41,7 @@ export default function RegisterPage() {
   const pwA = analyzePassword(form.password);
   const passwordMismatch = !!form.confirmPassword && form.password !== form.confirmPassword;
   const phone = form.phoneDigits ? '+7' + form.phoneDigits : '';
-  const isPasswordValid = pwA.checks.length && pwA.checks.digits && pwA.checks.specials;
+  const isPasswordValid = pwA.valid;
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -129,6 +124,7 @@ export default function RegisterPage() {
             )}
             <div className="mt-2 space-y-1">
               {[
+                { ok: pwA.checks.bytes, label: 'Ең көбі 72 UTF-8 байт' },
                 { ok: pwA.checks.length, label: 'Кемінде 6 символ' },
                 { ok: pwA.checks.digits, label: `Кемінде 2 цифр (қазір: ${pwA.digits})` },
                 { ok: pwA.checks.specials, label: `Кемінде 2 арнайы таңба (қазір: ${pwA.specials})` },

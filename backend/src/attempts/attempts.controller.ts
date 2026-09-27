@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Param, Body, Query, UseGuards, Patch, Header } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCookieAuth, ApiQuery } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AttemptsService } from './attempts.service';
 import { SaveDraftDto, SubmitAnswersDto } from './dto/attempt.dto';
@@ -11,7 +11,7 @@ import { Role } from '@prisma/client';
 import { Actor } from '../proctor/proctor-access';
 
 @ApiTags('Талпынулар')
-@ApiBearerAuth()
+@ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('attempts')
 export class AttemptsController {

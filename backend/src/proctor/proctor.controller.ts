@@ -1,5 +1,5 @@
 import { Controller, Get, Put, Delete, Post, Body, Param, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCookieAuth } from '@nestjs/swagger';
 import { ProctorService } from './proctor.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -10,7 +10,7 @@ import { Actor } from './proctor-access';
 import { AppealAttemptDto, ResolveAppealDto, ReviewAttemptDto } from './proctor.dto';
 
 @ApiTags('Прокторинг')
-@ApiBearerAuth()
+@ApiCookieAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.PROCTOR, Role.ADMIN)
 @Controller('proctor')

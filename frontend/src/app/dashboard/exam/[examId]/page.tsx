@@ -261,7 +261,7 @@ function ExamSession({ examId }: { examId: string }) {
       await startRecording('screen', screenRecorder);
       if (!mountedRef.current) { stopAllMedia(); return; }
       await refreshLocal();
-      const socket = io(`${WS_URL}/proctor`, { auth: { token: localStorage.getItem('accessToken') }, transports: ['websocket'] });
+      const socket = io(`${WS_URL}/proctor`, { withCredentials: true, transports: ['websocket'] });
       socketRef.current = socket;
       socket.on('connect', () => socket.emit('proctor:start', { attemptId: data.id, role: 'student' }));
       socket.on('proctor:event:recorded', ({ trustScore: score }) => { if (mountedRef.current) setTrustScore(score); });
@@ -270,8 +270,7 @@ function ExamSession({ examId }: { examId: string }) {
           try {
             await api.get('/auth/me');
             if (endedRef.current || !mountedRef.current) return;
-            socket.auth = { token: localStorage.getItem('accessToken') };
-            socket.connect();
+            socket.disconnect().connect();
           } catch { if (mountedRef.current) setNotice(message || 'Прокторинг байланысы үзілді.'); }
         } else if (mountedRef.current) setNotice(message || 'Прокторинг қатесі');
       });

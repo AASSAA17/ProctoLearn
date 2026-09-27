@@ -1,7 +1,7 @@
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCookieAuth, ApiQuery } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto, UpdateCourseDto } from './dto/course.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -16,7 +16,7 @@ export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
   @Post()
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Курс жасау (мұғалім)' })
@@ -51,7 +51,7 @@ export class CoursesController {
   }
 
   @Get(':id/material')
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Курс материалдары (тіркелген студент немесе курс иесі)' })
   getMaterial(@Param('id') id: string, @CurrentUser() viewer: LessonViewer) {
@@ -59,7 +59,7 @@ export class CoursesController {
   }
 
   @Patch(':id')
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Курсты жаңарту' })
@@ -73,7 +73,7 @@ export class CoursesController {
   }
 
   @Delete(':id')
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Курсты жою' })

@@ -109,7 +109,7 @@ test('socket rejects a revoked token before processing events', async () => {
   await f.service.logout(f.user.id);
   const gateway = new ProctorGateway({ recordEvent: () => assert.fail('revoked session') }, f.jwt, f.config, f.db);
   let disconnected = false;
-  const client = { data: {}, handshake: { auth: { token: tokens.accessToken } }, emit() {}, disconnect() { disconnected = true; } };
+  const client = { data: {}, handshake: { headers: { origin: 'http://localhost:3000', cookie: `pl-access=${tokens.accessToken}` } }, emit() {}, disconnect() { disconnected = true; } };
   await assert.rejects(gateway.handleEvent(client, { attemptId: 'a', type: 'tab_switch' }), WsException);
   assert.equal(disconnected, true);
 });

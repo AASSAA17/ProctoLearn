@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { NavIcon } from '@/components/nav-icon';
 import { Spinner } from '@/components/ui';
 import ChatWidget from '@/components/ai/ChatWidget';
+import toast from 'react-hot-toast';
 
 const ROLE_LABEL: Record<string, string> = {
   STUDENT: 'Студент',
@@ -16,26 +17,27 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, fetchMe, logout, isLoading, _hasHydrated } = useAuthStore();
+  const { user, fetchMe, logout, isLoading, initialized, error } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
-    // Validate token in background; user is already restored from localStorage by persist
-    fetchMe();
-  }, []);
+    void fetchMe();
+    const retry = () => { if (document.visibilityState === 'visible') void fetchMe(); };
+    window.addEventListener('online', retry);
+    document.addEventListener('visibilitychange', retry);
+    return () => { window.removeEventListener('online', retry); document.removeEventListener('visibilitychange', retry); };
+  }, [fetchMe]);
 
   useEffect(() => {
-    // Only redirect after hydration is complete and there is no user
-    if (_hasHydrated && !isLoading && !user) {
-      router.push('/auth/login');
+    if (initialized && !isLoading && !user && !error) {
+      router.replace('/auth/login');
     }
-  }, [user, isLoading, _hasHydrated]);
+  }, [user, isLoading, initialized, error, router]);
 
-  // Show spinner until persist has rehydrated from localStorage
-  if (!_hasHydrated || (!user && isLoading)) {
+  if (!initialized || (!user && isLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -46,7 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!user) return null;
+  if (!user) return error ? <div className="min-h-screen flex items-center justify-center p-6"><div className="card space-y-4 max-w-md"><p role="alert">{error}</p><button className="btn-primary" onClick={() => void fetchMe()}>Қайта тексеру</button><Link className="block text-primary-700" href="/auth/login">Кіру беті</Link></div></div> : null;
 
   // Exam mode: hide entire shell, render only the exam page
   if (pathname.startsWith('/dashboard/exam/')) {
@@ -55,8 +57,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const handleLogout = async () => {
     setProfileOpen(false);
-    await logout();
-    router.push('/auth/login');
+    try { await logout(); router.replace('/auth/login'); }
+    catch { toast.error('Серверден шығу расталмады. Байланысты тексеріп, қайта көріңіз.'); }
   };
 
   const navLinks = [
@@ -89,6 +91,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {error && <div role="alert" className="bg-amber-50 p-3 text-center text-sm">{error}<button className="ml-3 underline" onClick={() => void fetchMe()}>Қайта тексеру</button></div>}
       {/* Password change banner */}
       {user.mustChangePassword && (
         <div className="bg-amber-500 text-white text-sm text-center py-2 px-4 font-medium">

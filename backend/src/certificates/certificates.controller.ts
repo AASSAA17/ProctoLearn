@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Res, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCookieAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CertificatesService } from './certificates.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -11,7 +11,7 @@ export class CertificatesController {
   constructor(private readonly certificatesService: CertificatesService) {}
 
   @Get('my')
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Менің сертификаттарым' })
   myСertificates(@CurrentUser('id') userId: string) {
@@ -25,7 +25,7 @@ export class CertificatesController {
   }
 
   @Get(':id/pdf')
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Сертификатты PDF форматта жүктеу' })
   async downloadPdf(

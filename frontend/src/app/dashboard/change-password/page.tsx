@@ -3,16 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
-import api from '@/lib/api';
+import { authMutation } from '@/lib/api';
 import toast from 'react-hot-toast';
+import { analyzePassword } from '@/lib/password-policy';
 
-function analyzePassword(pw: string) {
-  const digits = (pw.match(/\d/g) || []).length;
-  const specials = (pw.match(/[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>\/?]/g) || []).length;
-  const checks = { length: pw.length >= 6, digits: digits >= 2, specials: specials >= 2 };
-  const score = Object.values(checks).filter(Boolean).length;
-  return { checks, score, digits, specials };
-}
+
 
 const STRENGTH_LABELS = ['', 'Әлсіз', 'Орташа', 'Күшті'];
 const STRENGTH_COLORS = ['', 'bg-red-500', 'bg-yellow-400', 'bg-green-500'];
@@ -26,7 +21,7 @@ export default function ChangePasswordPage() {
 
   const pwA = analyzePassword(form.newPassword);
   const mismatch = !!form.confirmPassword && form.newPassword !== form.confirmPassword;
-  const isValid = pwA.checks.length && pwA.checks.digits && pwA.checks.specials;
+  const isValid = pwA.valid;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,12 +29,10 @@ export default function ChangePasswordPage() {
     if (mismatch) { toast.error('Құпиясөздер сәйкес келмейді'); return; }
     setLoading(true);
     try {
-      await api.post('/auth/change-password', {
+      await authMutation('/auth/change-password', {
         currentPassword: form.currentPassword,
         newPassword: form.newPassword,
-      });
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      }, true);
       setUser(null);
       toast.success('Құпиясөз өзгертілді. Жаңа құпиясөзбен қайта кіріңіз.');
       router.replace('/auth/login');
@@ -88,6 +81,7 @@ export default function ChangePasswordPage() {
             )}
             <div className="mt-1 space-y-0.5">
               {[
+                { ok: pwA.checks.bytes, l: 'Ең көбі 72 UTF-8 байт' },
                 { ok: pwA.checks.length, l: 'Кемінде 6 символ' },
                 { ok: pwA.checks.digits, l: `Кемінде 2 сан (қазір: ${pwA.digits})` },
                 { ok: pwA.checks.specials, l: `Кемінде 2 арнайы таңба (қазір: ${pwA.specials})` },

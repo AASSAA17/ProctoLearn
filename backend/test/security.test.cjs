@@ -223,7 +223,7 @@ test('socket revalidates expired tokens and deleted users before invoking servic
   const service = { recordEvent: () => assert.fail('must not process an event') };
   for (const token of [jwt.sign({ sub: 'student' }, { secret: key, expiresIn: -1 }), jwt.sign({ sub: 'deleted' }, { secret: key, expiresIn: '15m' })]) {
     let disconnected = false;
-    const client = { handshake: { auth: { token } }, emit() {}, disconnect() { disconnected = true; } };
+    const client = { data: {}, handshake: { headers: { origin: 'http://localhost:3000', cookie: `pl-access=${token}` } }, emit() {}, disconnect() { disconnected = true; } };
     const gateway = new ProctorGateway(service, jwt, config, { user: { findUnique: async () => null } });
     await assert.rejects(gateway.handleEvent(client, { attemptId: 'a', type: 'tab_switch' }), WsException);
     assert.equal(disconnected, true);
@@ -235,7 +235,7 @@ test('socket uses current DB role, not a stale role from JWT', async () => {
   const token = jwt.sign({ sub: 'student', role: 'PROCTOR', ver: 0 }, { secret: key, expiresIn: '15m' });
   const f = fixture();
   const gateway = new ProctorGateway(f.proctor, jwt, new ConfigService({ JWT_ACCESS_SECRET: key }), { user: { findUnique: async () => ({ id: 'student', role: 'STUDENT', tokenVersion: 0 }) } });
-  const client = { data: {}, handshake: { auth: { token } }, emit() {}, disconnect() {}, join() { assert.fail('must not join'); } };
+  const client = { data: {}, handshake: { headers: { origin: 'http://localhost:3000', cookie: `pl-access=${token}` } }, emit() {}, disconnect() {}, join() { assert.fail('must not join'); } };
   await assert.rejects(gateway.handleStart(client, { attemptId: 'attempt', role: 'proctor' }), WsException);
   gateway.handleDisconnect(client);
 });

@@ -1,7 +1,7 @@
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCookieAuth } from '@nestjs/swagger';
 import { StepsService } from './steps.service';
 import { CreateStepDto, UpdateStepDto, SubmitAnswerDto } from './dto/step.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -12,14 +12,14 @@ import { Role } from '@prisma/client';
 import { LessonViewer } from '../lessons/lesson-access';
 
 @ApiTags('Қадамдар')
-@ApiBearerAuth()
+@ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
 @Controller()
 export class StepsController {
   constructor(private readonly stepsService: StepsService) {}
 
   @Post('lessons/:lessonId/steps')
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @UseGuards(RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Сабаққа қадам қосу' })
@@ -44,7 +44,7 @@ export class StepsController {
   }
 
   @Patch('steps/:id')
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @UseGuards(RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Қадамды жаңарту' })
@@ -57,7 +57,7 @@ export class StepsController {
   }
 
   @Delete('steps/:id')
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @UseGuards(RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({ summary: 'Қадамды жою' })
@@ -66,7 +66,7 @@ export class StepsController {
   }
 
   @Post('steps/:id/submit')
-  @ApiBearerAuth()
+  @ApiCookieAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Жауапты тапсыру (автотексеру)' })
   submit(

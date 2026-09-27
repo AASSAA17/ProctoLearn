@@ -95,6 +95,8 @@ export default function LoginPage() {
           </button>
         </form>
 
+        <p className="mt-4 text-center text-sm"><Link href="/auth/forgot-password" className="text-primary-700 hover:underline">Құпиясөзді ұмыттыңыз ба?</Link></p>
+
         <p className="text-center text-sm text-gray-500 mt-6">
           Тіркелмедіңіз бе?{' '}
           <Link href="/auth/register" className="text-primary-600 hover:underline font-medium">

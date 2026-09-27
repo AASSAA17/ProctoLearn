@@ -24,6 +24,7 @@ import { ActivityInterceptor } from './common/interceptors/activity.interceptor'
 import { GraphiteMetricsInterceptor } from '@/common/interceptors/graphite-metrics.interceptor';
 import { GraphiteService } from './common/services/graphite.service';
 import { validateEnvironment } from './common/config/environment';
+import { CsrfGuard } from './auth/csrf.guard';
 
 @Module({
   imports: [
@@ -64,6 +65,10 @@ import { validateEnvironment } from './common/config/environment';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useExisting: CsrfGuard,
     },
     {
       provide: APP_INTERCEPTOR,

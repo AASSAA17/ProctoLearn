@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCookieAuth } from '@nestjs/swagger';
 import { LessonsService } from './lessons.service';
 import { CreateLessonDto, UpdateLessonDto } from './dto/lesson.dto';
 import { LessonViewer } from './lesson-access';
@@ -16,7 +16,7 @@ class CheckAssignmentDto {
 }
 
 @ApiTags('Сабақтар')
-@ApiBearerAuth()
+@ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('courses/:courseId/lessons')
 export class LessonsController {
@@ -78,7 +78,7 @@ export class LessonsController {
 }
 
 @ApiTags('Сабақтар')
-@ApiBearerAuth()
+@ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('modules/:moduleId/lessons')
 export class ModuleLessonsController {
@@ -100,7 +100,7 @@ export class ModuleLessonsController {
 }
 
 @ApiTags('Сабақтар')
-@ApiBearerAuth()
+@ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('lessons')
 export class StandaloneLessonsController {
