@@ -13,6 +13,7 @@ interface Attempt {
   startedAt: string;
   finishedAt: string | null;
   reviewStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
+  appealState?: 'OPEN' | 'UPHELD' | 'OVERTURNED' | null;
   reviewReason?: string | null;
   flaggedAt?: string | null;
   exam: { id: string; title: string; passScore: number };
@@ -127,6 +128,7 @@ export default function MyAttemptsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-2">
                         {statusLabel(attempt)}
+                        {attempt.appealState && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">{attempt.appealState === 'OPEN' ? 'Апелляция қаралуда' : attempt.appealState === 'OVERTURNED' ? 'Апелляция қанағаттандырылды' : 'Апелляция: шешім сақталды'}</span>}
                         {attempt.flaggedAt && <span className="text-xs text-amber-700">Қосымша тексеру</span>}
                         <h3 className="font-semibold text-gray-900 text-sm truncate">
                           {attempt.exam.title}
@@ -167,7 +169,7 @@ export default function MyAttemptsPage() {
                       )}
                       {(attempt.status === 'FINISHED' || attempt.status === 'FLAGGED' || attempt.status === 'FAILED') && (
                         <Link href={`/dashboard/my-attempts/${attempt.id}`} className="btn-secondary text-sm px-4 py-2">
-                          📄 Нәтижені қарау
+                          {attempt.appealState ? 'Апелляцияны қарау' : attempt.reviewStatus === 'REJECTED' ? 'Нәтиже және апелляция' : '📄 Нәтижені қарау'}
                         </Link>
                       )}
                     </div>

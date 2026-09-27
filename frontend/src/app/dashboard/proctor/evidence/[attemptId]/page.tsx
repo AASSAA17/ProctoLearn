@@ -23,6 +23,10 @@ interface ReviewSummary {
   reviewStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
   reviewReason: string | null;
   reviewedAt: string | null;
+  reviewedBy: string | null;
+  appeal: { id: string; reason: string; state: string; response: string | null; createdAt: string; decidedAt: string | null } | null;
+  history: { id: string; reviewerId: string; decision: string; source: string; reason: string; createdAt: string }[];
+  recordingUploads: { id: string; kind: string; state: string; interrupted: boolean; bytes: number }[];
   exam: { title: string; passScore: number };
 }
 
@@ -207,11 +211,18 @@ export default function EvidencePage() {
   const ownAttempt = !!summary && summary.userId === user?.id;
   const pendingReview = summary?.reviewStatus === 'PENDING';
   const canReview = finished && pendingReview && !ownAttempt;
-  const canApprove = canReview && summary?.status === 'FINISHED' && summary.score !== null
-    && summary.score >= summary.exam.passScore && cameras.length > 0 && screens.length > 0;
+  const unfinishedUploads = summary?.recordingUploads?.filter((upload) => !['COMPLETE', 'ABORTED'].includes(upload.state)) ?? [];
+  const interruptedUploads = summary?.recordingUploads?.filter((upload) => upload.interrupted || upload.state === 'ABORTED') ?? [];
+  const evidenceReady = summary?.status === 'FINISHED' && summary.score !== null
+    && summary.score >= summary.exam.passScore && cameras.length > 0 && screens.length > 0 && unfinishedUploads.length === 0;
+  const canApprove = canReview && evidenceReady;
+  const originalReviewer = summary?.history?.find((review) => review.source === 'INITIAL')?.reviewerId ?? summary?.reviewedBy;
+  const canResolveAppeal = finished && summary?.appeal?.state === 'OPEN' && !ownAttempt && !!originalReviewer && originalReviewer !== user?.id;
 
-  const submitReview = async (decision: 'APPROVED' | 'REJECTED') => {
-    if (!canReview || reviewRequestRef.current || (decision === 'APPROVED' && !canApprove)) return;
+  const submitReview = async (decision: 'APPROVED' | 'REJECTED' | 'UPHELD' | 'OVERTURNED') => {
+    const appealDecision = decision === 'UPHELD' || decision === 'OVERTURNED';
+    if (reviewRequestRef.current || (appealDecision ? !canResolveAppeal : !canReview)
+      || ((decision === 'APPROVED' || decision === 'OVERTURNED') && !evidenceReady)) return;
     const reason = reviewReason.trim();
     if (reason.length < 3 || reason.length > 2000) {
       setReviewError('Шешімнің себебін жазыңыз (3–2000 таңба).');
@@ -226,10 +237,13 @@ export default function EvidencePage() {
     setReviewError(null);
     setReviewMessage(null);
     try {
-      const { data } = await api.post(`/proctor/sessions/${attemptId}/review`, { decision, reason }, { signal: controller.signal });
+      const { data } = await api.post(`/proctor/sessions/${attemptId}/${appealDecision ? 'appeal/resolve' : 'review'}`, { decision, reason }, { signal: controller.signal });
       if (!activeRef.current || epoch !== epochRef.current) return;
       setSummary((previous) => previous ? { ...previous, ...data } : previous);
+      setReviewReason('');
       setReviewMessage(data.certificateIssued ? 'Шешім сақталды. Сертификат қолжетімді.' : 'Тексеру шешімі сақталды.');
+      reviewRequestRef.current = null;
+      void refresh('manual');
     } catch (failure: any) {
       if (controller.signal.aborted || !activeRef.current || epoch !== epochRef.current) return;
       const message = failure?.response?.data?.message;
@@ -273,6 +287,11 @@ export default function EvidencePage() {
           {summary.reviewedAt && <p className="text-xs text-gray-500">{new Date(summary.reviewedAt).toLocaleString('kk-KZ')}</p>}
           {!finished && <p className="text-sm text-gray-600">Студент емтиханды аяқтағаннан кейін шешім қабылдауға болады.</p>}
           {ownAttempt && <p className="text-sm text-amber-800">Өз талпынысыңызды тексеруге болмайды.</p>}
+          {unfinishedUploads.length > 0 && <p className="text-sm text-amber-800">Жүктелуі аяқталмаған жазбалар: {unfinishedUploads.length}. Мақұлдау үшін жүктеудің аяқталуын күтіңіз.</p>}
+          {interruptedUploads.length > 0 && <p className="text-sm text-amber-800">Үзілген немесе тоқтатылған жазбалар: {interruptedUploads.length}. Жазбалардағы үзілістерді шешім қабылдағанға дейін тексеріңіз.</p>}
+          {!!summary.recordingUploads?.length && <ul className="space-y-1 text-xs text-gray-600">{summary.recordingUploads.map((upload) => (
+            <li key={upload.id}>{upload.kind === 'camera' ? 'Камера' : 'Экран'}: {upload.state === 'COMPLETE' ? 'Жүктелді' : upload.state === 'ABORTED' ? 'Тоқтатылды' : upload.state === 'FINALIZING' ? 'Біріктірілуде' : 'Жүктелуде'} · {(upload.bytes / 1024 / 1024).toFixed(1)} МБ{upload.interrupted ? ' · Үзіліс тіркелді' : ''}</li>
+          ))}</ul>}
           {canReview && (
             <>
               <p className="text-sm text-gray-600">Камера мен экран жазбаларын қарап, шешімнің себебін жазыңыз. Сақталған шешімді өзгертуге болмайды.</p>
@@ -290,6 +309,30 @@ export default function EvidencePage() {
               {reviewing && <p role="status" className="text-sm text-gray-500">Шешім сақталуда...</p>}
             </>
           )}
+          {summary.appeal && <div className="border-t pt-4 space-y-3">
+            <h3 className="font-semibold">Апелляция: {summary.appeal.state === 'OPEN' ? 'Қаралуда' : summary.appeal.state === 'OVERTURNED' ? 'Қанағаттандырылды' : 'Бастапқы шешім сақталды'}</h3>
+            <p className="text-sm whitespace-pre-wrap">Студенттің себебі: {summary.appeal.reason}</p>
+            {summary.appeal.response && <p className="text-sm whitespace-pre-wrap">Жауап: {summary.appeal.response}</p>}
+            {summary.appeal.state === 'OPEN' && !ownAttempt && !canResolveAppeal && <p className="text-sm text-amber-800">Апелляцияны бастапқы шешімді қабылдамаған басқа тағайындалған проктор немесе әкімші қарайды.</p>}
+            {canResolveAppeal && <>
+              <p className="text-sm text-gray-600">Бастапқы шешім мен жазбаларды қайта қарап, тәуелсіз шешім қабылдаңыз.</p>
+              {!evidenceReady && <p className="text-sm text-amber-800">Қанағаттандыру үшін өту балы және камера мен экранның толық жүктелген жазбалары қажет.</p>}
+              <label htmlFor="appeal-response" className="block text-sm font-medium">Апелляция жауабы</label>
+              <textarea id="appeal-response" value={reviewReason} onChange={(event) => setReviewReason(event.target.value)} minLength={3} maxLength={2000} rows={4} disabled={reviewing} className="w-full rounded-lg border border-gray-300 p-3 text-sm" />
+              <div className="flex flex-wrap gap-3">
+                <button type="button" disabled={reviewing || !evidenceReady || reviewReason.trim().length < 3} onClick={() => { void submitReview('OVERTURNED'); }} className="btn-primary disabled:opacity-50">Апелляцияны қанағаттандыру</button>
+                <button type="button" disabled={reviewing || reviewReason.trim().length < 3} onClick={() => { void submitReview('UPHELD'); }} className="rounded-lg border border-red-300 px-4 py-2 font-semibold text-red-700 disabled:opacity-50">Бастапқы шешімді сақтау</button>
+              </div>
+              {reviewing && <p role="status" className="text-sm text-gray-500">Шешім сақталуда...</p>}
+            </>}
+          </div>}
+          {!!summary.history?.length && <details className="border-t pt-3">
+            <summary className="cursor-pointer text-sm font-semibold">Шешімдер тарихы</summary>
+            <ol className="mt-3 space-y-3">{summary.history.map((review) => <li key={review.id} className="text-sm">
+              <p className="font-medium">{review.source === 'APPEAL' ? 'Апелляция' : 'Бастапқы тексеру'} · {review.decision === 'APPROVED' ? 'Мақұлданды' : review.decision === 'REJECTED' ? 'Қабылданбады' : review.decision === 'OVERTURNED' ? 'Қанағаттандырылды' : 'Бастапқы шешім сақталды'}</p>
+              <p className="whitespace-pre-wrap">{review.reason}</p><p className="text-xs text-gray-500">{new Date(review.createdAt).toLocaleString('kk-KZ')}</p>
+            </li>)}</ol>
+          </details>}
         </section>
       )}
 

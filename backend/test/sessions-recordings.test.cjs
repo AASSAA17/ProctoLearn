@@ -129,39 +129,23 @@ test('recording header must match the declared container', async () => {
     await assert.rejects(recordingFormat(path, 'video/webm'), BadRequestException);
   });
 });
-test('temporary upload is deleted on success and service failure', async () => {
+test('temporary chunk file is deleted on success and service failure', async () => {
   for (const fail of [false, true]) await withFile(webmHeader, async (path) => {
-    const controller = new EvidenceController({ saveRecording: async (_id, actualPath) => {
+    const controller = new EvidenceController({}, { putChunk: async (_id, _index, actualPath) => {
       assert.equal(actualPath, path);
       if (fail) throw new Error('storage unavailable');
       return { id: 'saved' };
     } });
-    const upload = controller.uploadRecording('attempt', { path, mimetype: 'video/webm' }, 'camera', 'student');
+    const upload = controller.uploadChunk('upload', 0, { path }, 'student');
     if (fail) await assert.rejects(upload, /storage unavailable/); else assert.equal((await upload).id, 'saved');
     await assert.rejects(access(path), { code: 'ENOENT' });
   });
 });
-test('invalid recording type also deletes the temporary file', async () => {
-  await withFile(webmHeader, async (path) => {
-    const controller = new EvidenceController({ saveRecording: () => assert.fail('must not save') });
-    await assert.rejects(controller.uploadRecording('attempt', { path }, 'invalid', 'student'), BadRequestException);
-    await assert.rejects(access(path), { code: 'ENOENT' });
-  });
-});
-test('object is removed if its database evidence record cannot be saved', async () => {
-  await withFile(webmHeader, async (path) => {
-    let uploaded, removed;
-    const service = new EvidenceService({
-      attempt: { findUnique: async () => ({ userId: 'student' }) },
-      evidenceFile: { create: async () => { throw new Error('DB failure'); } },
-    }, {
-      uploadFile: async (actualPath, name) => { assert.equal(actualPath, path); uploaded = name; },
-      removeObject: async (name) => { removed = name; },
-    });
-    await assert.rejects(service.saveRecording('attempt', path, 'video/webm', 'camera', 'student'), /DB failure/);
-    assert.ok(uploaded);
-    assert.equal(removed, uploaded);
-  });
+test('legacy recording endpoint and service cannot bypass chunk quotas or review policy', async () => {
+  const controller = new EvidenceController({}, {});
+  assert.throws(() => controller.uploadRecording(), (error) => error.getStatus() === 410);
+  const service = new EvidenceService({ attempt: { findUnique: async () => ({ userId: 'student' }) } }, { uploadFile: () => assert.fail('legacy write must not upload') });
+  await assert.rejects(service.saveRecording('attempt', '/unused', 'video/webm', 'camera', 'student'), (error) => error.getStatus() === 410);
 });
 test('presigned URLs use the external host without contacting internal MinIO', async () => {
   const service = new MinioService(new ConfigService({
@@ -182,44 +166,4 @@ test('production rejects missing external storage URL and URLs with paths', () =
 test('MinIO never falls back to shared public credentials', () => {
   assert.throws(() => new MinioService(new ConfigService({})), /MINIO_ROOT_USER/);
   assert.throws(() => new MinioService(new ConfigService({ MINIO_ROOT_USER: 'test-user' })), /MINIO_ROOT_PASSWORD/);
-});
-
-test('HTTP multipart accepts camera/screen files and rejects foreign owners before storing', async () => {
-  const { Test } = require('@nestjs/testing');
-  const { ForbiddenException } = require('@nestjs/common');
-  const { JwtAuthGuard } = require('../src/common/guards/jwt-auth.guard');
-  const savedPaths = [];
-  const module = await Test.createTestingModule({
-    controllers: [EvidenceController],
-    providers: [{ provide: EvidenceService, useValue: {
-      assertOwner: async (attemptId) => { if (attemptId !== 'own') throw new ForbiddenException(); },
-      saveRecording: async (_attemptId, path, mime, type, userId) => {
-        assert.equal(userId, 'student');
-        assert.equal((await recordingFormat(path, mime)).extension, 'webm');
-        savedPaths.push(path);
-        return { id: 'saved', type };
-      },
-    } }],
-  }).overrideGuard(JwtAuthGuard).useValue({ canActivate: (ctx) => {
-    ctx.switchToHttp().getRequest().user = { id: 'student' };
-    return true;
-  } }).compile();
-  const app = module.createNestApplication({ logger: false });
-  try {
-    await app.listen(0, '127.0.0.1');
-    const origin = await app.getUrl();
-    for (const [attemptId, type] of [['own', 'camera'], ['own', 'screen'], ['foreign', 'camera']]) {
-      const form = new FormData();
-      form.append('file', new Blob([webmHeader], { type: 'video/webm' }), 'recording.webm');
-      form.append('type', type);
-      const response = await fetch(`${origin}/evidence/${attemptId}/recording`, { method: 'POST', body: form });
-      const body = await response.json();
-      assert.equal(response.status, attemptId === 'own' ? 201 : 403, JSON.stringify(body));
-      if (attemptId === 'own') assert.equal(body.type, type);
-    }
-    assert.equal(savedPaths.length, 2);
-    for (const path of savedPaths) await assert.rejects(access(path), { code: 'ENOENT' });
-  } finally {
-    await app.close();
-  }
 });

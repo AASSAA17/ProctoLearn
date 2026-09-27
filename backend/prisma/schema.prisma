@@ -244,6 +244,9 @@ model Attempt {
   events     ProctorEvent[]
   evidences  EvidenceFile[]
   answers    Answer[]
+  recordingUploads RecordingUpload[]
+  appeal AttemptAppeal?
+  reviews AttemptReview[]
 
   @@index([examId, userId])
   @@map("attempts")
@@ -296,6 +299,71 @@ model Certificate {
   course   Course   @relation(fields: [courseId], references: [id])
 
   @@map("certificates")
+}
+
+model RecordingUpload {
+  id String @id @default(uuid())
+  attemptId String
+  kind String
+  clientSessionId String
+  mimeType String
+  state String @default("OPEN")
+  bytes Int @default(0)
+  expectedChunks Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime
+  evidenceId String? @unique
+  interrupted Boolean @default(false)
+  finalizeToken String?
+  finalizeLeaseUntil DateTime?
+  attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  chunks RecordingChunk[]
+
+  @@unique([attemptId, kind, clientSessionId])
+  @@index([state, expiresAt])
+  @@map("recording_uploads")
+}
+
+model RecordingChunk {
+  uploadId String
+  index Int
+  sha256 String
+  size Int
+  objectKey String @unique
+  createdAt DateTime @default(now())
+  upload RecordingUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@id([uploadId, index])
+  @@map("recording_chunks")
+}
+
+model AttemptAppeal {
+  id String @id @default(uuid())
+  attemptId String @unique
+  reason String
+  state String @default("OPEN")
+  createdAt DateTime @default(now())
+  decidedAt DateTime?
+  decidedBy String?
+  response String?
+  attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@map("attempt_appeals")
+}
+
+model AttemptReview {
+  id String @id @default(uuid())
+  attemptId String
+  reviewerId String
+  decision String
+  reason String
+  source String
+  createdAt DateTime @default(now())
+  attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId, createdAt])
+  @@map("attempt_reviews")
 }
 
 model PasswordResetToken {

@@ -49,6 +49,7 @@ export function safeAttempt(attempt: any): Record<string, any> {
     result.exam = Object.fromEntries(['id', 'title', 'duration', 'passScore', 'courseId'].filter((key) => source[key] !== undefined).map((key) => [key, source[key]]));
   }
   if (attempt.user) result.user = { id: attempt.user.id, name: attempt.user.name, email: attempt.user.email };
+  if (attempt.appeal !== undefined) result.appealState = attempt.appeal?.state ?? null;
   if (attempt._count) result._count = attempt._count;
   return result;
 }

@@ -27,14 +27,14 @@ function fixture() {
       { type: 'recording_camera', url: 'recordings/attempt/camera.webm' },
       { type: 'recording_screen', url: 'recordings/attempt/screen.webm' },
     ],
-    certificates: [], events: [], enrollment: { userId: 'student', courseId: 'course', completedAt: null },
+    certificates: [], events: [], reviews: [], recordingUploads: [], enrollment: { userId: 'student', courseId: 'course', completedAt: null },
     assigned: true,
   };
   const failures = { certificate: false, enrollment: false, cas: false };
   const db = {
     attempt: {
       findUnique: async ({ where }) => where.id === 'attempt' ? structuredClone({
-        ...state.attempt, events: state.events, evidences: state.evidence,
+        ...state.attempt, events: state.events, evidences: state.evidence, reviews: state.reviews, recordingUploads: state.recordingUploads, appeal: null,
         exam: { id: 'exam', title: 'Changed exam', duration: 1, passScore: 1, courseId: 'course' },
         user: { id: 'student', name: 'Student', email: 'student@example.invalid' },
       }) : null,
@@ -47,6 +47,8 @@ function fixture() {
     },
     examProctor: { findUnique: async ({ where }) => state.assigned && where.examId_proctorId.proctorId === 'proctor' ? { examId: 'exam', proctorId: 'proctor' } : null },
     evidenceFile: { findMany: async () => structuredClone(state.evidence) },
+    recordingUpload: { findMany: async () => structuredClone(state.recordingUploads) },
+    attemptReview: { create: async ({ data }) => { const review = { id: 'review', ...data, createdAt: new Date() }; state.reviews.push(review); return review; } },
     certificate: {
       findFirst: async ({ where }) => state.certificates.find((certificate) => certificate.userId === where.userId && certificate.courseId === where.courseId) || null,
       create: async ({ data }) => {
@@ -92,6 +94,8 @@ test('approval commits review, provenance, certificate and course completion tog
   assert.ok(f.state.attempt.reviewedAt instanceof Date);
   assert.equal(f.state.certificates[0].issuedVia, 'PROCTORED_EXAM');
   assert.ok(f.state.enrollment.completedAt instanceof Date);
+  assert.equal(f.state.reviews.length, 1);
+  assert.equal(f.state.reviews[0].source, 'INITIAL');
 });
 
 test('review requires current assignment or admin role and rejects self review', async () => {
@@ -158,6 +162,7 @@ test('same decision and normalized reason are idempotent, conflicting retries ar
     const second = await f.service.reviewAttempt('attempt', reviewer, { ...decision, reason: `  ${decision.reason}  ` });
     assert.deepEqual(second, first);
     assert.equal(f.state.certificates.length, decision.decision === 'APPROVED' ? 1 : 0);
+    assert.equal(f.state.reviews.length, 1);
     await assert.rejects(f.service.reviewAttempt('attempt', reviewer, { ...decision, reason: 'Changed audit reason' }), ConflictException);
     await assert.rejects(f.service.reviewAttempt('attempt', reviewer, decision === approval ? rejection : approval), ConflictException);
   }
@@ -172,6 +177,7 @@ test('storage failures and a lost compare-and-set roll back the whole review', a
     assert.equal(f.state.attempt.reviewedAt, null);
     assert.equal(f.state.certificates.length, 0);
     assert.equal(f.state.enrollment.completedAt, null);
+    assert.equal(f.state.reviews.length, 0);
   }
 });
 

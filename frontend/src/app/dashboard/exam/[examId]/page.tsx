@@ -7,6 +7,11 @@ import { io, Socket } from 'socket.io-client';
 import api, { WS_URL } from '@/lib/api';
 import { observeRecorderStop, stopRecorder } from '@/lib/recording';
 import { answerList, answerMap, DraftAnswer, DraftState, ExamDraft, ExamDraftSaver } from '@/lib/exam-draft';
+import { IndexedDbRecordingStore, LocalRecording } from '@/lib/recording-store';
+import { DurableRecording, RecordingQueueState } from '@/lib/durable-recording';
+import { claimRecording, recordingTransport } from '@/lib/recording-upload';
+import { AUDIO_BITS, CAMERA_BITS, SCREEN_BITS, recordingBudget } from '@/lib/recording-budget';
+import { useAuthStore } from '@/store/auth.store';
 import toast from 'react-hot-toast';
 
 interface Question {
@@ -35,7 +40,23 @@ function selectedOptions(value: string | undefined): string[] {
 
 export default function ExamPage() {
   const { examId } = useParams<{ examId: string }>();
+  const ownerId = useAuthStore((state) => state.user?.id);
+  return <ExamSession key={`${ownerId ?? 'anonymous'}:${examId}`} examId={examId} />;
+}
+
+function ExamSession({ examId }: { examId: string }) {
   const router = useRouter();
+  const ownerId = useAuthStore((state) => state.user?.id);
+  const storeRef = useRef(new IndexedDbRecordingStore());
+  const writersRef = useRef(new Map<string, DurableRecording>());
+  const cameraWriterRef = useRef<DurableRecording | null>(null);
+  const screenWriterRef = useRef<DurableRecording | null>(null);
+  const releaseExamLockRef = useRef<(() => void) | null>(null);
+  const interruptedCaptureRef = useRef(false);
+  const [localSessions, setLocalSessions] = useState<LocalRecording[]>([]);
+  const [queueStates, setQueueStates] = useState<Record<string, RecordingQueueState>>({});
+  const [recovering, setRecovering] = useState<string | null>(null);
+  const [preflight, setPreflight] = useState<{ duration: number; remainingSeconds: number; recordingUsedBytes: number } | null>(null);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const answersRef = useRef<Record<string, string>>({});
@@ -70,11 +91,40 @@ export default function ExamPage() {
   const screenRecorderRef = useRef<MediaRecorder | null>(null);
   const cameraStopRef = useRef<(() => Promise<void>) | null>(null);
   const screenStopRef = useRef<(() => Promise<void>) | null>(null);
-  const cameraChunksRef = useRef<Blob[]>([]);
-  const screenChunksRef = useRef<Blob[]>([]);
   const uploadedRef = useRef(new Set<string>());
   const uploadPromiseRef = useRef<Promise<void> | null>(null);
   const handleSubmitRef = useRef<() => Promise<void>>(async () => {});
+
+  const refreshLocal = useCallback(async () => {
+    if (!ownerId) return;
+    const sessions = await storeRef.current.list(ownerId, examId);
+    if (mountedRef.current) setLocalSessions(sessions.filter((session) => session.state !== 'complete' && !session.supersededBy));
+  }, [ownerId, examId]);
+
+  const acquireExamLock = async () => {
+    if (!ownerId) throw new Error('Алдымен жүйеге кіріңіз.');
+    if (!releaseExamLockRef.current) {
+      const release = await claimRecording(`exam:${ownerId}:${examId}`);
+      if (!mountedRef.current) { release(); throw new Error('Exam page closed'); }
+      releaseExamLockRef.current = release;
+    }
+  };
+
+  const makeWriter = (session: LocalRecording, recorder?: MediaRecorder) => {
+    const writer = new DurableRecording(session.id, storeRef.current, recordingTransport, (state) => {
+      if (mountedRef.current) setQueueStates((previous) => ({ ...previous, [session.id]: state }));
+      void refreshLocal().catch(() => {});
+    }, (paused) => {
+      if (paused) {
+        interruptedCaptureRef.current = true;
+        if (recorder?.state === 'recording') recorder.pause();
+        void writer.markInterrupted().catch(() => {});
+        if (mountedRef.current) setNotice('Жергілікті сақтау кідірді, жазба уақытша тоқтатылды. Бетті жаппай, сақтауды қайта көріңіз.');
+      } else if (recorder?.state === 'paused' && !endedRef.current) recorder.resume();
+    });
+    writersRef.current.set(session.id, writer);
+    return writer;
+  };
 
   const sendEvent = useCallback((type: string, metadata?: Record<string, unknown>) => {
     if (endedRef.current || !attemptIdRef.current) return;
@@ -100,25 +150,49 @@ export default function ExamPage() {
       mountedRef.current = false;
       endedRef.current = true;
       draftRef.current?.dispose();
+      const writers = [...writersRef.current.values()];
+      const stops = [cameraStopRef.current?.(), screenStopRef.current?.()].filter(Boolean);
+      const release = releaseExamLockRef.current;
+      releaseExamLockRef.current = null;
       stopAllMedia();
+      void (async () => {
+        await Promise.allSettled(stops);
+        for (const writer of writers) {
+          try {
+            await writer.flushLocal();
+            const local = await storeRef.current.get(writer.id);
+            if (local.state !== 'complete') await storeRef.current.update(writer.id, { state: 'pending', interrupted: true });
+          } catch { /* Persisted chunks remain recoverable; the page warned before closing with unsaved bytes. */ }
+          await writer.close();
+        }
+        release?.();
+      })();
     };
   }, [stopAllMedia]);
 
+  useEffect(() => {
+    if (!ownerId) return;
+    void refreshLocal().catch(() => { if (mountedRef.current) setStartError('Жергілікті жазба қоймасы қолжетімсіз. Браузерді тексеріңіз.'); });
+    void api.get(`/attempts/preflight/${examId}`).then(({ data }) => { if (mountedRef.current) setPreflight(data); }).catch((error) => { if (mountedRef.current) setStartError(error?.response?.data?.message || 'Емтихан параметрлерін жүктеу мүмкін болмады.'); });
+  }, [examId, ownerId, refreshLocal]);
+
   // Capture permissions are requested from the button click, before starting the server timer.
   const begin = async () => {
-    if (startingRef.current || attemptIdRef.current) return;
+    if (startingRef.current || attemptIdRef.current || !preflight || !ownerId) return;
     startingRef.current = true;
     setStarting(true);
     setStartError('');
     endedRef.current = false;
     try {
+      recordingBudget(preflight.remainingSeconds ?? preflight.duration * 60, preflight.recordingUsedBytes ?? 0);
+      await acquireExamLock();
       if (!navigator.mediaDevices?.getDisplayMedia || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
         throw new Error('Бұл браузер экран мен камера жазбасын қолдамайды. Жұмыс үстелі браузерін және HTTPS қолданыңыз.');
       }
-      const screen = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      const screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 10, max: 15 }, width: { ideal: 1280, max: 1920 }, height: { ideal: 720, max: 1080 } }, audio: true });
       if (!mountedRef.current) { screen.getTracks().forEach((track) => track.stop()); return; }
       screenStreamRef.current = screen;
-      const camera = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const camera = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640, max: 640 }, height: { ideal: 480, max: 480 }, frameRate: { ideal: 12, max: 15 } }, audio: true });
       if (!mountedRef.current) { camera.getTracks().forEach((track) => track.stop()); stopAllMedia(); return; }
       cameraStreamRef.current = camera;
       if (![screen, camera].every((stream) => stream.getVideoTracks().some((track) => track.readyState === 'live'))) {
@@ -126,19 +200,16 @@ export default function ExamPage() {
       }
       const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((mime) => MediaRecorder.isTypeSupported(mime));
       if (!mimeType) throw new Error('Бұл браузер WebM жазбасын қолдамайды.');
-      cameraChunksRef.current = [];
-      screenChunksRef.current = [];
+      await storeRef.current.open();
+      const estimate = await navigator.storage?.estimate?.();
+      if (typeof estimate?.quota !== 'number' || typeof estimate?.usage !== 'number') throw new Error('Браузердегі бос орын бағасын тексеру мүмкін болмады.');
+      const { data: latestPreflight } = await api.get(`/attempts/preflight/${examId}`);
+      recordingBudget(latestPreflight.remainingSeconds ?? latestPreflight.duration * 60, latestPreflight.recordingUsedBytes ?? 0, estimate.quota - estimate.usage);
+      if (!mountedRef.current) { stopAllMedia(); return; }
+      setPreflight(latestPreflight);
       uploadedRef.current.clear();
-      const record = (stream: MediaStream, chunks: React.RefObject<Blob[]>, stopped: React.RefObject<(() => Promise<void>) | null>) => {
-        const recorder = new MediaRecorder(stream, { mimeType });
-        stopped.current = observeRecorderStop(recorder);
-        recorder.ondataavailable = ({ data }) => { if (data.size) chunks.current.push(data); };
-        recorder.onerror = () => { if (mountedRef.current && !endedRef.current) setNotice('Жазба қатесі тіркелді. Жауаптарыңызды жіберуге болады; нәтиже тексеріледі.'); };
-        recorder.start(10000);
-        return recorder;
-      };
-      cameraRecorderRef.current = record(camera, cameraChunksRef, cameraStopRef);
-      screenRecorderRef.current = record(screen, screenChunksRef, screenStopRef);
+      const cameraRecorder = new MediaRecorder(camera, { mimeType, videoBitsPerSecond: CAMERA_BITS, audioBitsPerSecond: AUDIO_BITS });
+      const screenRecorder = new MediaRecorder(screen, { mimeType, videoBitsPerSecond: SCREEN_BITS, audioBitsPerSecond: AUDIO_BITS });
       const requestedAt = performance.now();
       const { data } = await api.post<Attempt>(`/attempts/start/${examId}`);
       if (!mountedRef.current) { stopAllMedia(); return; }
@@ -167,6 +238,29 @@ export default function ExamPage() {
       setTimeLeft(Math.ceil(remaining / 1000));
       setTrustScore(data.trustScore);
       setAttempt(data);
+      const startRecording = async (kind: 'camera' | 'screen', recorder: MediaRecorder) => {
+        const session: LocalRecording = {
+          id: crypto.randomUUID(), ownerId, examId, attemptId: data.id, kind, mimeType,
+          state: 'recording', interrupted: false, nextIndex: 0, totalBytes: 0, uploadId: null, createdAt: Date.now(), updatedAt: Date.now(),
+        };
+        await storeRef.current.create(session);
+        if (!mountedRef.current) { stopAllMedia(); return; }
+        const writer = makeWriter(session, recorder);
+        const stopped = observeRecorderStop(recorder);
+        if (kind === 'camera') { cameraRecorderRef.current = recorder; cameraStopRef.current = stopped; cameraWriterRef.current = writer; }
+        else { screenRecorderRef.current = recorder; screenStopRef.current = stopped; screenWriterRef.current = writer; }
+        recorder.ondataavailable = ({ data: blob }) => { if (blob.size) void writer.append(blob).catch(() => {}); };
+        recorder.onerror = () => {
+          interruptedCaptureRef.current = true;
+          void writer.markInterrupted().catch(() => {});
+          if (mountedRef.current && !endedRef.current) setNotice('Жазба қатесі тіркелді. Сақталған бөліктер жоғалмайды; нәтиже тексеріледі.');
+        };
+        recorder.start(2000);
+      };
+      await startRecording('camera', cameraRecorder);
+      await startRecording('screen', screenRecorder);
+      if (!mountedRef.current) { stopAllMedia(); return; }
+      await refreshLocal();
       const socket = io(`${WS_URL}/proctor`, { auth: { token: localStorage.getItem('accessToken') }, transports: ['websocket'] });
       socketRef.current = socket;
       socket.on('connect', () => socket.emit('proctor:start', { attemptId: data.id, role: 'student' }));
@@ -185,12 +279,16 @@ export default function ExamPage() {
       const screenEnded = () => {
         if (endedRef.current || !mountedRef.current) return;
         sendEvent('screen_share_stopped');
+        interruptedCaptureRef.current = true;
+        void screenWriterRef.current?.markInterrupted().catch(() => {});
         setNotice('Экран бөлісуі тоқтады. Бұл оқиға тексеріледі; жауаптарыңызды жіберуге болады.');
       };
       const screenTrack = screen.getVideoTracks()[0];
       if (screenTrack?.readyState === 'ended') screenEnded();
       else screenTrack?.addEventListener('ended', screenEnded, { once: true });
       const cameraEnded = () => {
+        interruptedCaptureRef.current = true;
+        void cameraWriterRef.current?.markInterrupted().catch(() => {});
         if (!endedRef.current && mountedRef.current) setNotice('Камера жазбасы тоқтады. Жауаптарыңызды жіберіңіз; нәтиже қосымша тексеріледі.');
       };
       const cameraTrack = camera.getVideoTracks()[0];
@@ -198,7 +296,11 @@ export default function ExamPage() {
       else cameraTrack?.addEventListener('ended', cameraEnded, { once: true });
     } catch (error: any) {
       stopAllMedia();
-      if (mountedRef.current) setStartError(error?.response?.data?.message || (error?.name === 'NotAllowedError' ? 'Камера мен экранға рұқсат берілмеді. Жаңа емтихан таймері басталған жоқ.' : error?.message || 'Емтиханды бастау мүмкін болмады.'));
+      if (mountedRef.current) {
+        const message = error?.response?.data?.message || (error?.name === 'NotAllowedError' ? 'Камера мен экранға рұқсат берілмеді. Жаңа емтихан таймері басталған жоқ.' : error?.message || 'Емтиханды бастау мүмкін болмады.');
+        if (attemptIdRef.current) { interruptedCaptureRef.current = true; setNotice(message); setUploadError(true); }
+        else setStartError(message);
+      }
     } finally {
       startingRef.current = false;
       if (mountedRef.current) setStarting(false);
@@ -222,7 +324,10 @@ export default function ExamPage() {
         event.preventDefault(); event.returnValue = '';
       }
     };
-    const online = () => { if (!endedRef.current && draftRef.current?.state.status === 'offline') void draftRef.current.flush(); };
+    const online = () => {
+      if (!endedRef.current && draftRef.current?.state.status === 'offline') void draftRef.current.flush();
+      for (const writer of writersRef.current.values()) void writer.retry().catch(() => {});
+    };
     document.addEventListener('visibilitychange', visibility);
     document.addEventListener('copy', copy);
     document.addEventListener('paste', paste);
@@ -252,19 +357,15 @@ export default function ExamPage() {
           if (finished.some(({ status }) => status === 'rejected')) throw new Error('Recording did not finish');
         }
         finally { stopAllMedia(); }
-        const upload = async (type: 'camera' | 'screen', chunks: Blob[]) => {
+        const upload = async (type: 'camera' | 'screen', writer: DurableRecording | null) => {
           if (uploadedRef.current.has(type)) return;
-          if (!chunks.length) throw new Error('Recording is empty');
-          const form = new FormData();
-          form.append('file', new Blob(chunks, { type: 'video/webm' }), `${type}.webm`);
-          form.append('type', type);
-          await api.post(`/evidence/${attemptId}/recording`, form, { headers: { 'Content-Type': undefined }, timeout: 120000 });
+          if (!writer || (await storeRef.current.get(writer.id)).attemptId !== attemptId) throw new Error('Recording is unavailable');
+          await writer.finish(interruptedCaptureRef.current);
           uploadedRef.current.add(type);
         };
-        const results = await Promise.allSettled([upload('camera', cameraChunksRef.current), upload('screen', screenChunksRef.current)]);
+        const results = await Promise.allSettled([upload('camera', cameraWriterRef.current), upload('screen', screenWriterRef.current)]);
         if (results.some(({ status }) => status === 'rejected')) throw new Error('Recording upload failed');
-        cameraChunksRef.current = [];
-        screenChunksRef.current = [];
+        await refreshLocal();
       } catch {
         if (mountedRef.current) setUploadError(true);
       } finally {
@@ -273,10 +374,37 @@ export default function ExamPage() {
     };
     uploadPromiseRef.current = work();
     try { await uploadPromiseRef.current; } finally { uploadPromiseRef.current = null; }
-  }, [stopAllMedia]);
+  }, [stopAllMedia, refreshLocal]);
+
+  const recoverRecording = async (session: LocalRecording, replaceAborted = false) => {
+    if (recovering || startingRef.current || (attemptIdRef.current && !endedRef.current)) return;
+    setRecovering(session.id);
+    try {
+      if (session.ownerId !== ownerId || session.examId !== examId) throw new Error('Жазба қолжетімсіз');
+      await acquireExamLock();
+      if (replaceAborted) {
+        if (!window.confirm('Сақталған жазбаны жаңа жүктеу арқылы жібересіз бе? Ашық апелляцияда бір рет қосымша 512 MiB беріледі. Жергілікті көшірме сервер қабылдағанша сақталады.')) return;
+        const previousId = session.id;
+        await writersRef.current.get(previousId)?.close();
+        session = await storeRef.current.cloneForRetry(previousId, crypto.randomUUID());
+        const replacement = makeWriter(session);
+        if (cameraWriterRef.current?.id === previousId) cameraWriterRef.current = replacement;
+        if (screenWriterRef.current?.id === previousId) screenWriterRef.current = replacement;
+        writersRef.current.delete(previousId);
+        await refreshLocal();
+      }
+      const writer = writersRef.current.get(session.id) ?? makeWriter(session);
+      await writer.finish(session.state === 'recording' || session.interrupted);
+      if ([cameraWriterRef.current?.id, screenWriterRef.current?.id].includes(session.id)) uploadedRef.current.add(session.kind);
+      if (uploadedRef.current.size === 2) setUploadError(false);
+      await refreshLocal();
+      toast.success('Жазба серверде сақталды');
+    } catch (error: any) { toast.error(error?.message || 'Жазбаны қалпына келтіру мүмкін болмады'); }
+    finally { if (mountedRef.current) setRecovering(null); }
+  };
 
   const handleSubmit = useCallback(async () => {
-    if (!attempt || submittingRef.current || endedRef.current) return;
+    if (!attempt || startingRef.current || submittingRef.current || endedRef.current) return;
     if (draftRef.current?.state.status === 'conflict' && !submissionRef.current) {
       setSubmitError('Басқа қойынды жауаптарды өзгертті. Алдымен сервердегі нұсқаны жүктеңіз.');
       return;
@@ -311,7 +439,7 @@ export default function ExamPage() {
   handleSubmitRef.current = handleSubmit;
 
   useEffect(() => {
-    if (!attempt || result) return;
+    if (!attempt || result || starting) return;
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((deadlineRef.current - performance.now()) / 1000));
       setTimeLeft(remaining);
@@ -320,10 +448,10 @@ export default function ExamPage() {
     tick();
     const timer = setInterval(tick, 250);
     return () => clearInterval(timer);
-  }, [attempt, result]);
+  }, [attempt, result, starting]);
 
   const updateAnswer = (questionId: string, answer: string) => {
-    if (submissionRef.current || endedRef.current || !timeLeft || draftRef.current?.state.status === 'conflict') return;
+    if (startingRef.current || submissionRef.current || endedRef.current || !timeLeft || draftRef.current?.state.status === 'conflict') return;
     const next = { ...answersRef.current, [questionId]: answer };
     answersRef.current = next;
     setAnswers(next);
@@ -344,14 +472,32 @@ export default function ExamPage() {
     finally { if (mountedRef.current) setLoadingDraft(false); }
   };
 
+  const recoveryPanel = localSessions.length > 0 && (
+    <section className="rounded-lg border bg-white p-4 space-y-3" aria-label="Жазбаларды сақтау">
+      <h2 className="font-semibold">Жазбаларды сақтау</h2>
+      <p className="text-sm text-gray-600">Жазбалар алдымен осы браузерде сақталады. Сервер қабылдағаннан кейін жергілікті бейне бөліктері өшіріледі. Қалпына келтіру үшін осы аккаунтпен осы браузерді ашыңыз.</p>
+      {localSessions.map((session) => {
+        const queue = queueStates[session.id];
+        const live = !!attempt && !endedRef.current;
+        const labels = { recording: 'Жазылуда', saving: 'Жергілікті сақтау', uploading: 'Серверге жүктелуде', offline: 'Байланысты күтуде', 'storage-error': 'Браузерге сақтау қатесі', error: 'Жүктеу қатесі', complete: 'Сақталды' };
+        return <div key={session.id} className="border-t pt-3 flex flex-wrap justify-between items-center gap-3 text-sm">
+          <div><p className="font-medium">{session.kind === 'camera' ? 'Камера' : 'Экран'} · {(session.totalBytes / 1024 / 1024).toFixed(1)} MiB</p><p>{queue ? labels[queue.status] : 'Қалпына келтіруге дайын'} · {new Date(session.createdAt).toLocaleString()}</p>{queue?.message && <p role="alert" className="text-amber-800">{queue.message}</p>}{session.interrupted && <p className="text-amber-700">Үзіліс бар, тексерушіге белгіленеді.</p>}</div>
+          {live ? <button className="text-primary-700 underline" disabled={starting || !queue || !['storage-error', 'offline', 'error'].includes(queue.status)} onClick={() => void writersRef.current.get(session.id)?.retry().catch(() => {})}>Қайта сақтау</button> : <button className="btn-secondary text-sm" disabled={!!recovering || starting || uploading} onClick={() => void recoverRecording(session, queue?.code === 'UPLOAD_ABORTED')}>{recovering === session.id ? 'Жүктелуде...' : queue?.code === 'UPLOAD_ABORTED' ? 'Жаңа жүктеумен қалпына келтіру' : 'Қалпына келтіріп жүктеу'}</button>}
+        </div>;
+      })}
+    </section>
+  );
+
   if (!attempt) return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="card max-w-xl w-full space-y-5">
         <h1 className="text-2xl font-bold">Емтиханға дайындық</h1>
         <p className="text-gray-600">Камера, микрофон және экран жазбасы қажет. Экранды таңдаңыз, содан кейін камераға рұқсат беріңіз. Жаңа емтихан осы тексерулерден кейін басталады.</p>
         <p className="text-sm text-gray-500">Бұрын басталған емтиханның таймері жалғасады. Қайта ашқанда серверде сақталған жауаптар қалпына келеді.</p>
+        <p className="text-sm text-gray-500">Камера мен экранға ортақ шек: 512 MiB. Браузердегі бос орын мен емтихан ұзақтығы бастау алдында тексеріледі{preflight ? ` (${preflight.duration} мин)` : ''}.</p>
         {startError && <p role="alert" className="text-red-700 bg-red-50 p-3 rounded-lg">{startError}</p>}
-        <button onClick={begin} disabled={starting} className="btn-primary w-full disabled:opacity-50">{starting ? 'Рұқсаттар тексерілуде...' : 'Камера мен экранды қосып, бастау / жалғастыру'}</button>
+        <button onClick={begin} disabled={starting || !preflight || !!recovering} className="btn-primary w-full disabled:opacity-50">{starting ? 'Рұқсаттар тексерілуде...' : !preflight ? 'Параметрлер жүктелуде...' : 'Камера мен экранды қосып, бастау / жалғастыру'}</button>
+        {recoveryPanel}
         <Link href="/dashboard/courses" className="block text-center text-primary-700">Курстарға оралу</Link>
       </div>
     </main>
@@ -359,7 +505,7 @@ export default function ExamPage() {
 
   const questions = attempt.exam.questions;
   const question = questions[currentQ];
-  const disabled = submissionFrozen || endedRef.current || !timeLeft || draftState.status === 'conflict' || loadingDraft;
+  const disabled = starting || submissionFrozen || endedRef.current || !timeLeft || draftState.status === 'conflict' || loadingDraft;
   const minutes = `${Math.floor(timeLeft / 60)}`.padStart(2, '0');
   const seconds = `${timeLeft % 60}`.padStart(2, '0');
   const draftLabels: Record<DraftState['status'], string> = {
@@ -382,6 +528,7 @@ export default function ExamPage() {
         </div>
       </header>
       <div className="max-w-5xl mx-auto p-4 space-y-4">
+        {recoveryPanel}
         <div role="status" aria-live="polite" className="rounded-lg border bg-white p-3 text-sm flex flex-wrap items-center gap-3">
           <span>{submissionFrozen ? 'Жауаптар жіберуге бекітілді' : draftLabels[draftState.status]}</span>
           {!submissionFrozen && draftState.status === 'saved' && draftState.updatedAt && <time dateTime={draftState.updatedAt}>{new Date(draftState.updatedAt).toLocaleTimeString()}</time>}
@@ -392,7 +539,7 @@ export default function ExamPage() {
         {trustScore <= 0 && <p className="bg-amber-50 p-3 rounded-lg text-sm">Оқиғалар қосымша тексеруді қажет етеді. Жауаптарыңызды жіберуге болады; шешімді тексеруші қабылдайды.</p>}
         {submitError && <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3"><p>{submitError}</p>{!endedRef.current ? <button className="btn-primary" disabled={submitting || draftState.status === 'conflict'} onClick={() => void handleSubmit()}>Сол жауаптарды қайта жіберу</button> : <button disabled={uploading || uploadError} className="text-primary-700 underline disabled:opacity-50" onClick={() => router.push('/dashboard/my-attempts')}>Нәтижелерді көру</button>}</div>}
         {uploading && <p role="status" className="bg-blue-50 p-3 rounded-lg">Жауаптар сақталды. Камера мен экран жазбалары жүктелуде. Бетті жаппаңыз.</p>}
-        {uploadError && <div role="alert" className="bg-amber-50 p-4 rounded-lg space-y-2"><p>Жазбаларды жүктеу аяқталмады. Осы бетті жаппай қайта жүктеңіз; сертификат тексеруден кейін беріледі.</p><button disabled={uploading} onClick={() => void uploadRecordings(attempt.id)} className="btn-secondary">Жазбаларды қайта жүктеу</button></div>}
+        {uploadError && <div role="alert" className="bg-amber-50 p-4 rounded-lg space-y-2"><p>Жазбаларды жүктеу аяқталмады. Қайта көріңіз немесе осы браузерде осы емтиханды ашып, сақталған бөліктерді қалпына келтіріңіз. Браузерге сақтау қатесі болса, бетті жаппаңыз. Сертификат тексеруден кейін беріледі.</p><button disabled={uploading} onClick={() => void uploadRecordings(attempt.id)} className="btn-secondary">Жазбаларды қайта жүктеу</button></div>}
         {result ? (
           <section className="card max-w-2xl mx-auto space-y-4 text-center">
             <h2 className="text-2xl font-bold">Жауаптар қабылданды</h2>

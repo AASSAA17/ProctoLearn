@@ -90,13 +90,22 @@ export class CertificatesService {
   }
 
   private async assertEvidenceReady(attemptId: string, db: Prisma.TransactionClient) {
-    // EvidenceFile is created only after storage accepts a complete recording.
-    // The chunk-upload stage must additionally reject unfinished upload manifests
-    // here, before a review can issue a certificate.
+    // Read manifests inside the review transaction: concurrent upload/finalize
+    // changes must conflict rather than approve partially committed recordings.
+    const uploads = await db.recordingUpload.findMany({
+      where: { attemptId }, select: { state: true, kind: true, evidenceId: true },
+    });
+    if (uploads.some((upload) => !['COMPLETE', 'ABORTED'].includes(upload.state))) {
+      throw new ConflictException('Жазбалардың жүктелуі әлі аяқталған жоқ');
+    }
     const files = await db.evidenceFile.findMany({
       where: { attemptId, type: { in: ['recording_camera', 'recording_screen'] } },
-      select: { type: true, url: true },
+      select: { id: true, type: true, url: true },
     });
+    if (uploads.some((upload) => upload.state === 'COMPLETE' && !files.some((file) =>
+      file.id === upload.evidenceId && file.type === `recording_${upload.kind}` && !!file.url))) {
+      throw new ConflictException('Аяқталған жазбаның дәлелдемесі табылмады');
+    }
     const types = new Set(files.filter((file) => !!file.url).map((file) => file.type));
     if (!types.has('recording_camera') || !types.has('recording_screen')) {
       throw new ConflictException('Камера мен экранның толық жазбалары қажет');

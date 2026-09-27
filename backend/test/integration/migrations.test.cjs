@@ -96,3 +96,38 @@ test('baselined legacy database preserves users and course enrollment during upg
     verifyNoDrift(url);
   });
 });
+
+test('recording and appeal upgrade preserves initial review audit and historical certificates', async () => {
+  await isolatedSchema(async (db, url) => {
+    const upgrade = '20260928020000_recording_uploads_appeals';
+    const earlier = readdirSync(path.join(backend, 'prisma/migrations'), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name < upgrade).map((entry) => entry.name).sort();
+    for (const migration of earlier) {
+      prisma(url, 'db', 'execute', '--file', `prisma/migrations/${migration}/migration.sql`, '--url', url);
+      prisma(url, 'migrate', 'resolve', '--applied', migration);
+    }
+    const teacher = await db.user.create({ data: { email: 'reviewer@example.invalid', name: 'Reviewer', password: 'not-a-login-hash', role: 'ADMIN' } });
+    const student = await db.user.create({ data: { email: 'reviewed@example.invalid', name: 'Student', password: 'not-a-login-hash' } });
+    const course = await db.course.create({ data: { title: 'Review migration fixture', teacherId: teacher.id } });
+    const exam = await db.exam.create({ data: { courseId: course.id, title: 'Exam', duration: 1 } });
+    const reviewedAt = new Date('2026-09-27T12:00:00Z');
+    const attempt = await db.attempt.create({ data: { examId: exam.id, userId: student.id, score: 100,
+      status: 'FINISHED', finishedAt: reviewedAt, reviewStatus: 'REJECTED', reviewedAt,
+      reviewedBy: teacher.id, reviewReason: 'Preserve original decision',
+    } });
+    const certificate = await db.certificate.create({ data: { userId: student.id, courseId: course.id, qrCode: randomUUID(), issuedVia: 'LEGACY' } });
+    prisma(url, 'migrate', 'deploy');
+    prisma(url, 'migrate', 'deploy');
+    const history = await db.attemptReview.findMany({ where: { attemptId: attempt.id } });
+    assert.equal(history.length, 1);
+    assert.equal(history[0].reviewerId, teacher.id);
+    assert.equal(history[0].decision, 'REJECTED');
+    assert.equal(history[0].reason, 'Preserve original decision');
+    assert.equal(history[0].source, 'INITIAL');
+    assert.equal(history[0].createdAt.toISOString(), reviewedAt.toISOString());
+    assert.deepEqual(await db.certificate.findUnique({ where: { id: certificate.id } }), certificate);
+    assert.equal(await db.recordingUpload.count(), 0, 'upgrade must not invent completed recordings');
+    await verifyHistory(db);
+    verifyNoDrift(url);
+  });
+});

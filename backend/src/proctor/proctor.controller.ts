@@ -7,7 +7,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Actor } from './proctor-access';
-import { ReviewAttemptDto } from './proctor.dto';
+import { AppealAttemptDto, ResolveAppealDto, ReviewAttemptDto } from './proctor.dto';
 
 @ApiTags('Прокторинг')
 @ApiBearerAuth()
@@ -27,6 +27,23 @@ export class ProctorController {
   @ApiOperation({ summary: 'Аяқталған емтиханды дәлелдемелер бойынша тексеру' })
   review(@Param('attemptId') attemptId: string, @CurrentUser() actor: Actor, @Body() dto: ReviewAttemptDto) {
     return this.proctorService.reviewAttempt(attemptId, actor, dto);
+  }
+
+  @Get('sessions/:attemptId/appeal')
+  @Roles(Role.STUDENT, Role.TEACHER, Role.PROCTOR, Role.ADMIN)
+  getAppeal(@Param('attemptId') attemptId: string, @CurrentUser() actor: Actor) {
+    return this.proctorService.getAppeal(attemptId, actor);
+  }
+
+  @Post('sessions/:attemptId/appeal')
+  @Roles(Role.STUDENT, Role.TEACHER, Role.PROCTOR, Role.ADMIN)
+  appeal(@Param('attemptId') attemptId: string, @CurrentUser() actor: Actor, @Body() dto: AppealAttemptDto) {
+    return this.proctorService.createAppeal(attemptId, actor, dto);
+  }
+
+  @Post('sessions/:attemptId/appeal/resolve')
+  resolveAppeal(@Param('attemptId') attemptId: string, @CurrentUser() actor: Actor, @Body() dto: ResolveAppealDto) {
+    return this.proctorService.resolveAppeal(attemptId, actor, dto);
   }
 
   @Get('exams/:examId/assignments')

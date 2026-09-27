@@ -182,3 +182,29 @@ test('opening owned history finalizes expired drafts once, while foreign reads c
   assert.equal(rows[0].score, 100);
   assert.equal(rows[0].draftAnswers, undefined);
 });
+
+test('storage preflight cannot start a timer or expose keys and uses remaining snapshot time on resume', async () => {
+  const fresh = fixture({ empty: true });
+  const initial = await fresh.service.preflight('exam', 'student');
+  assert.equal(initial.remainingSeconds, 1800);
+  assert.equal(initial.existingAttemptId, null);
+  assert.equal(initial.recordingUsedBytes, 0);
+  assert.equal(initial.recordingMaxBytes, 512 * 1024 * 1024);
+  assert.equal(initial.questions, undefined);
+  assert.deepEqual(fresh.writes, []);
+  assert.equal(fresh.state.attempt, null);
+  const active = fixture({ attempt: { startedAt: new Date(Date.now() - 600_000) } });
+  active.state.attempt.examSnapshot = examSnapshot(active.exam);
+  active.exam.duration = 1;
+  active.db.recordingUpload = { aggregate: async ({ where }) => {
+    assert.equal(where.attemptId, 'attempt'); return { _sum: { bytes: 100 } };
+  } };
+  const resumed = await active.service.preflight('exam', 'student');
+  assert.equal(resumed.duration, 30);
+  assert.ok(resumed.remainingSeconds <= 1200 && resumed.remainingSeconds >= 1198);
+  assert.equal(resumed.recordingUsedBytes, 100);
+  assert.deepEqual(active.writes, []);
+  active.db.enrollment.findUnique = async () => null;
+  await assert.rejects(active.service.preflight('exam', 'student'), ForbiddenException);
+  assert.deepEqual(active.writes, []);
+});

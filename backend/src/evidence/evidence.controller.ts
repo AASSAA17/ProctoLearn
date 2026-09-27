@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, UseGuards, UseInterceptors, UploadedFile, Body, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Param, Post, Put, UseGuards, UseInterceptors, UploadedFile, Body, BadRequestException, GoneException, ParseIntPipe } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { diskStorage } from 'multer';
@@ -14,10 +14,12 @@ import { Role } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { RecordingOwnerGuard } from './recording-owner.guard';
 import { Actor } from '../proctor/proctor-access';
+import { RecordingUploadsService } from './recording-uploads.service';
+import { RecordingUploadOwnerGuard } from './recording-upload-owner.guard';
+import { CHUNK_LIMIT } from './recording-upload-policy';
+import { CompleteRecordingUploadDto, CreateRecordingUploadDto } from './recording-upload.dto';
 
-const ALLOWED_MIME_TYPES = ['video/webm', 'video/mp4', 'video/ogg', 'video/x-matroska'];
-const MAX_FILE_SIZE = 200 * 1024 * 1024; // 200 MB
-const RECORDING_DIRECTORY = join(tmpdir(), 'proctolearn-recordings');
+export const RECORDING_DIRECTORY = join(tmpdir(), 'proctolearn-recording-chunks');
 mkdirSync(RECORDING_DIRECTORY, { recursive: true, mode: 0o700 });
 
 @ApiTags('Дәлелдемелер')
@@ -25,7 +27,45 @@ mkdirSync(RECORDING_DIRECTORY, { recursive: true, mode: 0o700 });
 @UseGuards(JwtAuthGuard)
 @Controller('evidence')
 export class EvidenceController {
-  constructor(private readonly evidenceService: EvidenceService) {}
+  constructor(private readonly evidenceService: EvidenceService, private readonly uploads: RecordingUploadsService) {}
+
+  @Post(':attemptId/uploads')
+  createUpload(@Param('attemptId') attemptId: string, @Body() dto: CreateRecordingUploadDto, @CurrentUser('id') userId: string) {
+    return this.uploads.create(attemptId, dto, userId);
+  }
+
+  @Get(':attemptId/uploads')
+  listUploads(@Param('attemptId') attemptId: string, @CurrentUser('id') userId: string) {
+    return this.uploads.list(attemptId, userId);
+  }
+
+  @Get('uploads/:id')
+  getUpload(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.uploads.get(id, userId);
+  }
+
+  @Put('uploads/:id/chunks/:index')
+  @UseGuards(RecordingUploadOwnerGuard)
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({ destination: RECORDING_DIRECTORY }),
+    limits: { fileSize: CHUNK_LIMIT, files: 1, fields: 0, parts: 2 },
+  }))
+  async uploadChunk(@Param('id') id: string, @Param('index', ParseIntPipe) index: number, @UploadedFile() file: Express.Multer.File, @CurrentUser('id') userId: string) {
+    if (!file) throw new BadRequestException('Файл жоқ');
+    try { return await this.uploads.putChunk(id, index, file.path, userId); }
+    finally { await unlink(file.path).catch(() => undefined); }
+  }
+
+  @Post('uploads/:id/complete')
+  completeUpload(@Param('id') id: string, @Body() dto: CompleteRecordingUploadDto, @CurrentUser('id') userId: string) {
+    return this.uploads.complete(id, dto, userId);
+  }
+
+  @Post('uploads/:id/abort')
+  abortUpload(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.uploads.abort(id, userId);
+  }
 
   @Get(':attemptId')
   @UseGuards(RolesGuard)
@@ -37,29 +77,8 @@ export class EvidenceController {
 
   @Post(':attemptId/recording')
   @UseGuards(RecordingOwnerGuard)
-  @ApiOperation({ summary: 'Видео жазбаны жүктеп салу (студент)' })
-  @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({ destination: RECORDING_DIRECTORY }),
-    // Busboy emits partsLimit at the closing boundary; allow that boundary too.
-    limits: { fileSize: MAX_FILE_SIZE, files: 1, fields: 1, fieldSize: 32, parts: 3 },
-    fileFilter: (_req, file, callback) => {
-      if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) return callback(new BadRequestException('Видео түрі жарамсыз'), false);
-      callback(null, true);
-    },
-  }))
-  async uploadRecording(
-    @Param('attemptId') attemptId: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Body('type') type: string,
-    @CurrentUser('id') userId: string,
-  ) {
-    if (!file) throw new BadRequestException('Файл жоқ');
-    try {
-      if (!['camera', 'screen'].includes(type)) throw new BadRequestException('Жазба түрі жарамсыз');
-      return await this.evidenceService.saveRecording(attemptId, file.path, file.mimetype, type as 'camera' | 'screen', userId);
-    } finally {
-      await unlink(file.path).catch(() => undefined);
-    }
+  @ApiOperation({ summary: 'Ескірген жүктеу: бөліктер арқылы жүктеуге өтіңіз' })
+  uploadRecording() {
+    throw new GoneException({ code: 'CHUNK_UPLOAD_REQUIRED', message: 'Бетті жаңартыңыз. Жазбалар бөліктер арқылы жүктеледі' });
   }
 }

@@ -14,6 +14,7 @@ const { AttemptsController } = require('../src/attempts/attempts.controller');
 const { AttemptsService } = require('../src/attempts/attempts.service');
 const { EvidenceController } = require('../src/evidence/evidence.controller');
 const { EvidenceService } = require('../src/evidence/evidence.service');
+const { RecordingUploadsService } = require('../src/evidence/recording-uploads.service');
 const { MinioService } = require('../src/minio/minio.service');
 const { CertificatesService } = require('../src/certificates/certificates.service');
 const { ProctorController } = require('../src/proctor/proctor.controller');
@@ -53,7 +54,7 @@ async function fixture(withGateway = false) {
   const signedObjects = [];
   const events = [];
   const hydrate = (attempt) => attempt && ({
-    ...attempt, events: events.filter((event) => event.attemptId === attempt.id),
+    ...attempt, appeal: null, reviews: [], recordingUploads: [], events: events.filter((event) => event.attemptId === attempt.id),
     exam: { ...exams.get(attempt.examId), proctorAssignments: [...assignments.values()].filter((entry) => entry.examId === attempt.examId) },
     user: users.get(attempt.userId), evidences: [{ id: `evidence-${attempt.id}`, url: `private/${attempt.id}.webm` }],
   });
@@ -90,6 +91,7 @@ async function fixture(withGateway = false) {
     imports: [PassportModule.register({ defaultStrategy: 'jwt' })],
     controllers: [AttemptsController, EvidenceController, ProctorController],
     providers: [JwtStrategy, AttemptsService, EvidenceService, ProctorService,
+      { provide: RecordingUploadsService, useValue: {} },
       ...(withGateway ? [ProctorGateway] : []),
       { provide: PrismaService, useValue: db },
       { provide: ConfigService, useValue: config },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import Link from 'next/link';
@@ -41,6 +41,15 @@ interface Attempt {
   events: { id: string; type: string; timestamp: string }[];
 }
 
+interface Appeal {
+  id: string;
+  reason: string;
+  state: 'OPEN' | 'UPHELD' | 'OVERTURNED';
+  response: string | null;
+  createdAt: string;
+  decidedAt: string | null;
+}
+
 const EVENT_LABELS: Record<string, string> = {
   tab_switch: 'Қойынды ауыстыру',
   fullscreen_exit: 'Толық экраннан шығу',
@@ -62,17 +71,55 @@ export default function AttemptReviewPage() {
   const router = useRouter();
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [loading, setLoading] = useState(true);
+  const [appeal, setAppeal] = useState<Appeal | null>(null);
+  const [appealLoaded, setAppealLoaded] = useState(false);
+  const [appealReason, setAppealReason] = useState('');
+  const [appealError, setAppealError] = useState<string | null>(null);
+  const [appealBusy, setAppealBusy] = useState(false);
+  const appealRequest = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setAppeal(null);
+    setAppealLoaded(false);
+    setAppealReason('');
+    setAppealError(null);
+    setAppealBusy(false);
     api
-      .get(`/attempts/${attemptId}`)
-      .then(({ data }) => setAttempt(data))
+      .get(`/attempts/${attemptId}`, { signal: controller.signal })
+      .then(({ data }) => { if (!controller.signal.aborted) setAttempt(data); })
       .catch(() => {
+        if (controller.signal.aborted) return;
         toast.error('Жүктеу қатесі');
         router.push('/dashboard/my-attempts');
       })
-      .finally(() => setLoading(false));
-  }, [attemptId]);
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    api.get<{ appeal: Appeal | null }>(`/proctor/sessions/${attemptId}/appeal`, { signal: controller.signal })
+      .then(({ data }) => { if (!controller.signal.aborted) { setAppeal(data.appeal); setAppealLoaded(true); } })
+      .catch(() => { if (!controller.signal.aborted) setAppealError('Апелляция күйі жүктелмеді. Бетті жаңартыңыз.'); });
+    return () => { controller.abort(); appealRequest.current?.abort(); appealRequest.current = null; };
+  }, [attemptId, router]);
+
+  const submitAppeal = async () => {
+    const reason = appealReason.trim();
+    if (!appealLoaded || appeal || appealRequest.current || reason.length < 3 || reason.length > 2000) return;
+    const controller = new AbortController();
+    appealRequest.current = controller;
+    setAppealBusy(true);
+    setAppealError(null);
+    try {
+      const { data } = await api.post<Appeal>(`/proctor/sessions/${attemptId}/appeal`, { reason }, { signal: controller.signal });
+      if (!controller.signal.aborted) { setAppeal(data); setAppealReason(''); }
+    } catch (failure: any) {
+      if (controller.signal.aborted) return;
+      const message = failure?.response?.data?.message;
+      setAppealError(Array.isArray(message) ? message.join('. ') : message || 'Апелляцияны жіберу мүмкін болмады. Себеп сақталды, қайта көріңіз.');
+    } finally {
+      if (appealRequest.current === controller) appealRequest.current = null;
+      if (!controller.signal.aborted) setAppealBusy(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -177,6 +224,22 @@ export default function AttemptReviewPage() {
           {attempt.reviewReason && <p className="text-sm">Тексеру себебі: {attempt.reviewReason}</p>}
           {attempt.reviewedAt && <p className="text-xs text-gray-500">{new Date(attempt.reviewedAt).toLocaleString('kk-KZ')}</p>}
           {passed && attempt.reviewStatus === 'APPROVED' && <Link href="/dashboard/certificates" className="text-primary-700 underline text-sm">Сертификаттарды көру</Link>}
+          {(attempt.reviewStatus === 'REJECTED' || appeal) && <div className="border-t pt-4 space-y-3">
+            <h3 className="font-semibold">Апелляция</h3>
+            {appeal ? <>
+              <p className="text-sm font-medium">{appeal.state === 'OPEN' ? 'Тәуелсіз тексерушінің қарауын күтуде' : appeal.state === 'OVERTURNED' ? 'Апелляция қанағаттандырылды' : 'Бастапқы шешім сақталды'}</p>
+              <p className="text-sm whitespace-pre-wrap">Сіздің себебіңіз: {appeal.reason}</p>
+              {appeal.response && <p className="text-sm whitespace-pre-wrap">Тексерушінің жауабы: {appeal.response}</p>}
+              {appeal.state === 'OPEN' && <p className="text-sm text-gray-600">Осы браузерде сақталған жазбаларды апелляция берілгеннен кейін 24 сағат ішінде қалпына келтіруге болады. <Link href={`/dashboard/exam/${attempt.exam.id}`} className="text-primary-700 underline">Жазбаларды қалпына келтіру</Link></p>}
+              <p className="text-xs text-gray-500">{new Date(appeal.decidedAt ?? appeal.createdAt).toLocaleString('kk-KZ')}</p>
+            </> : <>
+              <p className="text-sm text-gray-600">Бұл шешіммен келіспесеңіз, себебін жазыңыз. Бір талпынысқа бір апелляция беріледі. Оны бастапқы шешімді қабылдамаған басқа тексеруші қарайды.</p>
+              <label htmlFor="appeal-reason" className="block text-sm font-medium">Апелляция себебі</label>
+              <textarea id="appeal-reason" value={appealReason} onChange={(event) => setAppealReason(event.target.value)} minLength={3} maxLength={2000} rows={4} disabled={appealBusy || !appealLoaded} className="w-full rounded-lg border border-gray-300 p-3 text-sm" />
+              <button type="button" disabled={appealBusy || !appealLoaded || appealReason.trim().length < 3} onClick={() => { void submitAppeal(); }} className="btn-primary disabled:opacity-50">{appealBusy ? 'Жіберілуде...' : 'Апелляция беру'}</button>
+            </>}
+            {appealError && <p role="alert" className="text-sm text-red-700">{appealError}</p>}
+          </div>}
         </section>
       )}
 

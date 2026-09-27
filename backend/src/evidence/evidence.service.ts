@@ -1,14 +1,10 @@
-import { Injectable, NotFoundException, Logger, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, GoneException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MinioService } from '../minio/minio.service';
-import { randomUUID } from 'crypto';
-import { recordingFormat } from './recording-format';
 import { Actor, assertProctorAccess } from '../proctor/proctor-access';
 
 @Injectable()
 export class EvidenceService {
-  private readonly logger = new Logger(EvidenceService.name);
-
   constructor(
     private prisma: PrismaService,
     private minio: MinioService,
@@ -30,17 +26,7 @@ export class EvidenceService {
   ) {
     await this.assertOwner(attemptId, userId);
 
-    const format = await recordingFormat(filePath, mimeType);
-    const objectName = `recordings/${attemptId}/${recordingType}-${randomUUID()}.${format.extension}`;
-    await this.minio.uploadFile(filePath, objectName, format.mime);
-    try {
-      return await this.prisma.evidenceFile.create({
-        data: { attemptId, type: `recording_${recordingType}`, url: objectName },
-      });
-    } catch (error) {
-      await this.minio.removeObject(objectName).catch(() => this.logger.error('Failed to remove unreferenced recording'));
-      throw error;
-    }
+    throw new GoneException({ code: 'CHUNK_UPLOAD_REQUIRED', message: 'Жазбаны бөліктер арқылы жүктеңіз' });
   }
 
   async getEvidenceByAttempt(attemptId: string, actor: Actor) {

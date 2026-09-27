@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as Minio from 'minio';
+import { Readable } from 'stream';
 
 @Injectable()
 export class MinioService implements OnModuleInit {
@@ -73,6 +74,24 @@ export class MinioService implements OnModuleInit {
 
   async removeObject(objectName: string): Promise<void> {
     await this.client.removeObject(this.bucket, objectName);
+  }
+
+  async getObject(objectName: string): Promise<Readable> {
+    return this.client.getObject(this.bucket, objectName);
+  }
+
+  async listObjects(prefix: string, limit = 200, startAfter = ''): Promise<{ name: string; lastModified: Date; size: number }[]> {
+    const stream = this.client.listObjectsV2(this.bucket, prefix, true, startAfter);
+    const objects: { name: string; lastModified: Date; size: number }[] = [];
+    try {
+      for await (const object of stream) {
+        if (object.name) objects.push({ name: object.name, lastModified: object.lastModified, size: object.size });
+        if (objects.length >= limit) break;
+      }
+    } finally {
+      stream.destroy();
+    }
+    return objects;
   }
 
   getUrl(objectName: string): string {

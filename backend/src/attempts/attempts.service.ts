@@ -10,6 +10,7 @@ import { attemptDeadline, attemptExpired, expiredAttemptError, validateAnswerIds
 import { serializable } from '../prisma/serializable';
 import { Actor, assertProctorAccess, attemptScope } from '../proctor/proctor-access';
 import { draftForAttempt, examSnapshot, finalizeExpiredAttempt, gradeAnswerRecords, publicExam, safeAttempt, snapshotDuration, snapshotForAttempt, submissionDigest } from './attempt-state';
+import { ATTEMPT_BYTE_LIMIT } from '../evidence/recording-upload-policy';
 
 @Injectable()
 export class AttemptsService {
@@ -22,6 +23,26 @@ export class AttemptsService {
   ) {}
 
   private static readonly MAX_ATTEMPTS_PER_EXAM = 5;
+
+  /** Read-only device/storage preflight: it never creates a timed attempt. */
+  async preflight(examId: string, userId: string) {
+    const exam = await this.prisma.exam.findUnique({ where: { id: examId }, select: { id: true, courseId: true, title: true, duration: true } });
+    if (!exam) throw new NotFoundException('Емтихан табылмады');
+    if (!await this.prisma.enrollment.findUnique({ where: { userId_courseId: { userId, courseId: exam.courseId } } })) {
+      throw new ForbiddenException('Алдымен курсқа тіркеліңіз');
+    }
+    const active = await this.prisma.attempt.findFirst({ where: { examId, userId, status: 'IN_PROGRESS', finishedAt: null } });
+    const duration = active ? snapshotDuration({ ...active, exam }) : exam.duration;
+    const now = Date.now();
+    const uploaded = active ? await this.prisma.recordingUpload.aggregate({ where: { attemptId: active.id }, _sum: { bytes: true } }) : null;
+    return {
+      id: exam.id, title: exam.title, duration,
+      existingAttemptId: active?.id ?? null,
+      remainingSeconds: active ? Math.max(0, Math.ceil((attemptDeadline(active.startedAt, duration) - now) / 1000)) : duration * 60,
+      serverTime: new Date(now).toISOString(), recordingMaxBytes: ATTEMPT_BYTE_LIMIT,
+      recordingUsedBytes: uploaded?._sum.bytes ?? 0,
+    };
+  }
 
   private async assertAdmission(tx: Prisma.TransactionClient, userId: string, courseId: string, enrollment: any) {
     if (enrollment.examAccessGrantedAt) return;
@@ -261,7 +282,7 @@ export class AttemptsService {
   async getUserAttempts(userId: string) {
     const attempts = await serializable(this.prisma, async (tx) => {
       const rows = await tx.attempt.findMany({
-        where: { userId }, include: { exam: { select: { id: true, courseId: true, title: true, duration: true, passScore: true } } }, orderBy: { startedAt: 'desc' },
+        where: { userId }, include: { exam: { select: { id: true, courseId: true, title: true, duration: true, passScore: true } }, appeal: { select: { state: true } } }, orderBy: { startedAt: 'desc' },
       });
       const result = [];
       for (const row of rows) {
@@ -277,12 +298,13 @@ export class AttemptsService {
     return attempts.map(safeAttempt);
   }
 
-  async getAllAttempts(actor: Actor, examId?: string, page = 1, limit = 50) {
-    const where = { ...attemptScope(actor), ...(examId ? { examId } : {}) };
+  async getAllAttempts(actor: Actor, examId?: string, page = 1, limit = 50, appealState?: string) {
+    if (appealState !== undefined && appealState !== 'OPEN') throw new BadRequestException('Апелляция сүзгісі жарамсыз');
+    const where = { ...attemptScope(actor), ...(examId ? { examId } : {}), ...(appealState ? { appeal: { is: { state: appealState } } } : {}) };
     const [attempts, total] = await Promise.all([
       this.prisma.attempt.findMany({
         where,
-        include: { user: { select: { id: true, name: true, email: true } }, exam: { select: { id: true, title: true } }, _count: { select: { events: true, evidences: true } } },
+        include: { user: { select: { id: true, name: true, email: true } }, exam: { select: { id: true, title: true } }, appeal: { select: { state: true } }, _count: { select: { events: true, evidences: true } } },
         orderBy: { startedAt: 'desc' }, skip: (page - 1) * limit, take: limit,
       }),
       this.prisma.attempt.count({ where }),

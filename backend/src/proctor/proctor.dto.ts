@@ -42,3 +42,16 @@ export class ReviewAttemptDto {
   @MaxLength(2000)
   reason: string;
 }
+
+export class AppealAttemptDto {
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @IsString()
+  @MinLength(3)
+  @MaxLength(2000)
+  reason: string;
+}
+
+export class ResolveAppealDto extends AppealAttemptDto {
+  @IsIn(['UPHELD', 'OVERTURNED'])
+  decision: 'UPHELD' | 'OVERTURNED';
+}

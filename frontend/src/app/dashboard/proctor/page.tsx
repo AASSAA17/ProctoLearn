@@ -10,6 +10,7 @@ interface AttemptSummary {
   id: string;
   status: string;
   reviewStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
+  appealState?: 'OPEN' | 'UPHELD' | 'OVERTURNED' | null;
   flaggedAt?: string | null;
   trustScore: number;
   startedAt: string;
@@ -23,17 +24,30 @@ export default function ProctorDashboardPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [appealsOnly, setAppealsOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setSelected(null);
+    setEvents([]);
     api
-      .get('/attempts')
+      .get('/attempts', { signal: controller.signal, params: { page, limit: 50, ...(appealsOnly ? { appealState: 'OPEN' } : {}) } })
       .then(({ data }) => {
+        if (controller.signal.aborted) return;
         const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
         setAttempts(list);
+        const pages = Math.max(1, data?.meta?.totalPages ?? 1);
+        setTotalPages(pages);
+        if (page > pages) setPage(pages);
       })
-      .catch(() => toast.error('Жүктеу қатесі'))
-      .finally(() => setLoading(false));
-  }, []);
+      .catch(() => { if (!controller.signal.aborted) { setAttempts([]); toast.error('Жүктеу қатесі'); } })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [appealsOnly, page, refreshVersion]);
 
   useEffect(() => {
     if (!selected) return;
@@ -140,6 +154,10 @@ export default function ProctorDashboardPage() {
         <div className="lg:col-span-2">
           <div className="card">
             <h2 className="text-lg font-semibold mb-4">Қолжетімді талпынулар</h2>
+            <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
+              <label className="flex items-center gap-2"><input type="checkbox" checked={appealsOnly} onChange={(event) => { setAppealsOnly(event.target.checked); setPage(1); }} />Ашық апелляциялар</label>
+              <button type="button" onClick={() => setRefreshVersion((value) => value + 1)} className="text-primary-700 underline">Жаңарту</button>
+            </div>
             {loading ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -166,6 +184,8 @@ export default function ProctorDashboardPage() {
                       </div>
                       <div className="text-right">
                         {statusBadge(attempt.status)}
+                        {attempt.appealState === 'OPEN' && <p className="mt-2 rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">Апелляция · тәуелсіз тексеру қажет</p>}
+                        {attempt.appealState && attempt.appealState !== 'OPEN' && <p className="mt-1 text-xs text-gray-600">{attempt.appealState === 'OVERTURNED' ? 'Апелляция қанағаттандырылды' : 'Апелляция: шешім сақталды'}</p>}
                         <p className="mt-1 text-xs font-medium text-gray-600">
                           {attempt.reviewStatus === 'APPROVED' ? 'Тексеру: мақұлданды' : attempt.reviewStatus === 'REJECTED' ? 'Тексеру: қабылданбады' : 'Тексеру: күтілуде'}
                           {attempt.flaggedAt ? ' · 🚩 Белгіленген' : ''}
@@ -185,7 +205,7 @@ export default function ProctorDashboardPage() {
                           onClick={(e) => e.stopPropagation()}
                           className="text-primary-600 hover:underline"
                         >
-                          Дәлелдемелер және тексеру
+                          {attempt.appealState === 'OPEN' ? 'Апелляция және дәлелдемелер' : 'Дәлелдемелер және тексеру'}
                         </Link>
                         {!attempt.flaggedAt && attempt.reviewStatus === 'PENDING' && (
                           <button
@@ -212,6 +232,11 @@ export default function ProctorDashboardPage() {
                     </div>
                   </div>
                 ))}
+                {totalPages > 1 && <div className="flex items-center justify-between pt-3 text-sm">
+                  <button type="button" disabled={page <= 1} onClick={() => setPage((value) => value - 1)} className="text-primary-700 disabled:opacity-40">← Алдыңғы</button>
+                  <span>{page} / {totalPages}</span>
+                  <button type="button" disabled={page >= totalPages} onClick={() => setPage((value) => value + 1)} className="text-primary-700 disabled:opacity-40">Келесі →</button>
+                </div>}
               </div>
             )}
           </div>

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Query, UseGuards, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query, UseGuards, Patch, Header } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AttemptsService } from './attempts.service';
@@ -16,6 +16,14 @@ import { Actor } from '../proctor/proctor-access';
 @Controller('attempts')
 export class AttemptsController {
   constructor(private readonly attemptsService: AttemptsService) {}
+
+  @Get('preflight/:examId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.STUDENT)
+  @Header('Cache-Control', 'no-store')
+  preflight(@Param('examId') examId: string, @CurrentUser('id') userId: string) {
+    return this.attemptsService.preflight(examId, userId);
+  }
 
   @Post('start/:examId')
   @UseGuards(RolesGuard)
@@ -63,6 +71,7 @@ export class AttemptsController {
   @UseGuards(RolesGuard)
   @Roles(Role.PROCTOR, Role.ADMIN, Role.TEACHER)
   @ApiQuery({ name: 'examId', required: false })
+  @ApiQuery({ name: 'appealState', required: false, enum: ['OPEN'] })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page (default: 50, max: 200)' })
   @ApiOperation({ summary: 'Барлық талпынулар (проктор/мұғалім)' })
@@ -71,10 +80,11 @@ export class AttemptsController {
     @Query('examId') examId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('appealState') appealState?: string,
   ) {
     const pageNum = Math.max(1, parseInt(page || '1', 10) || 1);
     const limitNum = Math.min(200, Math.max(1, parseInt(limit || '50', 10) || 50));
-    return this.attemptsService.getAllAttempts(actor, examId, pageNum, limitNum);
+    return this.attemptsService.getAllAttempts(actor, examId, pageNum, limitNum, appealState);
   }
 
   @Patch(':id/flag')
