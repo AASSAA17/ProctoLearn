@@ -7,6 +7,7 @@ import api from '@/lib/api';
 import { downloadFile } from '@/lib/download';
 import { useAuthStore } from '@/store/auth.store';
 import { useRouter } from 'next/navigation';
+import LoadFailure from '@/components/LoadFailure';
 
 interface Stats {
   users: { total: number; newThisWeek: number; online: number; byRole: Record<string, number> };
@@ -30,13 +31,24 @@ export default function AdminPage() {
   const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (user && user.role !== 'ADMIN') { router.push('/dashboard'); return; }
-    api.get('/admin/stats').then((r) => setStats(r.data)).finally(() => setLoading(false));
-  }, [user, router]);
+    api.get('/admin/stats').then((r) => {
+      setStats(r.data);
+      setLoadError(false);
+    }).catch(() => setLoadError(true)).finally(() => setLoading(false));
+  }, [user, router, retryKey]);
+
+  const retry = () => {
+    setLoading(true);
+    setRetryKey((key) => key + 1);
+  };
 
   if (loading) return <div className="text-center py-16 text-gray-400">Жүктелуде...</div>;
+  if (loadError) return <LoadFailure onRetry={retry} />;
   if (!stats) return null;
 
   const downloadExcel = async (type: 'users' | 'courses') => {

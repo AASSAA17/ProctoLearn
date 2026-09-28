@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/auth.store';
 import Link from 'next/link';
 import api from '@/lib/api';
+import LoadFailure from '@/components/LoadFailure';
 
 interface Enrollment {
   id: string;
@@ -37,17 +38,36 @@ export default function DashboardPage() {
   const [activeEnrollments, setActiveEnrollments] = useState<Enrollment[]>([]);
   const [attempts, setAttempts] = useState<number>(0);
   const [certs, setCerts] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    api.get('/enrollments/my').then((r) => {
-      const all: Enrollment[] = Array.isArray(r.data) ? r.data : [];
+  const loadDashboard = useCallback(async () => {
+    try {
+      const [enrollments, attemptsResponse, certificates] = await Promise.all([
+        api.get('/enrollments/my'), api.get('/attempts/my'), api.get('/certificates/my'),
+      ]);
+      const all: Enrollment[] = Array.isArray(enrollments.data) ? enrollments.data : [];
       setActiveEnrollments(all.filter(e => !e.completedAt));
-    }).catch(() => {});
-    api.get('/attempts/my').then((r) => setAttempts(Array.isArray(r.data) ? r.data.length : 0)).catch(() => {});
-    api.get('/certificates/my').then((r) => setCerts(Array.isArray(r.data) ? r.data.length : 0)).catch(() => {});
+      setAttempts(Array.isArray(attemptsResponse.data) ? attemptsResponse.data.length : 0);
+      setCerts(Array.isArray(certificates.data) ? certificates.data.length : 0);
+      setLoadError(false);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => { void loadDashboard(); }, [loadDashboard]);
+
+  const retry = () => {
+    setLoading(true);
+    void loadDashboard();
+  };
+
   if (!user) return null;
+  if (loading) return <div role="status" className="py-16 text-center text-gray-500">Жүктелуде...</div>;
+  if (loadError) return <LoadFailure onRetry={retry} />;
 
   const initials = user.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
   const grad = ROLE_GRAD[user.role] ?? ROLE_GRAD.STUDENT;

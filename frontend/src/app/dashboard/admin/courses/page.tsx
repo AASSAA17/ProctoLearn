@@ -5,6 +5,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { downloadFile } from '@/lib/download';
+import LoadFailure from '@/components/LoadFailure';
 
 interface CourseStat {
   id: string; title: string; teacher: { name: string };
@@ -15,10 +16,20 @@ interface CourseStat {
 export default function AdminCoursesPage() {
   const [courses, setCourses] = useState<CourseStat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    api.get('/admin/courses/stats').then(r => setCourses(r.data)).finally(() => setLoading(false));
-  }, []);
+    api.get('/admin/courses/stats').then(r => {
+      setCourses(r.data);
+      setLoadError(false);
+    }).catch(() => setLoadError(true)).finally(() => setLoading(false));
+  }, [retryKey]);
+
+  const retry = () => {
+    setLoading(true);
+    setRetryKey((key) => key + 1);
+  };
 
   const downloadExcel = async () => {
     try { await downloadFile('/admin/export/courses', 'курстар.xlsx'); }
@@ -40,6 +51,8 @@ export default function AdminCoursesPage() {
 
       {loading ? (
         <div className="text-center py-12 text-gray-400">Жүктелуде...</div>
+      ) : loadError ? (
+        <LoadFailure onRetry={retry} />
       ) : (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <table className="w-full text-sm">

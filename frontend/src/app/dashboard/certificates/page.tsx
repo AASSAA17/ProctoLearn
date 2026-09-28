@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { certificateVerificationUrl } from '@/lib/public-links';
 import toast from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
+import LoadFailure from '@/components/LoadFailure';
 
 interface Certificate {
   id: string;
@@ -19,15 +20,25 @@ export default function CertificatesPage() {
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [origin, setOrigin] = useState('');
+  const [loadError, setLoadError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     setOrigin(window.location.origin);
     api
       .get('/certificates/my')
-      .then(({ data }) => setCerts(data))
-      .catch(() => toast.error('Сертификаттарды жүктеу қатесі'))
+      .then(({ data }) => {
+        setCerts(data);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [retryKey]);
+
+  const retry = () => {
+    setLoading(true);
+    setRetryKey((key) => key + 1);
+  };
 
   if (loading) {
     return (
@@ -36,6 +47,7 @@ export default function CertificatesPage() {
       </div>
     );
   }
+  if (loadError) return <LoadFailure onRetry={retry} />;
 
   const downloadPdf = async (certId: string, courseTitle: string) => {
     try {

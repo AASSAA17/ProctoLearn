@@ -110,6 +110,30 @@ async function main() {
       console.log(`PASS role ${role}: browser, API and private cookie`);
     }
 
+    for (const [role, route, endpoint, readyText] of [
+      ['STUDENT', '/dashboard', '/enrollments/my', 'Белсенді курс'],
+      ['STUDENT', '/dashboard/certificates', '/certificates/my', 'Менің сертификаттарым'],
+      ['ADMIN', '/dashboard/admin', '/admin/stats', 'Жалпы статистика және басқару'],
+      ['ADMIN', '/dashboard/admin/courses', '/admin/courses/stats', 'Курстар статистикасы'],
+    ]) {
+      const page = sessions.get(role).page;
+      let fail = true;
+      const intercept = async (request) => {
+        if (fail) await request.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"unavailable"}' });
+        else await request.continue();
+      };
+      await page.route(`**${endpoint}`, intercept);
+      await page.goto(web + route);
+      await page.getByRole('alert').getByText('Деректерді жүктеу мүмкін болмады.').waitFor();
+      assert.equal(await page.getByText('Курстар жоқ').count(), 0);
+      fail = false;
+      await page.getByRole('button', { name: 'Қайта жүктеу' }).click();
+      await page.getByRole('alert').filter({ hasText: 'Деректерді жүктеу мүмкін болмады.' }).waitFor({ state: 'hidden' });
+      await page.getByText(readyText, { exact: true }).first().waitFor();
+      await page.unroute(`**${endpoint}`, intercept);
+    }
+    console.log('PASS dashboard, certificates and admin load failures recover on retry');
+
     const mobile = sessions.get('STUDENT');
     await mobile.page.setViewportSize({ width: 390, height: 844 });
     await mobile.page.goto(`${web}/dashboard/courses`);
