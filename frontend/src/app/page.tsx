@@ -188,7 +188,7 @@ export default function HomePage() {
                 return (
                   <Link
                     key={course.id}
-                    href="/auth/register"
+                    href={`/courses/${encodeURIComponent(course.id)}`}
                     className="bg-white rounded-2xl border border-gray-200 hover:border-primary-300 hover:shadow-lg transition-all group overflow-hidden"
                   >
                     <div className={`h-3 w-full ${
@@ -225,10 +225,10 @@ export default function HomePage() {
 
           <div className="text-center mt-10">
             <Link
-              href="/auth/register"
+              href="/courses"
               className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold px-8 py-3 rounded-xl transition-colors"
             >
-              Тіркеліп барлық курстарды көру →
+              Барлық курстарды көру →
             </Link>
           </div>
         </div>

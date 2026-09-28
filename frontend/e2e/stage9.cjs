@@ -90,8 +90,36 @@ async function main() {
     await publicPage.locator('#courses').getByRole('heading', { name: 'Курстар', exact: true }).waitFor();
     assert.ok(await publicPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     assert.equal(await publicPage.getByText('1 000+').count(), 0);
+    let catalogUnavailable = true;
+    const interceptCatalog = async route => {
+      if (catalogUnavailable) await route.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"unavailable"}' });
+      else await route.continue();
+    };
+    await publicPage.route('**/courses?*', interceptCatalog);
+    await publicPage.goto(`${web}/courses`);
+    await publicPage.getByRole('heading', { name: 'Барлық курстар' }).waitFor();
+    await publicPage.getByRole('alert').getByText('Курстарды жүктеу мүмкін болмады.').waitFor();
+    catalogUnavailable = false;
+    await publicPage.getByRole('alert').getByRole('button', { name: 'Қайта жүктеу' }).click();
+    const publicCards = publicPage.locator('a[href^="/courses/"]');
+    await publicCards.first().waitFor();
+    assert.ok(await publicCards.count() <= 12);
+    assert.ok(await publicPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    if (await prisma.course.count() > 12) {
+      const firstHref = await publicCards.first().getAttribute('href');
+      await publicPage.getByRole('button', { name: 'Келесі бет' }).click();
+      await publicPage.waitForFunction(previous => document.querySelector('a[href^="/courses/"]')?.getAttribute('href') !== previous, firstHref);
+      assert.notEqual(await publicCards.first().getAttribute('href'), firstHref);
+    }
+    await publicPage.unroute('**/courses?*', interceptCatalog);
+    const courseHref = await publicCards.first().getAttribute('href');
+    const publicCourse = await prisma.course.findUniqueOrThrow({ where: { id: decodeURIComponent(courseHref.split('/').at(-1)) } });
+    await publicCards.first().click();
+    await publicPage.getByRole('heading', { name: publicCourse.title, exact: true }).waitFor();
+    await publicPage.getByRole('link', { name: 'Тіркеліп, курсты бастау' }).waitFor();
+    await auditPage(publicPage);
     await publicPage.close();
-    console.log('PASS public landing width and verified-only content');
+    console.log('PASS public landing and paged catalog lead to a real course before registration');
 
     for (const [role, route, heading] of [
       ['STUDENT', '/dashboard/courses', 'Курстар'],
