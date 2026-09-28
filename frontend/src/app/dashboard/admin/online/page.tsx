@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
+import LoadFailure from '@/components/LoadFailure';
 
 interface OnlineUser {
   id: string; name: string; email: string; role: string; lastSeen: string;
@@ -15,12 +16,14 @@ const ROLE_LABELS: Record<string, string> = {
 export default function AdminOnlinePage() {
   const [users, setUsers] = useState<OnlineUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = () => {
     api.get('/admin/users/online')
-      .then(r => { setUsers(r.data); setLastUpdate(new Date()); })
+      .then(r => { setUsers(r.data); setLastUpdate(new Date()); setLoadError(false); })
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   };
 
@@ -48,7 +51,7 @@ export default function AdminOnlinePage() {
           <button onClick={load} className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg">
             🔄 Жаңарту
           </button>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-gray-600 mt-1">
             Жаңартылды: {lastUpdate?.toLocaleTimeString('kk-KZ') ?? '—'}
           </p>
         </div>
@@ -61,8 +64,10 @@ export default function AdminOnlinePage() {
 
       {loading ? (
         <div className="text-center py-12 text-gray-400">Жүктелуде...</div>
+      ) : loadError ? (
+        <LoadFailure onRetry={load} />
       ) : users.length === 0 ? (
-        <div className="bg-white rounded-xl p-8 text-center text-gray-400 shadow-sm">
+        <div className="bg-white rounded-xl p-8 text-center text-gray-600 shadow-sm">
           Қазір онлайн пайдаланушы жоқ
         </div>
       ) : (
@@ -78,7 +83,7 @@ export default function AdminOnlinePage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-900 truncate">{u.name}</p>
-                  <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                  <p className="text-xs text-gray-600 truncate">{u.email}</p>
                 </div>
               </div>
               <div className="mt-3 flex items-center justify-between">
@@ -92,7 +97,7 @@ export default function AdminOnlinePage() {
         </div>
       )}
 
-      <p className="text-xs text-gray-400 text-center">Бет автоматты түрде 30 секунд сайын жаңарады</p>
+      <p className="text-xs text-gray-600 text-center">Бет автоматты түрде 30 секунд сайын жаңарады</p>
     </div>
   );
 }

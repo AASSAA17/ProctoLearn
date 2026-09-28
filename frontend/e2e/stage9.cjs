@@ -125,6 +125,32 @@ async function main() {
     }
     console.log('PASS staff workspaces hide student tools and enrollment API rejects staff');
 
+    for (const [role, route, heading] of [
+      ['STUDENT', '/dashboard/profile', 'Менің профилім'],
+      ['STUDENT', '/dashboard/my-attempts', 'Менің нәтижелерім'],
+      ['STUDENT', '/dashboard/certificates', 'Менің сертификаттарым'],
+      ['TEACHER', '/dashboard/teacher/courses/new', 'Жаңа курс жасау'],
+      ['PROCTOR', '/dashboard/proctor', 'Проктор панелі'],
+      ['ADMIN', '/dashboard/admin', 'Админ панелі'],
+      ['ADMIN', '/dashboard/admin/courses', 'Курстар статистикасы'],
+      ['ADMIN', '/dashboard/admin/users', 'Пайдаланушылар'],
+      ['ADMIN', '/dashboard/admin/online', /Онлайн пайдаланушылар/],
+      ['ADMIN', '/dashboard/admin/audit', 'Әрекеттер журналы'],
+    ]) {
+      const page = sessions.get(role).page;
+      await page.goto(web + route);
+      await page.getByRole('heading', { name: heading, exact: typeof heading === 'string' }).first().waitFor();
+      await auditPage(page);
+    }
+    for (const role of ['STUDENT', 'TEACHER', 'PROCTOR', 'ADMIN']) {
+      const page = sessions.get(role).page;
+      await page.goto(`${web}/dashboard/notifications`);
+      await page.getByRole('heading', { name: 'Хабарландырулар', exact: true }).waitFor();
+      await auditPage(page);
+    }
+    assert.deepEqual(auditIssues, []);
+    console.log('PASS role pages, profile, inbox and administration smoke with WCAG A/AA');
+
     for (const [role, route, endpoint] of [
       ['TEACHER', '/dashboard/teacher/courses', '/courses'],
       ['PROCTOR', '/dashboard/proctor', '/attempts'],
@@ -149,9 +175,11 @@ async function main() {
 
     for (const [role, route, endpoint, readyText] of [
       ['STUDENT', '/dashboard', '/enrollments/my', 'Белсенді курс'],
+      ['STUDENT', '/dashboard/my-attempts', '/attempts/my', 'Менің нәтижелерім'],
       ['STUDENT', '/dashboard/certificates', '/certificates/my', 'Менің сертификаттарым'],
       ['ADMIN', '/dashboard/admin', '/admin/stats', 'Жалпы статистика және басқару'],
       ['ADMIN', '/dashboard/admin/courses', '/admin/courses/stats', 'Курстар статистикасы'],
+      ['ADMIN', '/dashboard/admin/online', '/admin/users/online', /Онлайн пайдаланушылар/],
     ]) {
       const page = sessions.get(role).page;
       let fail = true;
@@ -166,7 +194,7 @@ async function main() {
       fail = false;
       await page.getByRole('button', { name: 'Қайта жүктеу' }).click();
       await page.getByRole('alert').filter({ hasText: 'Деректерді жүктеу мүмкін болмады.' }).waitFor({ state: 'hidden' });
-      await page.getByText(readyText, { exact: true }).first().waitFor();
+      await page.getByText(readyText, { exact: typeof readyText === 'string' }).first().waitFor();
       await page.unroute(`**${endpoint}`, intercept);
     }
     console.log('PASS dashboard, certificates and admin load failures recover on retry');

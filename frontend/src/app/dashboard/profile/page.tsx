@@ -61,7 +61,7 @@ export default function ProfilePage() {
         </div>
 
         {info?.lastSeen && (
-          <div className="text-xs text-gray-400 mb-2">
+          <div className="text-xs text-gray-600 mb-2">
             Соңғы белсенділік: {new Date(info.lastSeen).toLocaleString('kk-KZ')}
           </div>
         )}
@@ -72,8 +72,9 @@ export default function ProfilePage() {
         <h2 className="font-semibold text-gray-800 mb-4">Ақпаратты өзгерту</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Аты-жөні</label>
+            <label htmlFor="profile-name" className="block text-sm font-medium text-gray-700 mb-1">Аты-жөні</label>
             <input
+              id="profile-name"
               type="text"
               className="input"
               value={form.name}
@@ -81,8 +82,9 @@ export default function ProfilePage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Телефон</label>
+            <label htmlFor="profile-phone" className="block text-sm font-medium text-gray-700 mb-1">Телефон</label>
             <input
+              id="profile-phone"
               type="tel"
               className="input"
               placeholder="+7 (___) ___-__-__"
@@ -91,14 +93,15 @@ export default function ProfilePage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Электронды пошта</label>
+            <label htmlFor="profile-email" className="block text-sm font-medium text-gray-700 mb-1">Электронды пошта</label>
             <input
+              id="profile-email"
               type="email"
               className="input bg-gray-50 cursor-not-allowed"
               value={info?.email || ''}
               disabled
             />
-            <p className="text-xs text-gray-400 mt-1">Поштаны өзгерту мүмкін емес</p>
+            <p className="text-xs text-gray-600 mt-1">Поштаны өзгерту мүмкін емес</p>
           </div>
           <button
             onClick={handleSave}

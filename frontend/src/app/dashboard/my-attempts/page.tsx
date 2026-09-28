@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
+import LoadFailure from '@/components/LoadFailure';
 
 interface Attempt {
   id: string;
@@ -22,14 +22,18 @@ interface Attempt {
 export default function MyAttemptsPage() {
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     api
       .get('/attempts/my')
-      .then(({ data }) => setAttempts(data))
-      .catch(() => toast.error('Жүктеу қатесі'))
+      .then(({ data }) => { setAttempts(data); setLoadError(false); })
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [retryKey]);
+
+  const retry = () => { setLoading(true); setRetryKey((key) => key + 1); };
 
   const statusLabel = (attempt: Attempt) => {
     const s = attempt.status;
@@ -68,6 +72,7 @@ export default function MyAttemptsPage() {
       </div>
     );
   }
+  if (loadError) return <LoadFailure onRetry={retry} />;
 
   // Stats
   const finished = attempts.filter(a => a.status === 'FINISHED' && a.reviewStatus === 'APPROVED');
@@ -84,7 +89,7 @@ export default function MyAttemptsPage() {
         <div className="text-center py-16 text-gray-500">
           <div className="text-6xl mb-4">📋</div>
           <p className="text-lg font-medium mb-2">Талпыныс табылмады</p>
-          <p className="text-sm text-gray-400 mb-6">Емтихан тапсырғаннан кейін нәтижелер осында көрінеді</p>
+          <p className="text-sm text-gray-600 mb-6">Емтихан тапсырғаннан кейін нәтижелер осында көрінеді</p>
           <Link href="/dashboard/courses" className="btn-primary">
             Курстарды қарау →
           </Link>
@@ -98,7 +103,7 @@ export default function MyAttemptsPage() {
               <p className="text-xs text-gray-500 mt-1">Барлық талпыныс</p>
             </div>
             <div className="card text-center py-4">
-              <p className="text-3xl font-bold text-green-600">{finished.length}</p>
+              <p className="text-3xl font-bold text-green-700">{finished.length}</p>
               <p className="text-xs text-gray-500 mt-1">Расталған нәтиже</p>
             </div>
             <div className="card text-center py-4">
@@ -138,23 +143,23 @@ export default function MyAttemptsPage() {
                         {/* Score */}
                         {attempt.score !== null && (
                           <div className="flex items-center gap-1.5">
-                            <span className="text-gray-400 text-xs">Балл:</span>
-                            <span className={`font-bold text-base ${passed ? 'text-green-600' : 'text-red-600'}`}>
+                            <span className="text-gray-600 text-xs">Балл:</span>
+                            <span className={`font-bold text-base ${passed ? 'text-green-700' : 'text-red-700'}`}>
                               {attempt.score}%
                             </span>
-                            <span className="text-xs text-gray-400">(өту: {attempt.exam.passScore}%)</span>
-                            {passed ? <span className="text-green-500 text-xs">Өту балы жиналды</span> : <span className="text-red-400 text-xs">Өту балы жиналмады</span>}
+                            <span className="text-xs text-gray-600">(өту: {attempt.exam.passScore}%)</span>
+                            {passed ? <span className="text-green-700 text-xs">Өту балы жиналды</span> : <span className="text-red-700 text-xs">Өту балы жиналмады</span>}
                           </div>
                         )}
                         {/* Trust */}
                         <div className="flex items-center gap-1.5">
-                          <span className="text-gray-400 text-xs">Сенімділік:</span>
+                          <span className="text-gray-600 text-xs">Сенімділік:</span>
                           {trustBar(attempt.trustScore)}
                         </div>
                       </div>
                       {attempt.reviewStatus === 'REJECTED' && attempt.reviewReason && <p className="mt-2 text-sm text-red-700">Тексеру себебі: {attempt.reviewReason}</p>}
                       {/* Date + duration */}
-                      <div className="flex gap-4 mt-2 text-xs text-gray-400">
+                      <div className="flex gap-4 mt-2 text-xs text-gray-600">
                         <span>📅 {new Date(attempt.startedAt).toLocaleDateString('kk-KZ', { day:'numeric', month:'long', year:'numeric' })}</span>
                         <span>⏱ {getDuration(attempt.startedAt, attempt.finishedAt)}</span>
                       </div>

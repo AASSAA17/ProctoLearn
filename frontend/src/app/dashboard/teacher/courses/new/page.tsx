@@ -46,10 +46,11 @@ export default function NewCoursePage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label htmlFor="new-course-title" className="block text-sm font-medium text-gray-700 mb-1.5">
               Курс атауы <span className="text-red-500">*</span>
             </label>
             <input
+              id="new-course-title"
               type="text"
               value={form.title}
               onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
@@ -59,8 +60,9 @@ export default function NewCoursePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Сипаттама</label>
+            <label htmlFor="new-course-description" className="block text-sm font-medium text-gray-700 mb-1.5">Сипаттама</label>
             <textarea
+              id="new-course-description"
               value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
               rows={4}
@@ -70,8 +72,9 @@ export default function NewCoursePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Деңгей</label>
+            <label htmlFor="new-course-level" className="block text-sm font-medium text-gray-700 mb-1.5">Деңгей</label>
             <select
+              id="new-course-level"
               value={form.level}
               onChange={(e) => setForm((p) => ({ ...p, level: e.target.value }))}
               className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
@@ -100,7 +103,7 @@ export default function NewCoursePage() {
         </form>
       </div>
 
-      <p className="text-center text-sm text-gray-400 mt-4">
+      <p className="text-center text-sm text-gray-600 mt-4">
         Курс жасалғаннан кейін бөлімдер мен сабақтарды қосуға болады
       </p>
     </div>

@@ -44,7 +44,7 @@ export default function AdminCoursesPage() {
           <h1 className="text-2xl font-bold text-gray-900 mt-1">Курстар статистикасы</h1>
         </div>
         <button onClick={downloadExcel}
-          className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg">
+          className="bg-green-700 hover:bg-green-800 text-white text-sm px-4 py-2 rounded-lg">
           📥 Excel жүктеу
         </button>
       </div>

@@ -21,7 +21,7 @@ function StatCard({ title, value, sub, color }: { title: string; value: number; 
     <div className={`bg-white rounded-xl shadow-sm border-l-4 ${color} p-6`}>
       <p className="text-sm text-gray-500">{title}</p>
       <p className="text-3xl font-bold text-gray-800 mt-1">{value.toLocaleString()}</p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      {sub && <p className="text-xs text-gray-600 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -69,7 +69,7 @@ export default function AdminPage() {
             📥 Excel: Пайдаланушылар
           </button>
           <button onClick={() => downloadExcel('courses')}
-            className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2">
+            className="bg-green-700 hover:bg-green-800 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2">
             📥 Excel: Курстар
           </button>
         </div>
@@ -112,7 +112,7 @@ export default function AdminPage() {
             <Link key={item.href} href={item.href}
               className={`border rounded-xl p-5 transition-colors ${item.color}`}>
               <p className="font-semibold text-gray-800">{item.label}</p>
-              <p className="text-sm text-gray-500 mt-1">{item.desc}</p>
+              <p className="text-sm text-gray-700 mt-1">{item.desc}</p>
             </Link>
           ))}
         </div>
