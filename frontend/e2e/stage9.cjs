@@ -77,6 +77,84 @@ const fakeCapture = () => {
   Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async () => stream() });
 };
 
+async function verifyProctorFeed(proctor, studentPage, attempt) {
+  const sessionPath = `/proctor/sessions/${attempt.id}`;
+  const matches = url => url.pathname === sessionPath;
+  let mode = 'fail';
+  let captureSnapshot;
+  let releaseSnapshot;
+  const captured = new Promise(resolve => { captureSnapshot = resolve; });
+  const released = new Promise(resolve => { releaseSnapshot = resolve; });
+  const intercept = async route => {
+    if (mode === 'fail') return route.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"unavailable"}' });
+    if (mode === 'hold') {
+      const response = await route.fetch();
+      const snapshot = await response.json();
+      captureSnapshot(snapshot);
+      await released;
+      return route.fulfill({ response, json: snapshot });
+    }
+    return route.continue();
+  };
+  await proctor.page.route(matches, intercept);
+  try {
+    await proctor.page.goto(`${web}/dashboard/proctor`);
+    const card = proctor.page.getByRole('article').filter({ has: proctor.page.locator(`a[href="/dashboard/proctor/evidence/${attempt.id}"]`) });
+    await card.getByRole('button', { name: /оқиғаларды көру/ }).click();
+    const feed = proctor.page.getByRole('region', { name: 'Нақты уақыт оқиғалары' });
+    await feed.getByText('Тікелей байланыс қосылды', { exact: true }).waitFor();
+    await feed.getByRole('alert').waitFor();
+    assert.equal(await feed.getByText('Оқиға жоқ', { exact: true }).count(), 0);
+    mode = 'pass';
+    await feed.getByRole('button', { name: 'Қайта жүктеу' }).click();
+    await feed.getByRole('alert').waitFor({ state: 'hidden' });
+    await feed.getByText('Оқиғалар жүктелуде...', { exact: true }).waitFor({ state: 'hidden' });
+
+    await studentPage.addScriptTag({ path: path.join(root, 'frontend/node_modules/socket.io-client/dist/socket.io.min.js') });
+    await studentPage.evaluate(({ api, attemptId }) => new Promise((resolve, reject) => {
+      const socket = window.proctorFeedTestSocket = window.io(`${api}/proctor`, { transports: ['websocket'], withCredentials: true, forceNew: true });
+      const timeout = setTimeout(() => reject(new Error('Student event socket did not join')), 10000);
+      socket.on('connect', () => socket.emit('proctor:start', { attemptId, role: 'student' }));
+      socket.once('proctor:started', () => { clearTimeout(timeout); resolve(); });
+    }), { api, attemptId: attempt.id });
+    const emitEvent = type => studentPage.evaluate(({ attemptId, type }) => new Promise((resolve, reject) => {
+      const socket = window.proctorFeedTestSocket;
+      const listener = payload => {
+        if (payload.event.attemptId !== attemptId || payload.event.type !== type) return;
+        clearTimeout(timeout); socket.off('proctor:event:recorded', listener); resolve(payload);
+      };
+      const timeout = setTimeout(() => { socket.off('proctor:event:recorded', listener); reject(new Error('Student event was not recorded')); }, 10000);
+      socket.on('proctor:event:recorded', listener);
+      socket.emit('proctor:event', { attemptId, type });
+    }), { attemptId: attempt.id, type });
+    await emitEvent('copy_paste');
+    await feed.getByText('⚠️ Көшіру/қою', { exact: true }).waitFor();
+
+    mode = 'hold';
+    await feed.getByRole('button', { name: 'Оқиғаларды жаңарту' }).click();
+    await Promise.race([captured, new Promise((_, reject) => setTimeout(() => reject(new Error('Summary snapshot was not captured')), 10000))]);
+    const live = await emitEvent('paste');
+    await feed.getByText('⚠️ Қою', { exact: true }).waitFor();
+    releaseSnapshot();
+    await feed.getByText('Оқиғалар жүктелуде...', { exact: true }).waitFor({ state: 'hidden' });
+    assert.equal(await feed.getByText('⚠️ Қою', { exact: true }).count(), 1);
+    assert.equal(await feed.getByText('⚠️ Көшіру/қою', { exact: true }).count(), 1);
+    const displayedTrust = Number((await card.getByText(/Сенімділік:/).innerText()).split(':').at(-1).trim());
+    assert.ok(displayedTrust <= live.trustScore, 'stale HTTP snapshot cannot restore a deducted trust score');
+    mode = 'pass';
+    await feed.getByRole('button', { name: 'Оқиғаларды жаңарту' }).click();
+    await feed.getByText('Оқиғалар жүктелуде...', { exact: true }).waitFor({ state: 'hidden' });
+    assert.equal(await feed.getByText('⚠️ Қою', { exact: true }).count(), 1);
+    await auditPage(proctor.page);
+    assert.deepEqual(auditIssues, []);
+    console.log('PASS proctor feed retries failed history and preserves live events/trust across delayed snapshots');
+  } finally {
+    releaseSnapshot();
+    await proctor.page.unroute(matches, intercept);
+    await studentPage.evaluate(() => window.proctorFeedTestSocket?.disconnect()).catch(() => {});
+  }
+}
+
 async function main() {
   const ready = await fetch(`${api}/ready`);
   assert.equal(ready.status, 200);
@@ -392,6 +470,7 @@ async function main() {
     await studentPage.getByRole('button', { name: /Камера мен экранды қосып/ }).click();
     await studentPage.getByRole('heading', { name: 'E2E вопрос' }).waitFor({ timeout: 30000 });
     const attempt = await prisma.attempt.findFirstOrThrow({ where: { examId: fixture.examId, userId: fixture.studentId } });
+    await verifyProctorFeed(sessions.get('PROCTOR'), studentPage, attempt);
     let dropped = false;
     await studentPage.route('**/attempts/*/draft', async route => {
       if (route.request().method() === 'PATCH' && !dropped) { dropped = true; await route.abort('failed'); }

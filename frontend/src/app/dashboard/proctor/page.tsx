@@ -6,6 +6,7 @@ import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import LoadFailure from '@/components/LoadFailure';
+import { mergeProctorEvents, mergeProctorSignals, ProctorFeedEvent } from '@/lib/proctor-feed';
 
 interface AttemptSummary {
   id: string;
@@ -23,13 +24,26 @@ interface AttemptSummary {
 export default function ProctorDashboardPage() {
   const [attempts, setAttempts] = useState<AttemptSummary[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<ProctorFeedEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventsError, setEventsError] = useState(false);
+  const [eventsVersion, setEventsVersion] = useState(0);
+  const [liveConnected, setLiveConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [appealsOnly, setAppealsOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [refreshVersion, setRefreshVersion] = useState(0);
+
+  const selectAttempt = (attemptId: string) => {
+    if (attemptId === selected) return;
+    setEvents([]);
+    setEventsError(false);
+    setEventsLoading(true);
+    setLiveConnected(false);
+    setSelected(attemptId);
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -59,15 +73,26 @@ export default function ProctorDashboardPage() {
       withCredentials: true,
       transports: ['websocket'],
     });
+    let active = true;
 
     socket.on('connect', () => {
       socket.emit('proctor:start', { attemptId: selected, role: 'proctor' });
     });
 
+    socket.on('proctor:started', ({ attemptId }) => {
+      if (!active || attemptId !== selected) return;
+      setLiveConnected(true);
+      // Fetch after joining, including on reconnect, to recover events missed while offline.
+      setEventsVersion(value => value + 1);
+    });
+    socket.on('disconnect', () => { if (active) setLiveConnected(false); });
+    socket.on('connect_error', () => { if (active) setLiveConnected(false); });
+
     socket.on('proctor:event:recorded', ({ event, trustScore, flaggedAt }) => {
-      setEvents((prev) => [event, ...prev].slice(0, 50));
+      if (!active || event?.attemptId !== selected) return;
+      setEvents((prev) => mergeProctorEvents(selected, prev, [event]));
       setAttempts((prev) =>
-        prev.map((a) => (a.id === selected ? { ...a, trustScore, flaggedAt: flaggedAt ?? a.flaggedAt } : a)),
+        prev.map((a) => (a.id === selected ? { ...a, ...mergeProctorSignals(a, { trustScore, flaggedAt }) } : a)),
       );
     });
 
@@ -75,8 +100,9 @@ export default function ProctorDashboardPage() {
       toast.success('Жаңа скриншот сақталды', { duration: 2000 });
     });
 
-    let active = true;
     socket.on('proctor:error', async ({ code, message }) => {
+      if (!active) return;
+      setLiveConnected(false);
       if (code === 'UNAUTHORIZED') {
         try {
           await api.get('/auth/me');
@@ -96,23 +122,25 @@ export default function ProctorDashboardPage() {
   useEffect(() => {
     if (!selected) return;
     const controller = new AbortController();
-    setEvents([]);
+    setEventsLoading(true);
+    setEventsError(false);
     api
       .get(`/proctor/sessions/${selected}`, { signal: controller.signal })
       .then(({ data }) => {
         if (controller.signal.aborted) return;
-        setEvents((data?.events ?? []).reverse());
-        setAttempts((previous) => previous.map((attempt) => attempt.id === selected ? { ...attempt, ...data } : attempt));
+        setEvents((previous) => mergeProctorEvents(selected, data?.events ?? [], previous));
+        setAttempts((previous) => previous.map((attempt) => attempt.id === selected ? { ...attempt, ...data, ...mergeProctorSignals(attempt, data) } : attempt));
       })
-      .catch(() => { if (!controller.signal.aborted) { setEvents([]); toast.error('Сессияны жүктеу мүмкін болмады'); } });
+      .catch(() => { if (!controller.signal.aborted) setEventsError(true); })
+      .finally(() => { if (!controller.signal.aborted) setEventsLoading(false); });
     return () => controller.abort();
-  }, [selected]);
+  }, [selected, eventsVersion]);
 
   const handleFlag = async (attemptId: string) => {
     try {
       const { data } = await api.patch(`/attempts/${attemptId}/flag`);
       setAttempts((prev) =>
-        prev.map((a) => (a.id === attemptId ? { ...a, ...data } : a)),
+        prev.map((a) => (a.id === attemptId ? { ...a, ...data, ...mergeProctorSignals(a, data) } : a)),
       );
       toast.success('Талпыныс белгіленді');
     } catch {
@@ -170,23 +198,23 @@ export default function ProctorDashboardPage() {
             ) : (
               <div className="space-y-3">
                 {attempts.map((attempt) => (
-                  <div
+                  <article
                     key={attempt.id}
                     className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                       selected === attempt.id
                         ? 'border-primary-500 bg-primary-50'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
-                    onClick={() => setSelected(attempt.id)}
+                    onClick={() => selectAttempt(attempt.id)}
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-gray-900">{attempt.user?.name ?? '—'}</p>
-                        <p className="text-sm text-gray-500">{attempt.user?.email ?? '—'}</p>
+                        <p className="text-sm text-gray-600">{attempt.user?.email ?? '—'}</p>
                         <p className="text-sm text-gray-600">{attempt.exam?.title ?? '—'}</p>
                       </div>
                       <div className="text-right">
-                        <button type="button" aria-label={`${attempt.user?.name ?? 'Талпыныс'}: оқиғаларды көру`} aria-pressed={selected === attempt.id} onClick={(event) => { event.stopPropagation(); setSelected(attempt.id); }} className="text-primary-700 underline text-sm mb-1">Оқиғаларды көру</button>
+                        <button type="button" aria-label={`${attempt.user?.name ?? 'Талпыныс'}: оқиғаларды көру`} aria-pressed={selected === attempt.id} onClick={(event) => { event.stopPropagation(); selectAttempt(attempt.id); }} className="text-primary-700 underline text-sm mb-1">Оқиғаларды көру</button>
                         {statusBadge(attempt.status)}
                         {attempt.appealState === 'OPEN' && <p className="mt-2 rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">Апелляция · тәуелсіз тексеру қажет</p>}
                         {attempt.appealState && attempt.appealState !== 'OPEN' && <p className="mt-1 text-xs text-gray-600">{attempt.appealState === 'OVERTURNED' ? 'Апелляция қанағаттандырылды' : 'Апелляция: шешім сақталды'}</p>}
@@ -214,7 +242,7 @@ export default function ProctorDashboardPage() {
                         {!attempt.flaggedAt && attempt.reviewStatus === 'PENDING' && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleFlag(attempt.id); }}
-                            className="text-red-600 hover:underline"
+                            className="text-red-700 hover:underline"
                           >
                             Белгілеу 🚩
                           </button>
@@ -234,7 +262,7 @@ export default function ProctorDashboardPage() {
                         style={{ width: `${attempt.trustScore ?? 100}%` }}
                       />
                     </div>
-                  </div>
+                  </article>
                 ))}
                 {totalPages > 1 && <div className="flex items-center justify-between pt-3 text-sm">
                   <button type="button" disabled={page <= 1} onClick={() => setPage((value) => value - 1)} className="text-primary-700 disabled:opacity-40">← Алдыңғы</button>
@@ -247,17 +275,21 @@ export default function ProctorDashboardPage() {
         </div>
 
         {/* Event feed */}
-        <div className="card">
-          <h2 className="text-lg font-semibold mb-4">
+        <section className="card" aria-labelledby="proctor-events-heading">
+          <h2 id="proctor-events-heading" className="text-lg font-semibold mb-4">
             {selected ? 'Нақты уақыт оқиғалары' : 'Талпыныс таңдаңыз'}
           </h2>
           {selected && (
             <div className="space-y-2 max-h-[500px] overflow-y-auto">
-              {events.length === 0 ? (
+              <p role="status" className="text-sm text-gray-600">{liveConnected ? 'Тікелей байланыс қосылды' : 'Тікелей байланыс жоқ. Оқиғаларды жаңартуға болады.'}</p>
+              <button type="button" onClick={() => setEventsVersion(value => value + 1)} disabled={eventsLoading} className="text-sm text-primary-700 underline disabled:opacity-50">Оқиғаларды жаңарту</button>
+              {eventsLoading && <p role="status" className="text-gray-600 text-sm">Оқиғалар жүктелуде...</p>}
+              {eventsError && <LoadFailure onRetry={() => setEventsVersion(value => value + 1)} />}
+              {events.length === 0 && !eventsLoading && !eventsError ? (
                 <p className="text-gray-600 text-sm">Оқиға жоқ</p>
               ) : (
-                events.map((ev, idx) => (
-                  <div key={ev?.id ?? idx} className="p-2 bg-yellow-50 rounded text-sm border border-yellow-200">
+                events.map((ev) => (
+                  <div key={ev.id} className="p-2 bg-yellow-50 rounded text-sm border border-yellow-200">
                     <p className="font-medium">{eventTypeLabel(ev?.type ?? '')}</p>
                     <p className="text-xs text-gray-600">
                       {ev?.timestamp ? new Date(ev.timestamp).toLocaleTimeString('kk-KZ') : '—'}
@@ -267,7 +299,7 @@ export default function ProctorDashboardPage() {
               )}
             </div>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );
