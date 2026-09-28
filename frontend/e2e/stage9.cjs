@@ -150,8 +150,9 @@ async function main() {
     await studentPage.setViewportSize({ width: 1365, height: 900 });
     await studentPage.addInitScript(fakeCapture);
     let droppedChunk = false;
+    let failFinalChunk = false;
     await studentPage.route('**/evidence/uploads/*/chunks/*', async route => {
-      if (!droppedChunk) { droppedChunk = true; await route.abort('failed'); }
+      if (failFinalChunk && !droppedChunk) { droppedChunk = true; await route.abort('failed'); }
       else await route.continue();
     });
     await studentPage.goto(`${web}/dashboard/exam/${fixture.examId}`);
@@ -171,18 +172,28 @@ async function main() {
     await studentPage.getByText('Жауаптар серверде сақталды').waitFor({ timeout: 20000 });
     console.log('PASS lost draft request keeps the answer and retries after network recovery');
     await studentPage.waitForTimeout(2500);
+    failFinalChunk = true;
     await studentPage.getByRole('button', { name: 'Жауаптарды жіберу' }).click();
     await studentPage.getByRole('heading', { name: 'Жауаптар қабылданды' }).waitFor({ timeout: 60000 });
     const deadline = Date.now() + 60000;
     let evidence = [];
+    let retriedUpload = false;
     while (Date.now() < deadline) {
       evidence = await prisma.evidenceFile.findMany({ where: { attemptId: attempt.id } });
       if (evidence.some(e => e.type === 'recording_camera') && evidence.some(e => e.type === 'recording_screen')) break;
+      const retry = studentPage.getByRole('button', { name: 'Жазбаларды қайта жүктеу' });
+      if (await retry.count() && await retry.isVisible() && await retry.isEnabled()) {
+        await retry.click();
+        retriedUpload = true;
+      }
       await studentPage.waitForTimeout(1000);
     }
-    assert.ok(evidence.some(e => e.type === 'recording_camera'));
-    assert.ok(evidence.some(e => e.type === 'recording_screen'));
+    if (!evidence.some(e => e.type === 'recording_camera') || !evidence.some(e => e.type === 'recording_screen')) {
+      const uploads = await prisma.recordingUpload.findMany({ where: { attemptId: attempt.id }, select: { kind: true, state: true, bytes: true } });
+      throw new Error(`Browser recordings did not complete after retry: ${JSON.stringify(uploads)}`);
+    }
     assert.equal(droppedChunk, true, 'one chunk upload must fail before the successful retry');
+    console.log(`PASS dropped video chunk recovered ${retriedUpload ? 'with visible retry control' : 'automatically'}`);
     const proctor = sessions.get('PROCTOR');
     const evidenceResponse = await proctor.context.request.get(`${api}/evidence/${attempt.id}`);
     assert.equal(evidenceResponse.status(), 200);
