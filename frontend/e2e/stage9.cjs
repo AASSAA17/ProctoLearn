@@ -87,7 +87,7 @@ async function main() {
   try {
     const publicPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
     await publicPage.goto(web);
-    await publicPage.getByRole('heading', { name: 'Курстар', exact: true }).waitFor();
+    await publicPage.locator('#courses').getByRole('heading', { name: 'Курстар', exact: true }).waitFor();
     assert.ok(await publicPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     assert.equal(await publicPage.getByText('1 000+').count(), 0);
     await publicPage.close();
