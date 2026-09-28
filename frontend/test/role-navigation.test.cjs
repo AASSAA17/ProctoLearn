@@ -25,6 +25,8 @@ test('staff navigation contains only role workspaces and common pages', () => {
   assert.deepEqual(dashboardLinks('STUDENT').map(link => link.href), [
     '/dashboard', '/dashboard/courses', '/dashboard/my-attempts', '/dashboard/certificates', '/dashboard/notifications',
   ]);
+  assert.equal(dashboardLinks('ADMIN').find(link => link.href === '/dashboard/teacher/courses').label, 'Курстарды басқару');
+  assert.equal(dashboardLinks('TEACHER').find(link => link.href === '/dashboard/teacher/courses').label, 'Менің курстарым');
 });
 
 test('student-only paths do not capture staff workspaces or common pages', () => {

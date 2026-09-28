@@ -130,6 +130,7 @@ async function main() {
       ['STUDENT', '/dashboard/my-attempts', 'Менің нәтижелерім'],
       ['STUDENT', '/dashboard/certificates', 'Менің сертификаттарым'],
       ['TEACHER', '/dashboard/teacher/courses/new', 'Жаңа курс жасау'],
+      ['ADMIN', '/dashboard/teacher/courses', 'Барлық курстар'],
       ['PROCTOR', '/dashboard/proctor', 'Проктор панелі'],
       ['ADMIN', '/dashboard/admin', 'Админ панелі'],
       ['ADMIN', '/dashboard/admin/courses', 'Курстар статистикасы'],
@@ -150,6 +151,16 @@ async function main() {
     }
     assert.deepEqual(auditIssues, []);
     console.log('PASS role pages, profile, inbox and administration smoke with WCAG A/AA');
+
+    for (const role of ['TEACHER', 'ADMIN']) {
+      const page = sessions.get(role).page;
+      const requestPromise = page.waitForRequest(request => new URL(request.url()).pathname === '/courses' && new URL(request.url()).searchParams.has('limit'));
+      await page.goto(`${web}/dashboard/teacher/courses`);
+      const query = new URL((await requestPromise).url()).searchParams;
+      assert.equal(query.get('teacherId'), role === 'TEACHER' ? (await prisma.user.findUniqueOrThrow({ where: { email: 'teacher@proctolearn.kz' } })).id : null);
+      await page.getByRole('heading', { name: role === 'ADMIN' ? 'Барлық курстар' : 'Менің курстарым' }).waitFor();
+    }
+    console.log('PASS teacher sees owned courses while admin sees the full catalog');
 
     const courseTitle = `E2E teacher course ${randomUUID()}`;
     try {

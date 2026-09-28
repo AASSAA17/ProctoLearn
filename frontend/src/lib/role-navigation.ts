@@ -24,7 +24,7 @@ export function dashboardLinks(role: DashboardRole) {
   ];
   return [
     ...common,
-    ...(role === 'TEACHER' || role === 'ADMIN' ? [{ href: '/dashboard/teacher/courses', label: 'Менің курстарым', icon: '🎓', exact: false }] : []),
+    ...(role === 'TEACHER' || role === 'ADMIN' ? [{ href: '/dashboard/teacher/courses', label: role === 'ADMIN' ? 'Курстарды басқару' : 'Менің курстарым', icon: '🎓', exact: false }] : []),
     ...(role === 'PROCTOR' || role === 'ADMIN' ? [{ href: '/dashboard/proctor', label: 'Проктор', icon: '🔍', exact: false }] : []),
     ...(role === 'ADMIN' ? [{ href: '/dashboard/admin', label: 'Админ', icon: '⚙️', exact: false }] : []),
   ];

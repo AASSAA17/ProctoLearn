@@ -28,6 +28,7 @@ export default function TeacherCoursesPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const teacherId = user?.id;
+  const isAdmin = user?.role === 'ADMIN';
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -35,7 +36,7 @@ export default function TeacherCoursesPage() {
   const loadCourses = useCallback(async () => {
     setLoading(true);
     try {
-      const params = teacherId ? `?limit=100&teacherId=${teacherId}` : '?limit=100';
+      const params = isAdmin ? '?limit=100' : teacherId ? `?limit=100&teacherId=${teacherId}` : '?limit=100';
       const { data } = await api.get(`/courses${params}`);
       setCourses(data.data ?? data);
       setLoadError(false);
@@ -44,7 +45,7 @@ export default function TeacherCoursesPage() {
     } finally {
       setLoading(false);
     }
-  }, [teacherId]);
+  }, [teacherId, isAdmin]);
 
   useEffect(() => { loadCourses(); }, [loadCourses]);
 
@@ -73,7 +74,7 @@ export default function TeacherCoursesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Менің курстарым</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{isAdmin ? 'Барлық курстар' : 'Менің курстарым'}</h1>
           <p className="text-gray-500 text-sm mt-1">Курстарды басқару</p>
         </div>
         <Link
