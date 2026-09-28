@@ -155,6 +155,96 @@ async function verifyProctorFeed(proctor, studentPage, attempt) {
   }
 }
 
+async function verifyTeacherSteps(page, lessonId) {
+  const cases = [
+    { type: 'TEXT', field: 'Мәтін мазмұны', value: '<p>Original lesson text</p>', updated: '<p>Edited lesson text</p>' },
+    { type: 'VIDEO', field: 'Бейне сілтемесі', value: 'https://example.invalid/lesson', updated: 'https://example.invalid/updated' },
+    { type: 'TASK', taskType: 'single_choice', button: '○ Бір жауап' },
+    { type: 'TASK', taskType: 'multiple_choice', button: '☑ Бірнеше жауап' },
+    { type: 'TASK', taskType: 'text_input', button: 'Аа Мәтін жауабы', value: 'Initial answer', updated: 'Edited answer' },
+    { type: 'TASK', taskType: 'number_input', button: '# Сан жауабы', value: '2.5', updated: '-3.75' },
+  ];
+  for (const [index, item] of cases.entries()) {
+    const order = index + 1;
+    await page.getByRole('button', { name: '+ Қадам қосу', exact: true }).click();
+    const form = page.getByRole('form', { name: 'Қадам редакторы' });
+    await form.getByRole('button', { name: { TEXT: '📝 Мәтін', VIDEO: '▶️ Бейне', TASK: '✏️ Тапсырма' }[item.type], exact: true }).click();
+    await form.getByLabel('Қадам реті', { exact: true }).fill(String(order));
+    if (item.field) await form.getByLabel(item.field, { exact: true }).fill(item.value);
+    else {
+      await form.getByRole('button', { name: item.button, exact: true }).click();
+      await form.getByLabel('Тапсырма сұрағы', { exact: true }).fill(`Question ${item.taskType}`);
+      if (item.taskType.endsWith('_choice')) {
+        await form.getByLabel('Жауап нұсқасы 1', { exact: true }).fill('A, B');
+        await form.getByLabel('Жауап нұсқасы 2', { exact: true }).fill('C');
+        if (item.taskType === 'single_choice') {
+          const before = await prisma.step.count({ where: { lessonId } });
+          await form.getByRole('button', { name: 'Қосу', exact: true }).click();
+          await form.getByRole('alert').getByText('Дұрыс жауапты белгілеңіз.').waitFor();
+          assert.equal(await prisma.step.count({ where: { lessonId } }), before);
+        }
+        await form.getByLabel('Дұрыс жауап: 1-нұсқа', { exact: true }).check();
+        if (item.taskType === 'multiple_choice') {
+          await form.getByRole('button', { name: '+ Нұсқа қосу' }).click();
+          await form.getByLabel('Жауап нұсқасы 3', { exact: true }).fill('D');
+          await form.getByLabel('Дұрыс жауап: 3-нұсқа', { exact: true }).check();
+          await form.getByRole('button', { name: 'Нұсқаны жою: 2', exact: true }).click();
+          assert.equal(await form.getByLabel('Дұрыс жауап: 2-нұсқа', { exact: true }).isChecked(), true);
+        }
+      } else await form.getByLabel('Дұрыс жауап', { exact: true }).fill(item.value);
+    }
+    const createdResponse = page.waitForResponse(response => new URL(response.url()).pathname === `/lessons/${lessonId}/steps` && response.request().method() === 'POST');
+    await form.getByRole('button', { name: 'Қосу', exact: true }).click();
+    const created = await createdResponse;
+    assert.equal(created.status(), 201);
+    const step = await created.json();
+    await page.getByRole('button', { name: `Қадамды өңдеу: ${order}`, exact: true }).click();
+    if (item.field) {
+      assert.equal(await form.getByLabel(item.field, { exact: true }).inputValue(), item.value);
+      await form.getByLabel(item.field, { exact: true }).fill(item.updated);
+    } else if (item.taskType.endsWith('_choice')) {
+      assert.equal(await form.getByLabel('Дұрыс жауап: 1-нұсқа', { exact: true }).isChecked(), true);
+      await form.getByLabel('Жауап нұсқасы 1', { exact: true }).fill('A, B edited');
+    } else await form.getByLabel('Дұрыс жауап', { exact: true }).fill(item.updated);
+    if (item.type === 'TEXT') {
+      await page.route(`**/steps/${step.id}`, route => route.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"unavailable"}' }));
+      await form.getByRole('button', { name: 'Жаңарту', exact: true }).click();
+      await form.getByRole('alert').waitFor();
+      assert.equal(await form.getByLabel(item.field, { exact: true }).inputValue(), item.updated);
+      assert.equal((await prisma.step.findUniqueOrThrow({ where: { id: step.id } })).content.html, item.value);
+      await page.unroute(`**/steps/${step.id}`);
+    }
+    if (item.taskType === 'multiple_choice') {
+      await page.setViewportSize({ width: 390, height: 844 });
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+      await auditPage(page);
+      assert.deepEqual(auditIssues, []);
+    }
+    const updatedResponse = page.waitForResponse(response => new URL(response.url()).pathname === `/steps/${step.id}` && response.request().method() === 'PATCH');
+    await form.getByRole('button', { name: 'Жаңарту', exact: true }).click();
+    assert.equal((await updatedResponse).status(), 200);
+    await form.waitFor({ state: 'hidden' });
+    const saved = await prisma.step.findUniqueOrThrow({ where: { id: step.id } });
+    assert.equal(saved.type, item.type);
+    if (item.type === 'TEXT') assert.equal(saved.content.html, item.updated);
+    else if (item.type === 'VIDEO') assert.equal(saved.content.videoUrl, item.updated);
+    else {
+      assert.equal(saved.content.taskType, item.taskType);
+      assert.deepEqual(saved.content.correctAnswer, item.taskType === 'multiple_choice' ? ['A, B edited', 'D'] : item.taskType === 'single_choice' ? 'A, B edited' : item.updated);
+    }
+    await page.reload();
+    await page.getByRole('button', { name: `Қадамды өңдеу: ${order}`, exact: true }).click();
+    if (item.field) assert.equal(await form.getByLabel(item.field, { exact: true }).inputValue(), item.updated);
+    else if (item.taskType.endsWith('_choice')) assert.equal(await form.getByLabel('Дұрыс жауап: 1-нұсқа', { exact: true }).isChecked(), true);
+    else assert.equal(await form.getByLabel('Дұрыс жауап', { exact: true }).inputValue(), item.updated);
+    await form.getByLabel('Қадам реті', { exact: true }).fill('99');
+    await form.getByRole('button', { name: 'Болдырмау', exact: true }).click();
+    assert.equal((await prisma.step.findUniqueOrThrow({ where: { id: step.id } })).order, order);
+    await page.setViewportSize({ width: 1365, height: 900 });
+  }
+  console.log('PASS teacher creates/edits every step/task type, preserves comma answers, retries failed saves and cancels drafts');
+}
+
 async function main() {
   const ready = await fetch(`${api}/ready`);
   assert.equal(ready.status, 200);
@@ -342,7 +432,9 @@ async function main() {
       await teacherPage.getByRole('textbox', { name: 'Сабақ атауы' }).fill(lessonTitle);
       await teacherPage.getByRole('button', { name: 'Қосу', exact: true }).click();
       await teacherPage.getByText(lessonTitle).first().waitFor();
-      assert.equal((await prisma.lesson.findFirstOrThrow({ where: { title: lessonTitle } })).moduleId, savedModule.id);
+      const savedLesson = await prisma.lesson.findFirstOrThrow({ where: { title: lessonTitle } });
+      assert.equal(savedLesson.moduleId, savedModule.id);
+      await verifyTeacherSteps(teacherPage, savedLesson.id);
 
       teacherPage.once('dialog', dialog => dialog.accept());
       await teacherPage.getByRole('button', { name: `Сабақты жою: ${lessonTitle}` }).click();

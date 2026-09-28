@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useId } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -84,17 +84,46 @@ function StepForm({
   const [question, setQuestion] = useState(existingStep?.content?.question ?? '');
   const [taskType, setTaskType] = useState(existingStep?.content?.taskType ?? 'single_choice');
   const [options, setOptions] = useState<string[]>(existingStep?.content?.options ?? ['', '']);
-  const [correctAnswer, setCorrectAnswer] = useState<string | string[]>(existingStep?.content?.correctAnswer ?? '');
+  const [correctAnswer, setCorrectAnswer] = useState(String(existingStep?.content?.correctAnswer ?? ''));
+  const [selectedOptions, setSelectedOptions] = useState<number[]>(() => {
+    const answer = existingStep?.content?.correctAnswer;
+    const answers = Array.isArray(answer) ? answer : [answer];
+    return (existingStep?.content?.options ?? []).flatMap((option: string, index: number) => answers.includes(option) ? [index] : []);
+  });
+  const choiceGroup = useId();
   const [explanation, setExplanation] = useState(existingStep?.content?.explanation ?? '');
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const buildContent = () => {
     if (type === 'VIDEO') return { videoUrl, description: videoDesc };
     if (type === 'TEXT') return { html };
-    return { question, taskType, options: options.filter(Boolean), correctAnswer, explanation };
+    const choices = options.map(option => option.trim());
+    const isChoice = taskType === 'single_choice' || taskType === 'multiple_choice';
+    const answer = taskType === 'single_choice' ? choices[selectedOptions[0]] : taskType === 'multiple_choice' ? selectedOptions.map(index => choices[index]) : correctAnswer;
+    return { question, taskType, ...(isChoice ? { options: choices } : {}), correctAnswer: answer, explanation };
   };
 
-  const handleSave = async () => {
+  const handleSave = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (saving) return;
+    setSaveError('');
+    if (!Number.isInteger(order) || order < 1) { setSaveError('Реті оң бүтін сан болуы керек.'); return; }
+    if (type === 'TEXT' && !html.trim()) { setSaveError('Мәтін мазмұнын енгізіңіз.'); return; }
+    if (type === 'VIDEO') {
+      try { if (!['https:', 'http:'].includes(new URL(videoUrl).protocol)) throw new Error(); }
+      catch { setSaveError('HTTP немесе HTTPS бейне сілтемесін енгізіңіз.'); return; }
+    }
+    if (type === 'TASK') {
+      if (!question.trim()) { setSaveError('Сұрақ мәтінін енгізіңіз.'); return; }
+      if (taskType === 'single_choice' || taskType === 'multiple_choice') {
+        const choices = options.map(option => option.trim());
+        if (choices.length < 2 || choices.some(option => !option) || new Set(choices).size !== choices.length) { setSaveError('Кемінде екі бос емес, қайталанбайтын нұсқа енгізіңіз.'); return; }
+        if (!selectedOptions.length) { setSaveError('Дұрыс жауапты белгілеңіз.'); return; }
+      } else if (!correctAnswer.trim() || (taskType === 'number_input' && !Number.isFinite(Number(correctAnswer)))) {
+        setSaveError('Дұрыс жауапты енгізіңіз.'); return;
+      }
+    }
     setSaving(true);
     try {
       const payload = { type, order, content: buildContent() };
@@ -106,18 +135,22 @@ function StepForm({
       toast.success(existingStep ? 'Қадам жаңартылды' : 'Қадам қосылды');
       onSaved();
     } catch {
-      toast.error('Сақтау қатесі');
+      setSaveError('Қадам сақталмады. Енгізілген деректер сақталды, қайта көріңіз.');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 space-y-4">
-      <div className="flex gap-3">
+    <form aria-label="Қадам редакторы" onSubmit={handleSave} className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+      <fieldset disabled={saving} className="space-y-4 min-w-0">
+      {saveError && <p role="alert" className="text-sm text-red-800">{saveError}</p>}
+      <div className="flex flex-wrap gap-3">
         {(['VIDEO', 'TEXT', 'TASK'] as const).map((t) => (
           <button
             key={t}
+            type="button"
+            aria-pressed={type === t}
             onClick={() => setType(t)}
             className={`px-3 py-1.5 text-sm rounded-lg border transition ${
               type === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
@@ -127,8 +160,10 @@ function StepForm({
           </button>
         ))}
         <div className="flex items-center gap-2 ml-auto">
-          <label className="text-xs text-gray-500">Рет:</label>
+          <label className="text-xs text-gray-600">Рет:</label>
           <input
+            aria-label="Қадам реті"
+            required
             type="number"
             value={order}
             onChange={(e) => setOrder(Number(e.target.value))}
@@ -142,6 +177,8 @@ function StepForm({
       {type === 'VIDEO' && (
         <div className="space-y-3">
           <input
+            aria-label="Бейне сілтемесі"
+            required
             type="url"
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
@@ -149,6 +186,7 @@ function StepForm({
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
           <input
+            aria-label="Бейне сипаттамасы"
             type="text"
             value={videoDesc}
             onChange={(e) => setVideoDesc(e.target.value)}
@@ -161,6 +199,8 @@ function StepForm({
       {/* TEXT fields */}
       {type === 'TEXT' && (
         <textarea
+          aria-label="Мәтін мазмұны"
+          required
           value={html}
           onChange={(e) => setHtml(e.target.value)}
           rows={5}
@@ -173,6 +213,8 @@ function StepForm({
       {type === 'TASK' && (
         <div className="space-y-3">
           <textarea
+            aria-label="Тапсырма сұрағы"
+            required
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             rows={2}
@@ -184,7 +226,9 @@ function StepForm({
             {Object.entries(TASK_TYPE_LABELS).map(([k, v]) => (
               <button
                 key={k}
-                onClick={() => setTaskType(k)}
+                type="button"
+                aria-pressed={taskType === k}
+                onClick={() => { setTaskType(k); if (k === 'single_choice') setSelectedOptions(selectedOptions.slice(0, 1)); }}
                 className={`px-3 py-1 text-xs rounded-lg border transition ${
                   taskType === k
                     ? 'bg-blue-600 text-white border-blue-600'
@@ -198,25 +242,34 @@ function StepForm({
 
           {(taskType === 'single_choice' || taskType === 'multiple_choice') && (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-gray-600">Жауап нұсқалары:</p>
+              <p className="text-xs font-medium text-gray-600">Нұсқаларды енгізіп, дұрыс жауапты белгілеңіз.</p>
               {options.map((opt, i) => (
-                <div key={i} className="flex gap-2">
+                <div key={i} className="flex items-center gap-2">
+                  <input type={taskType === 'multiple_choice' ? 'checkbox' : 'radio'} name={choiceGroup}
+                    aria-label={`Дұрыс жауап: ${i + 1}-нұсқа`} checked={selectedOptions.includes(i)}
+                    onChange={event => setSelectedOptions(taskType === 'single_choice' ? [i] : event.target.checked ? [...selectedOptions, i] : selectedOptions.filter(index => index !== i))} />
                   <input
+                    aria-label={`Жауап нұсқасы ${i + 1}`}
+                    required
                     type="text"
                     value={opt}
                     onChange={(e) => setOptions(options.map((o, j) => (j === i ? e.target.value : o)))}
                     placeholder={`${i + 1}-нұсқа`}
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    className="min-w-0 flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />
                   <button
-                    onClick={() => setOptions(options.filter((_, j) => j !== i))}
-                    className="text-red-400 hover:text-red-600 px-1"
+                    type="button"
+                    aria-label={`Нұсқаны жою: ${i + 1}`}
+                    disabled={options.length <= 2}
+                    onClick={() => { setOptions(options.filter((_, j) => j !== i)); setSelectedOptions(selectedOptions.filter(index => index !== i).map(index => index > i ? index - 1 : index)); }}
+                    className="text-red-700 hover:text-red-800 px-1 disabled:opacity-50"
                   >
                     ✕
                   </button>
                 </div>
               ))}
               <button
+                type="button"
                 onClick={() => setOptions([...options, ''])}
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
@@ -225,27 +278,25 @@ function StepForm({
             </div>
           )}
 
-          <div>
+          {(taskType === 'text_input' || taskType === 'number_input') && <div>
             <label className="text-xs font-medium text-gray-600 block mb-1">
-              Дұрыс жауап {taskType === 'multiple_choice' ? '(үтірмен бөліңіз)' : ''}:
+              Дұрыс жауап:
             </label>
             <input
+              aria-label="Дұрыс жауап"
+              required
+              step="any"
               type={taskType === 'number_input' ? 'number' : 'text'}
-              value={Array.isArray(correctAnswer) ? correctAnswer.join(', ') : correctAnswer}
-              onChange={(e) => {
-                if (taskType === 'multiple_choice') {
-                  setCorrectAnswer(e.target.value.split(',').map((s) => s.trim()));
-                } else {
-                  setCorrectAnswer(e.target.value);
-                }
-              }}
+              value={correctAnswer}
+              onChange={(e) => setCorrectAnswer(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-          </div>
+          </div>}
 
           <div>
             <label className="text-xs font-medium text-gray-600 block mb-1">Түсіндірме (міндетті емес):</label>
             <input
+              aria-label="Жауап түсіндірмесі"
               type="text"
               value={explanation}
               onChange={(e) => setExplanation(e.target.value)}
@@ -258,20 +309,22 @@ function StepForm({
 
       <div className="flex gap-2 pt-1">
         <button
-          onClick={handleSave}
+          type="submit"
           disabled={saving}
           className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
         >
           {saving ? 'Сақталуда...' : existingStep ? 'Жаңарту' : 'Қосу'}
         </button>
         <button
+          type="button"
           onClick={onCancel}
           className="px-4 py-2 bg-white text-gray-600 border border-gray-200 text-sm rounded-lg hover:bg-gray-50 transition"
         >
           Болдырмау
         </button>
       </div>
-    </div>
+      </fieldset>
+    </form>
   );
 }
 
@@ -303,7 +356,7 @@ function LessonCard({
     <div className="pl-4 border-l-2 border-gray-200 ml-2 space-y-2">
       <div className="flex items-center gap-2 py-1">
         <span className="text-sm font-medium text-gray-700">📖 {lesson.order}. {lesson.title}</span>
-        <span className="text-xs text-gray-400 ml-auto">{lesson.steps.length} қадам</span>
+        <span className="text-xs text-gray-600 ml-auto">{lesson.steps.length} қадам</span>
       </div>
 
       {/* Steps */}
@@ -319,21 +372,23 @@ function LessonCard({
             />
           ) : (
             <div className="flex items-center gap-2 bg-white border border-gray-100 rounded-lg px-3 py-2 group">
-              <span className="text-xs text-gray-400">{step.order}.</span>
+              <span className="text-xs text-gray-600">{step.order}.</span>
               <span className="text-xs font-medium">{STEP_TYPE_LABELS[step.type]}</span>
-              <span className="text-xs text-gray-400 flex-1 truncate">
+              <span className="text-xs text-gray-600 min-w-0 flex-1 truncate">
                 {step.type === 'TASK' && (step.content.question ?? '')}
                 {step.type === 'VIDEO' && (step.content.videoUrl ?? '')}
                 {step.type === 'TEXT' && '(мәтін)'}
               </span>
-              <div className="hidden group-hover:flex gap-1">
+              <div className="flex gap-1">
                 <button
+                  aria-label={`Қадамды өңдеу: ${step.order}`}
                   onClick={() => setEditingStep(step)}
                   className="text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 rounded"
                 >
                   Өңдеу
                 </button>
                 <button
+                  aria-label={`Қадамды жою: ${step.order}`}
                   onClick={() => deleteStep(step.id)}
                   className="text-xs px-2 py-1 text-red-600 hover:bg-red-50 rounded"
                 >
@@ -356,7 +411,7 @@ function LessonCard({
       ) : (
         <button
           onClick={() => setAddingStep(true)}
-          className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1 py-1"
+          className="text-xs text-blue-700 hover:text-blue-800 flex items-center gap-1 py-1"
         >
           + Қадам қосу
         </button>
@@ -427,16 +482,16 @@ function ModuleCard({
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
       {/* Module header */}
       <div className="flex items-center gap-3 px-5 py-3.5 bg-gray-50 border-b border-gray-100">
-        <button onClick={() => setCollapsed(!collapsed)} className="text-gray-400 hover:text-gray-600 text-sm">
+        <button aria-label={`Бөлім: ${mod.title}`} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)} className="text-gray-600 hover:text-gray-800 text-sm">
           {collapsed ? '▶' : '▼'}
         </button>
         <span className="font-semibold text-gray-800 flex-1">
           {mod.order}. {mod.title}
         </span>
-        <span className="text-xs text-gray-400">{mod.lessons.length} сабақ</span>
+        <span className="text-xs text-gray-600">{mod.lessons.length} сабақ</span>
         <button
           onClick={deleteModule}
-          className="text-xs text-red-500 hover:text-red-700 px-2 py-1 hover:bg-red-50 rounded"
+          className="text-xs text-red-700 hover:text-red-800 px-2 py-1 hover:bg-red-50 rounded"
         >
           Жою
         </button>
@@ -454,7 +509,7 @@ function ModuleCard({
                 <button
                   aria-label={`Сабақты жою: ${lesson.title}`}
                   onClick={() => deleteLesson(lesson.id)}
-                  className="text-xs text-red-700 hover:text-red-800 mt-2 opacity-0 group-hover:opacity-100 focus:opacity-100 transition"
+                  className="text-xs text-red-700 hover:text-red-800 mt-2"
                 >
                   ✕
                 </button>
