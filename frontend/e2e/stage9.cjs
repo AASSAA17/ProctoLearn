@@ -151,6 +151,25 @@ async function main() {
     assert.deepEqual(auditIssues, []);
     console.log('PASS role pages, profile, inbox and administration smoke with WCAG A/AA');
 
+    const courseTitle = `E2E teacher course ${randomUUID()}`;
+    try {
+      const teacherPage = sessions.get('TEACHER').page;
+      await teacherPage.goto(`${web}/dashboard/teacher/courses/new`);
+      await teacherPage.getByLabel('Курс атауы').fill(courseTitle);
+      await teacherPage.getByLabel('Сипаттама').fill('Isolated browser authoring check');
+      await teacherPage.getByLabel('Деңгей').selectOption('INTERMEDIATE');
+      await teacherPage.getByRole('button', { name: 'Курс жасау →' }).click();
+      await teacherPage.waitForURL(/\/dashboard\/teacher\/courses\/[^/]+\/edit$/);
+      const saved = await prisma.course.findFirstOrThrow({ where: { title: courseTitle } });
+      assert.equal(saved.level, 'INTERMEDIATE');
+      assert.equal(saved.teacherId, (await prisma.user.findUniqueOrThrow({ where: { email: 'teacher@proctolearn.kz' } })).id);
+      assert.equal((await sessions.get('PROCTOR').context.request.post(`${api}/courses`, { data: { title: 'Forbidden' } })).status(), 403);
+      console.log('PASS teacher creates a course through the browser; proctor cannot create one');
+    } finally {
+      const created = await prisma.course.findFirst({ where: { title: courseTitle } });
+      if (created) await prisma.course.delete({ where: { id: created.id } });
+    }
+
     for (const [role, route, endpoint] of [
       ['TEACHER', '/dashboard/teacher/courses', '/courses'],
       ['PROCTOR', '/dashboard/proctor', '/attempts'],
