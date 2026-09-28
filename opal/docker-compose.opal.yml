@@ -1,5 +1,7 @@
+# Optional policy stack; enable with --profile policy. Published ports are loopback only.
 services:
   opa:
+    profiles: ['policy']
     image: openpolicyagent/opa:0.68.0
     container_name: proctolearn_opa
     command:
@@ -9,11 +11,12 @@ services:
       - --set=decision_logs.console=true
       - /policy
     ports:
-      - "8181:8181"
+      - "127.0.0.1:8181:8181"
     volumes:
       - ./policies:/policy:ro
 
   opal_server:
+    profiles: ['policy']
     image: permitio/opal-server:latest
     container_name: proctolearn_opal_server
     environment:
@@ -22,11 +25,12 @@ services:
       OPAL_POLICY_REPO_POLLING_INTERVAL: 20
       OPAL_BROADCAST_URI: redis://opal_redis:6379
     ports:
-      - "7002:7002"
+      - "127.0.0.1:7002:7002"
     depends_on:
       - opal_redis
 
   opal_client:
+    profiles: ['policy']
     image: permitio/opal-client:latest
     container_name: proctolearn_opal_client
     environment:
@@ -39,7 +43,8 @@ services:
       - opal_server
 
   opal_redis:
+    profiles: ['policy']
     image: redis:7-alpine
     container_name: proctolearn_opal_redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"

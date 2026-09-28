@@ -1,5 +1,9 @@
+# Legacy installation: use --profile legacy explicitly. Existing volumes stay unchanged.
+# For a fresh local stack use scripts/start-local.ps1 and docker-compose.local.yml.
+# Storage migration requires a verified object copy; never attach minio_data to SeaweedFS.
 services:
   postgres:
+    profiles: ['legacy']
     image: postgres:16-alpine
     container_name: proctolearn_postgres
     restart: unless-stopped
@@ -8,7 +12,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your private environment}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - '5433:5432'
+      - '127.0.0.1:5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,7 +22,9 @@ services:
       retries: 5
 
   minio:
-    image: minio/minio:latest
+    profiles: ['legacy']
+    build:
+      context: ./infra/legacy-minio
     container_name: proctolearn_minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -26,8 +32,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in your private environment}
     ports:
-      - '9000:9000'
-      - '9001:9001'
+      - '127.0.0.1:9000:9000'
+      - '127.0.0.1:9001:9001'
     volumes:
       - minio_data:/data
     healthcheck:
@@ -37,6 +43,7 @@ services:
       retries: 5
 
   api:
+    profiles: ['legacy']
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
@@ -44,13 +51,14 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your private environment}@postgres:5432/${POSTGRES_DB}
+      DB_HOST: postgres
+      DB_PORT: '5432'
       MINIO_ENDPOINT: minio
       N8N_EXAM_SUBMIT_WEBHOOK_URL: ${N8N_EXAM_SUBMIT_WEBHOOK_URL:-http://n8n:5678/webhook/proctolearn/exam-submit}
       N8N_WEBHOOK_TOKEN: ${N8N_WEBHOOK_TOKEN:-}
       NODE_ENV: development
     ports:
-      - '4000:4000'
+      - '127.0.0.1:4000:4000'
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,6 +69,7 @@ services:
       - /app/node_modules
 
   web:
+    profiles: ['legacy']
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
@@ -72,7 +81,7 @@ services:
       NEXT_PUBLIC_WS_URL: ws://localhost:4000
       NODE_ENV: development
     ports:
-      - '3001:3000'
+      - '127.0.0.1:3001:3000'
     depends_on:
       - api
     volumes:
@@ -80,6 +89,7 @@ services:
       - /app/node_modules
 
   pgadmin:
+    profiles: ['legacy']
     image: dpage/pgadmin4:latest
     container_name: proctolearn_pgadmin
     restart: unless-stopped
@@ -88,7 +98,7 @@ services:
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?Set PGADMIN_DEFAULT_PASSWORD in your private environment}
       PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
-      - '5050:80'
+      - '127.0.0.1:5050:80'
     depends_on:
       postgres:
         condition: service_healthy
@@ -96,14 +106,16 @@ services:
       - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
 
   mailpit:
+    profiles: ['legacy']
     image: axllent/mailpit:latest
     container_name: proctolearn_mailpit
     restart: unless-stopped
     ports:
-      - '1025:1025'
-      - '8025:8025'
+      - '127.0.0.1:1025:1025'
+      - '127.0.0.1:8025:8025'
 
   n8n:
+    profiles: ['legacy']
     image: n8nio/n8n:latest
     container_name: proctolearn_n8n
     restart: unless-stopped
@@ -118,7 +130,7 @@ services:
       N8N_PROTOCOL: http
       TZ: Asia/Almaty
     ports:
-      - '5678:5678'
+      - '127.0.0.1:5678:5678'
     volumes:
       - n8n_data:/home/node/.n8n
       - ./n8n/workflows:/data/import:ro
@@ -126,6 +138,7 @@ services:
       - mailpit
 
   jenkins:
+    profiles: ['legacy']
     build:
       context: ./jenkins
       dockerfile: Dockerfile
@@ -137,14 +150,15 @@ services:
       JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:?Set JENKINS_ADMIN_PASSWORD in your private environment}
       JENKINS_ADMIN_EMAIL: ${JENKINS_ADMIN_EMAIL:-admin@proctolearn.com}
     ports:
-      - '8088:8080'
-      - '50000:50000'
+      - '127.0.0.1:8088:8080'
+      - '127.0.0.1:50000:50000'
     volumes:
       - jenkins_home:/var/jenkins_home
       - ./:/var/jenkins_home/proctolearn:ro
       - /var/run/docker.sock:/var/run/docker.sock
 
   opa:
+    profiles: ['legacy']
     image: openpolicyagent/opa:0.68.0
     container_name: proctolearn_opa
     command:
@@ -154,17 +168,19 @@ services:
       - --set=decision_logs.console=true
       - /policy
     ports:
-      - '8181:8181'
+      - '127.0.0.1:8181:8181'
     volumes:
       - ./opal/policies:/policy:ro
 
   opal_redis:
+    profiles: ['legacy']
     image: redis:7-alpine
     container_name: proctolearn_opal_redis
     ports:
-      - '6380:6379'
+      - '127.0.0.1:6380:6379'
 
   opal_server:
+    profiles: ['legacy']
     image: permitio/opal-server:latest
     container_name: proctolearn_opal_server
     environment:
@@ -173,11 +189,12 @@ services:
       OPAL_POLICY_REPO_POLLING_INTERVAL: ${OPAL_POLICY_REPO_POLLING_INTERVAL:-20}
       OPAL_BROADCAST_URI: redis://opal_redis:6379
     ports:
-      - '7002:7002'
+      - '127.0.0.1:7002:7002'
     depends_on:
       - opal_redis
 
   opal_client:
+    profiles: ['legacy']
     image: permitio/opal-client:latest
     container_name: proctolearn_opal_client
     environment:

@@ -1,24 +1,25 @@
-FROM node:22-alpine AS builder
-RUN apk add --no-cache font-liberation fontconfig
+FROM node:24-alpine AS builder
+RUN apk add --no-cache openssl font-liberation fontconfig
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 COPY . .
-RUN ./node_modules/.bin/prisma generate
-RUN npm run build
+RUN node_modules/.bin/prisma generate && npm run build
+RUN cp prisma/demo-seed.cjs dist/prisma/demo-seed.cjs && npm prune --omit=dev
 
-FROM node:22-alpine AS production
-RUN apk add --no-cache font-liberation fontconfig
+FROM node:24-alpine AS production
+RUN apk add --no-cache openssl font-liberation fontconfig
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --from=builder /app/package.json ./package.json
-COPY prisma ./prisma
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --from=builder --chown=node:node /app/package.json ./package.json
+COPY --from=builder --chown=node:node /app/prisma ./prisma
+COPY --chown=node:node docker ./docker
+USER node
 
 EXPOSE 4000
-HEALTHCHECK --interval=10s --timeout=5s --retries=10 \
-  CMD wget -qO- http://localhost:4000/health || exit 1
-CMD ["/bin/sh", "-c", \
-  "node_modules/.bin/prisma migrate deploy && node dist/src/main.js"]
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=10 \
+  CMD node -e "fetch('http://127.0.0.1:'+ (process.env.API_PORT || '4000') +'/ready',{signal:AbortSignal.timeout(4000)}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+ENTRYPOINT ["/bin/sh", "/app/docker/entrypoint.sh"]
+CMD ["node", "dist/src/main.js"]

@@ -5,7 +5,37 @@ import { CertificatesService } from '../certificates/certificates.service';
 import * as bcrypt from 'bcryptjs';
 import { randomInt } from 'crypto';
 import { serializable } from '../prisma/serializable';
-import * as ExcelJS from 'exceljs';
+import writeXlsxFile, { type CellObject, type SheetData } from 'write-excel-file/node';
+
+function writeReport(
+  sheet: string,
+  columns: { header: string; width: number }[],
+  rows: (string | number)[][],
+  headerColor: string,
+  alternateColor: string,
+): Promise<Buffer> {
+  const data: SheetData = [
+    columns.map(({ header }): CellObject => ({
+      value: header,
+      type: String,
+      backgroundColor: headerColor,
+      textColor: '#FFFFFF',
+      fontWeight: 'bold',
+      align: 'center',
+    })),
+    ...rows.map((row, index) => row.map((value): CellObject => ({
+      value,
+      // User-entered text must remain literal even when it starts with '='.
+      type: typeof value === 'number' ? Number : String,
+      borderStyle: 'thin',
+      ...(index % 2 === 0 ? { backgroundColor: alternateColor } : {}),
+    }))),
+  ];
+  return writeXlsxFile(data, {
+    sheet,
+    columns: columns.map(({ width }) => ({ width })),
+  }, { fontFamily: 'Calibri', fontSize: 11 }).toBuffer();
+}
 
 @Injectable()
 export class AdminService {
@@ -308,30 +338,17 @@ export class AdminService {
       orderBy: { createdAt: 'desc' },
     });
 
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'ProctoLearn';
-    workbook.created = new Date();
-
-    const ws = workbook.addWorksheet('Пайдаланушылар');
-
-    ws.columns = [
-      { header: '№', key: 'no', width: 6 },
-      { header: 'Аты-жөні', key: 'name', width: 25 },
-      { header: 'Email', key: 'email', width: 30 },
-      { header: 'Телефон', key: 'phone', width: 18 },
-      { header: 'Рөлі', key: 'role', width: 12 },
-      { header: 'Талпынулар', key: 'attempts', width: 14 },
-      { header: 'Сертификаттар', key: 'certs', width: 16 },
-      { header: 'Соңғы белсенділік', key: 'lastSeen', width: 22 },
-      { header: 'Тіркелу күні', key: 'createdAt', width: 20 },
+    const columns = [
+      { header: '№', width: 6 },
+      { header: 'Аты-жөні', width: 25 },
+      { header: 'Email', width: 30 },
+      { header: 'Телефон', width: 18 },
+      { header: 'Рөлі', width: 12 },
+      { header: 'Талпынулар', width: 14 },
+      { header: 'Сертификаттар', width: 16 },
+      { header: 'Соңғы белсенділік', width: 22 },
+      { header: 'Тіркелу күні', width: 20 },
     ];
-
-    // Header style
-    ws.getRow(1).eachCell((cell) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
-      cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
-      cell.alignment = { horizontal: 'center' };
-    });
 
     const roleLabels: Record<string, string> = {
       STUDENT: 'Студент',
@@ -340,35 +357,19 @@ export class AdminService {
       ADMIN: 'Adminістратор',
     };
 
-    users.forEach((u, i) => {
-      ws.addRow({
-        no: i + 1,
-        name: u.name,
-        email: u.email,
-        phone: u.phone || '—',
-        role: roleLabels[u.role] || u.role,
-        attempts: u._count.attempts,
-        certs: u._count.certificates,
-        lastSeen: u.lastSeen ? u.lastSeen.toLocaleString('kk-KZ') : '—',
-        createdAt: u.createdAt.toLocaleString('kk-KZ'),
-      });
-    });
+    const rows = users.map((u, i) => [
+      i + 1,
+      u.name,
+      u.email,
+      u.phone || '—',
+      roleLabels[u.role] || u.role,
+      u._count.attempts,
+      u._count.certificates,
+      u.lastSeen ? u.lastSeen.toLocaleString('kk-KZ') : '—',
+      u.createdAt.toLocaleString('kk-KZ'),
+    ]);
 
-    ws.eachRow((row, rowNum) => {
-      if (rowNum > 1) {
-        row.eachCell((cell) => {
-          cell.border = {
-            top: { style: 'thin' }, left: { style: 'thin' },
-            bottom: { style: 'thin' }, right: { style: 'thin' },
-          };
-          if (rowNum % 2 === 0) {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F9FF' } };
-          }
-        });
-      }
-    });
-
-    return workbook.xlsx.writeBuffer() as unknown as Promise<Buffer>;
+    return writeReport('Пайдаланушылар', columns, rows, '#2563EB', '#F0F9FF');
   }
 
   async exportCoursesExcel(): Promise<Buffer> {
@@ -382,54 +383,27 @@ export class AdminService {
       orderBy: { createdAt: 'desc' },
     });
 
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'ProctoLearn';
-
-    const ws = workbook.addWorksheet('Курстар');
-    ws.columns = [
-      { header: '№', key: 'no', width: 6 },
-      { header: 'Курс атауы', key: 'title', width: 35 },
-      { header: 'Мұғалім', key: 'teacher', width: 25 },
-      { header: 'Сабақтар', key: 'lessons', width: 12 },
-      { header: 'Емтихандар', key: 'exams', width: 14 },
-      { header: 'Талпынулар', key: 'attempts', width: 14 },
-      { header: 'Сертификаттар', key: 'certs', width: 16 },
-      { header: 'Жасалған күні', key: 'createdAt', width: 20 },
+    const columns = [
+      { header: '№', width: 6 },
+      { header: 'Курс атауы', width: 35 },
+      { header: 'Мұғалім', width: 25 },
+      { header: 'Сабақтар', width: 12 },
+      { header: 'Емтихандар', width: 14 },
+      { header: 'Талпынулар', width: 14 },
+      { header: 'Сертификаттар', width: 16 },
+      { header: 'Жасалған күні', width: 20 },
     ];
+    const rows = courses.map((c, i) => [
+      i + 1,
+      c.title,
+      c.teacher.name,
+      c.lessons.length,
+      c.exams.length,
+      c.exams.reduce((sum, exam) => sum + exam._count.attempts, 0),
+      c._count.certificates,
+      c.createdAt.toLocaleString('kk-KZ'),
+    ]);
 
-    ws.getRow(1).eachCell((cell) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF16A34A' } };
-      cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
-      cell.alignment = { horizontal: 'center' };
-    });
-
-    courses.forEach((c, i) => {
-      ws.addRow({
-        no: i + 1,
-        title: c.title,
-        teacher: c.teacher.name,
-        lessons: c.lessons.length,
-        exams: c.exams.length,
-        attempts: c.exams.reduce((s, e) => s + e._count.attempts, 0),
-        certs: c._count.certificates,
-        createdAt: c.createdAt.toLocaleString('kk-KZ'),
-      });
-    });
-
-    ws.eachRow((row, rowNum) => {
-      if (rowNum > 1) {
-        row.eachCell((cell) => {
-          cell.border = {
-            top: { style: 'thin' }, left: { style: 'thin' },
-            bottom: { style: 'thin' }, right: { style: 'thin' },
-          };
-          if (rowNum % 2 === 0) {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDF4' } };
-          }
-        });
-      }
-    });
-
-    return workbook.xlsx.writeBuffer() as unknown as Promise<Buffer>;
+    return writeReport('Курстар', columns, rows, '#16A34A', '#F0FDF4');
   }
 }

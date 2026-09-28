@@ -25,6 +25,7 @@ import { GraphiteMetricsInterceptor } from '@/common/interceptors/graphite-metri
 import { GraphiteService } from './common/services/graphite.service';
 import { validateEnvironment } from './common/config/environment';
 import { CsrfGuard } from './auth/csrf.guard';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { CsrfGuard } from './auth/csrf.guard';
     ]),
     PrismaModule,
     MinioModule,
+    HealthModule,
     MailModule,
     AuthModule,
     UsersModule,

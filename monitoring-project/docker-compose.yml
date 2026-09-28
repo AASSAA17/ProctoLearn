@@ -1,5 +1,7 @@
+# Optional monitoring stack; enable with --profile monitoring. Published ports are loopback only.
 services:
   prometheus:
+    profiles: ['monitoring']
     image: prom/prometheus:v2.54.1
     container_name: prometheus
     command:
@@ -7,7 +9,7 @@ services:
       - "--storage.tsdb.path=/prometheus"
       - "--web.enable-lifecycle"
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
@@ -22,6 +24,7 @@ services:
       - monitoring
 
   grafana:
+    profiles: ['monitoring']
     image: grafana/grafana-oss:11.1.4
     container_name: grafana
     environment:
@@ -29,7 +32,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:?Set GF_SECURITY_ADMIN_PASSWORD in your private environment}
       - GF_USERS_ALLOW_SIGN_UP=false
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3100:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
@@ -41,20 +44,22 @@ services:
       - monitoring
 
   node_exporter:
+    profiles: ['monitoring']
     image: prom/node-exporter:v1.8.2
     container_name: node_exporter
     ports:
-      - "9100:9100"
+      - "127.0.0.1:9100:9100"
     restart: unless-stopped
     networks:
       - monitoring
 
   nginx:
+    profiles: ['monitoring']
     image: nginx:latest
     container_name: monitoring_nginx
     ports:
-      - "80:80"
-      - "8080:8080"
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:8080:8080"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     restart: unless-stopped
@@ -62,12 +67,13 @@ services:
       - monitoring
 
   nginx_exporter:
+    profiles: ['monitoring']
     image: nginx/nginx-prometheus-exporter:latest
     container_name: nginx_exporter
     command:
       - "-nginx.scrape-uri=http://nginx:8080/stub_status"
     ports:
-      - "9113:9113"
+      - "127.0.0.1:9113:9113"
     depends_on:
       - nginx
     restart: unless-stopped
@@ -75,12 +81,13 @@ services:
       - monitoring
 
   alertmanager:
+    profiles: ['monitoring']
     image: prom/alertmanager:v0.27.0
     container_name: alertmanager
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
     ports:
-      - "9093:9093"
+      - "127.0.0.1:9093:9093"
     volumes:
       - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     restart: unless-stopped
@@ -88,10 +95,11 @@ services:
       - monitoring
 
   cadvisor:
+    profiles: ['monitoring']
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
     ports:
-      - "8081:8080"
+      - "127.0.0.1:8081:8080"
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
@@ -102,12 +110,13 @@ services:
       - monitoring
 
   blackbox_exporter:
+    profiles: ['monitoring']
     image: prom/blackbox-exporter:latest
     container_name: blackbox_exporter
     command:
       - "--config.file=/etc/blackbox_exporter/config.yml"
     ports:
-      - "9115:9115"
+      - "127.0.0.1:9115:9115"
     volumes:
       - ./blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
     restart: unless-stopped
@@ -115,11 +124,12 @@ services:
       - monitoring
 
   portainer:
+    profiles: ['monitoring']
     image: portainer/portainer-ce:latest
     container_name: portainer
     ports:
-      - "9002:9000"
-      - "9443:9443"
+      - "127.0.0.1:9002:9000"
+      - "127.0.0.1:9443:9443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
@@ -128,12 +138,13 @@ services:
       - monitoring
 
   telegram_bot:
+    profiles: ['monitoring']
     build:
       context: ./telegram-bot
       dockerfile: Dockerfile
     container_name: monitoring_telegram_bot
     ports:
-      - "5001:5001"
+      - "127.0.0.1:5001:5001"
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
@@ -150,6 +161,7 @@ services:
       - monitoring
 
   zabbix_pgsql:
+    profiles: ['monitoring']
     image: postgres:16-alpine
     container_name: zabbix_pgsql
     environment:
@@ -163,6 +175,7 @@ services:
       - monitoring
 
   zabbix_server:
+    profiles: ['monitoring']
     image: zabbix/zabbix-server-pgsql:alpine-7.0-latest
     container_name: zabbix_server
     environment:
@@ -171,7 +184,7 @@ services:
       POSTGRES_USER: zabbix
       POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:?Set ZABBIX_DB_PASSWORD in your private environment}
     ports:
-      - "10051:10051"
+      - "127.0.0.1:10051:10051"
     depends_on:
       - zabbix_pgsql
     restart: unless-stopped
@@ -179,6 +192,7 @@ services:
       - monitoring
 
   zabbix_web:
+    profiles: ['monitoring']
     image: zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest
     container_name: zabbix_web
     environment:
@@ -189,7 +203,7 @@ services:
       POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:?Set ZABBIX_DB_PASSWORD in your private environment}
       PHP_TZ: Asia/Almaty
     ports:
-      - "8082:8080"
+      - "127.0.0.1:8082:8080"
     depends_on:
       - zabbix_server
       - zabbix_pgsql
@@ -198,6 +212,7 @@ services:
       - monitoring
 
   zabbix_agent:
+    profiles: ['monitoring']
     image: zabbix/zabbix-agent2:alpine-7.0-latest
     container_name: zabbix_agent
     environment:
@@ -205,7 +220,7 @@ services:
       ZBX_SERVER_HOST: zabbix_server
       ZBX_SERVER_PORT: 10051
     ports:
-      - "10050:10050"
+      - "127.0.0.1:10050:10050"
     depends_on:
       - zabbix_server
     restart: unless-stopped
@@ -213,13 +228,14 @@ services:
       - monitoring
 
   pgadmin:
+    profiles: ['monitoring']
     image: dpage/pgadmin4:8
     container_name: monitoring_pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@local.test}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?Set PGADMIN_DEFAULT_PASSWORD in your private environment}
     ports:
-      - "5051:80"
+      - "127.0.0.1:5051:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
@@ -229,12 +245,13 @@ services:
       - monitoring
 
   postgres_exporter:
+    profiles: ['monitoring']
     image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
     container_name: postgres_exporter
     environment:
       DATA_SOURCE_NAME: "postgresql://zabbix:${ZABBIX_DB_PASSWORD:?Set ZABBIX_DB_PASSWORD in your private environment}@zabbix_pgsql:5432/zabbix?sslmode=disable"
     ports:
-      - "9187:9187"
+      - "127.0.0.1:9187:9187"
     depends_on:
       - zabbix_pgsql
     restart: unless-stopped
@@ -242,24 +259,26 @@ services:
       - monitoring
 
   graphite:
+    profiles: ['monitoring']
     image: graphiteapp/graphite-statsd:1.1.10-5
     container_name: graphite
     ports:
-      - "8085:80"
-      - "2003:2003"
-      - "8125:8125/udp"
+      - "127.0.0.1:8085:80"
+      - "127.0.0.1:2003:2003"
+      - "127.0.0.1:8125:8125/udp"
     restart: unless-stopped
     networks:
       - monitoring
 
   nagios:
+    profiles: ['monitoring']
     image: jasonrivers/nagios:latest
     container_name: nagios
     environment:
       NAGIOSADMIN_USER: ${NAGIOSADMIN_USER:-nagiosadmin}
       NAGIOSADMIN_PASS: ${NAGIOSADMIN_PASS:?Set NAGIOSADMIN_PASS in your private environment}
     ports:
-      - "8084:80"
+      - "127.0.0.1:8084:80"
     restart: unless-stopped
     networks:
       - monitoring

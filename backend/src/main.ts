@@ -12,6 +12,7 @@ let metricsInitialized = false;
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.enableShutdownHooks();
 
   if (!metricsInitialized) {
     collectDefaultMetrics();
@@ -47,16 +48,14 @@ async function bootstrap() {
     SwaggerModule.setup('api/docs', app, document);
   }
 
-  // Lightweight health check endpoint (used by Docker healthcheck)
   const httpAdapter = app.getHttpAdapter();
-  httpAdapter.get('/health', (_req: any, res: any) => res.status(200).json({ status: 'ok' }));
   httpAdapter.get('/metrics', async (_req: any, res: any) => {
     res.setHeader('Content-Type', register.contentType);
     res.send(await register.metrics());
   });
 
   const port = process.env.API_PORT || 4000;
-  await app.listen(port);
+  await app.listen(port, process.env.API_HOST || '0.0.0.0');
   const logger = new Logger('Bootstrap');
   logger.log(`🚀 ProctoLearn API is running on: http://localhost:${port}`);
   if (process.env.NODE_ENV !== 'production') {

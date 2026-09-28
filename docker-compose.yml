@@ -1,5 +1,9 @@
+# Legacy installation: use --profile legacy explicitly. Existing volumes stay unchanged.
+# For a fresh local stack use scripts/start-local.ps1 and docker-compose.local.yml.
+# Storage migration requires a verified object copy; never attach minio_data to SeaweedFS.
 services:
   postgres:
+    profiles: ['legacy']
     image: postgres:16-alpine
     container_name: proctolearn_postgres
     restart: unless-stopped
@@ -23,7 +27,9 @@ services:
           memory: 512M
 
   minio:
-    image: minio/minio:latest
+    profiles: ['legacy']
+    build:
+      context: ./infra/legacy-minio
     container_name: proctolearn_minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -47,6 +53,7 @@ services:
           memory: 256M
 
   api:
+    profiles: ['legacy']
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -54,7 +61,8 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your private environment}@postgres:5432/${POSTGRES_DB}
+      DB_HOST: postgres
+      DB_PORT: '5432'
       MINIO_ENDPOINT: minio
       NODE_ENV: production
       GROQ_API_KEY: ${GROQ_API_KEY:-}
@@ -67,7 +75,7 @@ services:
       minio:
         condition: service_healthy
     healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://localhost:4000/health || exit 1']
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:4000/ready || exit 1']
       interval: 15s
       timeout: 5s
       retries: 10
@@ -79,6 +87,7 @@ services:
           memory: 512M
 
   web:
+    profiles: ['legacy']
     build:
       context: ./frontend
       dockerfile: Dockerfile

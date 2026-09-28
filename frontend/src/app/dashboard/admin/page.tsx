@@ -34,7 +34,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (user && user.role !== 'ADMIN') { router.push('/dashboard'); return; }
     api.get('/admin/stats').then((r) => setStats(r.data)).finally(() => setLoading(false));
-  }, [user]);
+  }, [user, router]);
 
   if (loading) return <div className="text-center py-16 text-gray-400">Жүктелуде...</div>;
   if (!stats) return null;

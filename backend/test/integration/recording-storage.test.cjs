@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID, createHash } = require('node:crypto');
 require('reflect-metadata');
-const Minio = require('minio');
+const { S3Client, CreateBucketCommand, PutObjectCommand, DeleteBucketCommand } = require('@aws-sdk/client-s3');
 const { ConfigService } = require('@nestjs/config');
 const { MinioService } = require('../../src/minio/minio.service');
 const { RecordingUploadsService } = require('../../src/evidence/recording-uploads.service');
@@ -16,11 +16,12 @@ if (!['localhost', '127.0.0.1'].includes(host) || port !== 19000 || !user || !pa
   throw new Error('Actual storage tests require the isolated localhost:19000 TEST_MINIO_* configuration');
 }
 
-test('actual MinIO object storage streams, checksums, retries and failed-finalization cleanup', async (t) => {
+test('actual S3-compatible object storage streams, checksums, retries and failed-finalization cleanup', async (t) => {
   const bucket = `proctolearn-test-${randomUUID()}`;
-  const client = new Minio.Client({ endPoint: host, port, useSSL: false, accessKey: user, secretKey: password, region: 'us-east-1' });
+  const client = new S3Client({ endpoint: `http://${host}:${port}`, forcePathStyle: true, credentials: { accessKeyId: user, secretAccessKey: password }, region: 'us-east-1', requestChecksumCalculation: 'WHEN_REQUIRED', responseChecksumValidation: 'WHEN_REQUIRED' });
   const storage = new MinioService(new ConfigService({ MINIO_ENDPOINT: host, MINIO_PORT: String(port), MINIO_ROOT_USER: user, MINIO_ROOT_PASSWORD: password, MINIO_BUCKET: bucket, MINIO_REGION: 'us-east-1' }));
-  await client.makeBucket(bucket, 'us-east-1');
+  await client.send(new CreateBucketCommand({ Bucket: bucket }));
+  await storage.storageProbe(2000);
   let fixture;
   const bytes = async (key) => { const result = []; for await (const chunk of await storage.getObject(key)) result.push(chunk); return Buffer.concat(result); };
   try {
@@ -36,6 +37,10 @@ test('actual MinIO object storage streams, checksums, retries and failed-finaliz
       const final = await bytes(evidence.url);
       assert.equal(final.length, parts.reduce((sum, part) => sum + part.length, 0));
       assert.equal(createHash('sha256').update(final).digest('hex'), createHash('sha256').update(Buffer.concat(parts)).digest('hex'));
+      const playbackUrl = await storage.getPresignedUrl(evidence.url, 60);
+      const playback = await fetch(playbackUrl, { headers: { Range: 'bytes=0-15' }, signal: AbortSignal.timeout(2000) });
+      assert.equal(playback.status, 206);
+      assert.deepEqual(Buffer.from(await playback.arrayBuffer()), final.subarray(0, 16));
       assert.equal((await storage.listObjects(`recordings/${upload.attemptId}/`)).length, 1);
       await f.db.recordingUpload.update({ where: { id: upload.id }, data: { expiresAt: new Date(0) } });
       await f.service.cleanupStaged(true);
@@ -48,7 +53,7 @@ test('actual MinIO object storage streams, checksums, retries and failed-finaliz
       const upload = await f.init((await f.newAttempt()).id);
       await f.service.putChunk(upload.id, 0, await f.file(), f.studentId);
       const chunk = await f.db.recordingChunk.findUnique({ where: { uploadId_index: { uploadId: upload.id, index: 0 } } });
-      await client.putObject(bucket, chunk.objectKey, Buffer.alloc(webm.length, 9));
+      await client.send(new PutObjectCommand({ Bucket: bucket, Key: chunk.objectKey, Body: Buffer.alloc(webm.length, 9) }));
       await assert.rejects(f.service.complete(upload.id, { expectedChunks: 1 }, f.studentId), (error) => error.getResponse?.().code === 'CHUNK_CORRUPT');
       assert.equal(await f.db.evidenceFile.count({ where: { attemptId: upload.attemptId } }), 0);
       assert.equal((await storage.listObjects(`recordings/${upload.attemptId}/`)).length, 0);
@@ -86,7 +91,13 @@ test('actual MinIO object storage streams, checksums, retries and failed-finaliz
     if (fixture) await fixture.close();
     // This bucket is created exclusively by this test run with an unguessable UUID.
     assert.match(bucket, /^proctolearn-test-[0-9a-f-]{36}$/);
-    for await (const object of client.listObjectsV2(bucket, '', true)) if (object.name) await client.removeObject(bucket, object.name);
-    await client.removeBucket(bucket);
+    for (;;) {
+      const objects = await storage.listObjects('', 1000);
+      if (!objects.length) break;
+      for (const object of objects) await storage.removeObject(object.name);
+    }
+    await client.send(new DeleteBucketCommand({ Bucket: bucket }));
+    storage.onModuleDestroy();
+    client.destroy();
   }
 });

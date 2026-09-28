@@ -15,7 +15,7 @@ const ROLE_LABELS: Record<string, string> = {
 export default function AdminOnlinePage() {
   const [users, setUsers] = useState<OnlineUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = () => {
@@ -31,7 +31,7 @@ export default function AdminOnlinePage() {
   }, []);
 
   const secondsAgo = (d: string) => {
-    const diff = Date.now() - new Date(d).getTime();
+    const diff = Math.max(0, (lastUpdate?.getTime() ?? new Date(d).getTime()) - new Date(d).getTime());
     if (diff < 60000) return `${Math.floor(diff / 1000)} сек. бұрын`;
     return `${Math.floor(diff / 60000)} мин. бұрын`;
   };
@@ -49,7 +49,7 @@ export default function AdminOnlinePage() {
             🔄 Жаңарту
           </button>
           <p className="text-xs text-gray-400 mt-1">
-            Жаңартылды: {lastUpdate.toLocaleTimeString('kk-KZ')}
+            Жаңартылды: {lastUpdate?.toLocaleTimeString('kk-KZ') ?? '—'}
           </p>
         </div>
       </div>

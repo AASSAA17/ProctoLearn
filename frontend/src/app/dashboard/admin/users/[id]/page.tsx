@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
@@ -39,10 +39,10 @@ export default function UserProgressPage() {
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedActionType, setSelectedActionType] = useState<'certificate' | 'exam'>('exam');
 
-  const loadProgress = () => {
+  const loadProgress = useCallback(() => {
     return api.get(`/admin/users/${id}/progress`)
       .then(r => setData(r.data));
-  };
+  }, [id]);
 
   useEffect(() => {
     setLoading(true);
@@ -54,7 +54,7 @@ export default function UserProgressPage() {
         setCourses(list);
       }),
     ]).finally(() => setLoading(false));
-  }, [id]);
+  }, [loadProgress]);
 
   const handleGrant = async (type: 'certificate' | 'exam', courseId: string) => {
     const key = `${type}-${courseId}`;

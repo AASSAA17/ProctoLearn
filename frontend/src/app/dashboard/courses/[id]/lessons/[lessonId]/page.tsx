@@ -84,7 +84,7 @@ export default function LessonViewerPage() {
     } finally {
       setLoading(false);
     }
-  }, [courseId, lessonId]);
+  }, [courseId, lessonId, router]);
 
   useEffect(() => {
     setLoading(true);

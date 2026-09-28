@@ -75,6 +75,7 @@ function ExamSession({ examId }: { examId: string }) {
   const [submissionFrozen, setSubmissionFrozen] = useState(false);
   const submissionRef = useRef<DraftAnswer[] | null>(null);
   const [result, setResult] = useState<ExamResult | null>(null);
+  const [ended, setEnded] = useState(false);
   const [uploadError, setUploadError] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [loadingDraft, setLoadingDraft] = useState(false);
@@ -146,11 +147,13 @@ function ExamSession({ examId }: { examId: string }) {
 
   useEffect(() => {
     mountedRef.current = true;
+    const writerCollection = writersRef.current;
+    const localStore = storeRef.current;
     return () => {
       mountedRef.current = false;
       endedRef.current = true;
       draftRef.current?.dispose();
-      const writers = [...writersRef.current.values()];
+      const writers = [...writerCollection.values()];
       const stops = [cameraStopRef.current?.(), screenStopRef.current?.()].filter(Boolean);
       const release = releaseExamLockRef.current;
       releaseExamLockRef.current = null;
@@ -160,8 +163,8 @@ function ExamSession({ examId }: { examId: string }) {
         for (const writer of writers) {
           try {
             await writer.flushLocal();
-            const local = await storeRef.current.get(writer.id);
-            if (local.state !== 'complete') await storeRef.current.update(writer.id, { state: 'pending', interrupted: true });
+            const local = await localStore.get(writer.id);
+            if (local.state !== 'complete') await localStore.update(writer.id, { state: 'pending', interrupted: true });
           } catch { /* Persisted chunks remain recoverable; the page warned before closing with unsaved bytes. */ }
           await writer.close();
         }
@@ -183,6 +186,7 @@ function ExamSession({ examId }: { examId: string }) {
     setStarting(true);
     setStartError('');
     endedRef.current = false;
+    setEnded(false);
     try {
       recordingBudget(preflight.remainingSeconds ?? preflight.duration * 60, preflight.recordingUsedBytes ?? 0);
       await acquireExamLock();
@@ -210,6 +214,7 @@ function ExamSession({ examId }: { examId: string }) {
       uploadedRef.current.clear();
       const cameraRecorder = new MediaRecorder(camera, { mimeType, videoBitsPerSecond: CAMERA_BITS, audioBitsPerSecond: AUDIO_BITS });
       const screenRecorder = new MediaRecorder(screen, { mimeType, videoBitsPerSecond: SCREEN_BITS, audioBitsPerSecond: AUDIO_BITS });
+      // eslint-disable-next-line react-hooks/purity -- This start-button handler measures elapsed time after media permissions, never during render.
       const requestedAt = performance.now();
       const { data } = await api.post<Attempt>(`/attempts/start/${examId}`);
       if (!mountedRef.current) { stopAllMedia(); return; }
@@ -224,6 +229,7 @@ function ExamSession({ examId }: { examId: string }) {
         setDraftState(state);
         if (state.status === 'closed') {
           endedRef.current = true;
+          setEnded(true);
           setSubmissionFrozen(true);
           setSubmitError('Емтихан аяқталған немесе уақыты біткен. Сервердегі нәтиже сақталды; жазбалар жүктелгеннен кейін оны көре аласыз.');
           draftRef.current?.dispose();
@@ -233,8 +239,10 @@ function ExamSession({ examId }: { examId: string }) {
       draftRef.current = saver;
       setDraftState(saver.state);
       attemptIdRef.current = data.id;
-      const remaining = Math.max(0, Date.parse(data.expiresAt) - Date.parse(data.serverTime) - (performance.now() - requestedAt));
-      deadlineRef.current = performance.now() + remaining;
+      // eslint-disable-next-line react-hooks/purity -- Account for network time inside the explicit start-button handler.
+      const now = performance.now();
+      const remaining = Math.max(0, Date.parse(data.expiresAt) - Date.parse(data.serverTime) - (now - requestedAt));
+      deadlineRef.current = now + remaining;
       setTimeLeft(Math.ceil(remaining / 1000));
       setTrustScore(data.trustScore);
       setAttempt(data);
@@ -418,6 +426,7 @@ function ExamSession({ examId }: { examId: string }) {
     try {
       const { data } = await api.post<ExamResult>(`/attempts/${attempt.id}/submit`, { answers: submissionRef.current }, { timeout: 20000 });
       endedRef.current = true;
+      if (mountedRef.current) setEnded(true);
       socketRef.current?.emit('proctor:end', { attemptId: attempt.id });
       if (mountedRef.current) setResult(data);
       await uploadRecordings(attempt.id);
@@ -425,6 +434,7 @@ function ExamSession({ examId }: { examId: string }) {
       const code = error?.response?.data?.code;
       if (['EXAM_EXPIRED', 'ATTEMPT_CLOSED', 'SUBMISSION_CONFLICT'].includes(code)) {
         endedRef.current = true;
+        if (mountedRef.current) setEnded(true);
         if (mountedRef.current) setSubmitError(error?.response?.data?.message || 'Бұл емтихан жабылған. Нәтижені тексеріңіз.');
         await uploadRecordings(attempt.id);
       } else if (mountedRef.current) {
@@ -435,7 +445,7 @@ function ExamSession({ examId }: { examId: string }) {
       if (mountedRef.current) setSubmitting(false);
     }
   }, [attempt, uploadRecordings]);
-  handleSubmitRef.current = handleSubmit;
+  useEffect(() => { handleSubmitRef.current = handleSubmit; }, [handleSubmit]);
 
   useEffect(() => {
     if (!attempt || result || starting) return;
@@ -477,7 +487,7 @@ function ExamSession({ examId }: { examId: string }) {
       <p className="text-sm text-gray-600">Жазбалар алдымен осы браузерде сақталады. Сервер қабылдағаннан кейін жергілікті бейне бөліктері өшіріледі. Қалпына келтіру үшін осы аккаунтпен осы браузерді ашыңыз.</p>
       {localSessions.map((session) => {
         const queue = queueStates[session.id];
-        const live = !!attempt && !endedRef.current;
+        const live = !!attempt && !ended;
         const labels = { recording: 'Жазылуда', saving: 'Жергілікті сақтау', uploading: 'Серверге жүктелуде', offline: 'Байланысты күтуде', 'storage-error': 'Браузерге сақтау қатесі', error: 'Жүктеу қатесі', complete: 'Сақталды' };
         return <div key={session.id} className="border-t pt-3 flex flex-wrap justify-between items-center gap-3 text-sm">
           <div><p className="font-medium">{session.kind === 'camera' ? 'Камера' : 'Экран'} · {(session.totalBytes / 1024 / 1024).toFixed(1)} MiB</p><p>{queue ? labels[queue.status] : 'Қалпына келтіруге дайын'} · {new Date(session.createdAt).toLocaleString()}</p>{queue?.message && <p role="alert" className="text-amber-800">{queue.message}</p>}{session.interrupted && <p className="text-amber-700">Үзіліс бар, тексерушіге белгіленеді.</p>}</div>
@@ -504,7 +514,7 @@ function ExamSession({ examId }: { examId: string }) {
 
   const questions = attempt.exam.questions;
   const question = questions[currentQ];
-  const disabled = starting || submissionFrozen || endedRef.current || !timeLeft || draftState.status === 'conflict' || loadingDraft;
+  const disabled = starting || submissionFrozen || ended || !timeLeft || draftState.status === 'conflict' || loadingDraft;
   const minutes = `${Math.floor(timeLeft / 60)}`.padStart(2, '0');
   const seconds = `${timeLeft % 60}`.padStart(2, '0');
   const draftLabels: Record<DraftState['status'], string> = {
@@ -522,7 +532,7 @@ function ExamSession({ examId }: { examId: string }) {
             <div className="text-center"><p className="text-xs text-gray-500">Trust Score</p><p className="font-bold">{trustScore}</p></div>
             <div className={timeLeft < 60 ? 'text-red-600' : 'text-gray-800'}><p className="text-xs">Қалған уақыт</p><p className="font-mono text-2xl font-bold">{minutes}:{seconds}</p></div>
             <button onClick={() => document.documentElement.requestFullscreen?.().catch(() => toast.error('Толық экран қолжетімсіз'))} className="btn-secondary text-sm">Толық экран</button>
-            <button disabled={submitting || endedRef.current || !!result || draftState.status === 'conflict'} onClick={() => { if (window.confirm('Жауаптарды жіберіп, емтиханды аяқтайсыз ба?')) void handleSubmit(); }} className="bg-red-600 text-white rounded-lg px-4 py-2 disabled:opacity-50">Аяқтау</button>
+            <button disabled={submitting || ended || !!result || draftState.status === 'conflict'} onClick={() => { if (window.confirm('Жауаптарды жіберіп, емтиханды аяқтайсыз ба?')) void handleSubmit(); }} className="bg-red-600 text-white rounded-lg px-4 py-2 disabled:opacity-50">Аяқтау</button>
           </div>
         </div>
       </header>
@@ -536,7 +546,7 @@ function ExamSession({ examId }: { examId: string }) {
         </div>
         {notice && <div role="status" className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">{notice}<button className="ml-3 underline" onClick={() => setNotice('')}>Жабу</button></div>}
         {trustScore <= 0 && <p className="bg-amber-50 p-3 rounded-lg text-sm">Оқиғалар қосымша тексеруді қажет етеді. Жауаптарыңызды жіберуге болады; шешімді тексеруші қабылдайды.</p>}
-        {submitError && <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3"><p>{submitError}</p>{!endedRef.current ? <button className="btn-primary" disabled={submitting || draftState.status === 'conflict'} onClick={() => void handleSubmit()}>Сол жауаптарды қайта жіберу</button> : <button disabled={uploading || uploadError} className="text-primary-700 underline disabled:opacity-50" onClick={() => router.push('/dashboard/my-attempts')}>Нәтижелерді көру</button>}</div>}
+        {submitError && <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3"><p>{submitError}</p>{!ended ? <button className="btn-primary" disabled={submitting || draftState.status === 'conflict'} onClick={() => void handleSubmit()}>Сол жауаптарды қайта жіберу</button> : <button disabled={uploading || uploadError} className="text-primary-700 underline disabled:opacity-50" onClick={() => router.push('/dashboard/my-attempts')}>Нәтижелерді көру</button>}</div>}
         {uploading && <p role="status" className="bg-blue-50 p-3 rounded-lg">Жауаптар сақталды. Камера мен экран жазбалары жүктелуде. Бетті жаппаңыз.</p>}
         {uploadError && <div role="alert" className="bg-amber-50 p-4 rounded-lg space-y-2"><p>Жазбаларды жүктеу аяқталмады. Қайта көріңіз немесе осы браузерде осы емтиханды ашып, сақталған бөліктерді қалпына келтіріңіз. Браузерге сақтау қатесі болса, бетті жаппаңыз. Сертификат тексеруден кейін беріледі.</p><button disabled={uploading} onClick={() => void uploadRecordings(attempt.id)} className="btn-secondary">Жазбаларды қайта жүктеу</button></div>}
         {result ? (
@@ -562,7 +572,7 @@ function ExamSession({ examId }: { examId: string }) {
                   })}
                   {question.type === 'TEXT' && <textarea aria-label="Жауап" maxLength={10000} className="input min-h-[140px]" value={answers[question.id] ?? ''} onChange={(event) => updateAnswer(question.id, event.target.value)} placeholder="Жауабыңызды теріңіз..." />}
                 </fieldset>
-                <div className="flex flex-wrap justify-between gap-3 mt-8"><button className="btn-secondary" disabled={!currentQ} onClick={() => setCurrentQ((index) => Math.max(0, index - 1))}>← Алдыңғы</button>{currentQ < questions.length - 1 ? <button className="btn-primary" onClick={() => setCurrentQ((index) => index + 1)}>Келесі →</button> : <button disabled={submitting || draftState.status === 'conflict' || endedRef.current} className="btn-primary disabled:opacity-50" onClick={() => void handleSubmit()}>{submitting ? 'Жіберілуде...' : submissionFrozen ? 'Қайта жіберу' : 'Жауаптарды жіберу'}</button>}</div>
+                <div className="flex flex-wrap justify-between gap-3 mt-8"><button className="btn-secondary" disabled={!currentQ} onClick={() => setCurrentQ((index) => Math.max(0, index - 1))}>← Алдыңғы</button>{currentQ < questions.length - 1 ? <button className="btn-primary" onClick={() => setCurrentQ((index) => index + 1)}>Келесі →</button> : <button disabled={submitting || draftState.status === 'conflict' || ended} className="btn-primary disabled:opacity-50" onClick={() => void handleSubmit()}>{submitting ? 'Жіберілуде...' : submissionFrozen ? 'Қайта жіберу' : 'Жауаптарды жіберу'}</button>}</div>
               </> : <p>Емтихан сұрақтары табылмады.</p>}
             </section>
           </div>

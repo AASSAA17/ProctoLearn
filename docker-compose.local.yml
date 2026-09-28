@@ -1,0 +1,94 @@
+# Fresh local installation only. A distinct project and new volumes protect older data.
+# powershell -File scripts/start-local.ps1
+name: proctolearn-local
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env.local}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.local}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env.local}
+    ports:
+      - '127.0.0.1:5433:5432'
+    volumes:
+      - local_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  storage:
+    image: chrislusf/seaweedfs:4.47
+    restart: unless-stopped
+    command: ['mini', '-dir=/data', '-ip=127.0.0.1', '-ip.bind=0.0.0.0', '-s3.port=8333', '-s3.port.iceberg=0', '-s3.port.lance=0', '-webdav=false', '-admin.ui=false', '-master.telemetry=false', '-s3.allowedOrigins=http://localhost:3000']
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env.local}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env.local}
+      S3_BUCKET: ${MINIO_BUCKET:-proctolearn-local}
+    ports:
+      - '127.0.0.1:9000:8333'
+    volumes:
+      - local_storage_data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', '--max-time', '2', 'http://127.0.0.1:8333/readyz']
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 20s
+
+  api:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    env_file: .env.local
+    environment:
+      DB_HOST: postgres
+      DB_PORT: '5432'
+      API_PORT: '4000'
+      MINIO_ENDPOINT: storage
+      MINIO_PORT: '8333'
+      MINIO_USE_SSL: 'false'
+      MINIO_REGION: us-east-1
+      MINIO_PUBLIC_URL: http://localhost:9000
+      FRONTEND_URL: http://localhost:3000
+      # All published ports bind to loopback. Local HTTP uses development cookies.
+      NODE_ENV: development
+      GRAPHITE_ENABLED: 'false'
+      N8N_EXAM_SUBMIT_WEBHOOK_URL: ''
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+    ports:
+      - '127.0.0.1:4000:4000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    stop_grace_period: 30s
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+        NEXT_PUBLIC_WS_URL: ws://localhost:4000
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3000:3000'
+    depends_on:
+      api:
+        condition: service_healthy
+    stop_grace_period: 15s
+
+  mailpit:
+    image: axllent/mailpit:v1.31.3
+    profiles: ['mail']
+    ports:
+      - '127.0.0.1:8025:8025'
+    restart: unless-stopped
+
+volumes:
+  local_postgres_data:
+  local_storage_data:

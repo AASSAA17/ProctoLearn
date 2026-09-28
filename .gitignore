@@ -53,6 +53,7 @@ backups/
 *.bak
 *.tsbuildinfo
 /handoff/
+/.local/
 
 # Generated evidence is private by default; only reviewed Markdown guides belong in Git.
 evidence/**/*

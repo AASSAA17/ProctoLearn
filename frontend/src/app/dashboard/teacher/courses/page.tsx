@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '@/lib/api';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -26,13 +26,14 @@ const LEVEL_LABELS: Record<string, { label: string; color: string }> = {
 export default function TeacherCoursesPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const teacherId = user?.id;
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadCourses = async () => {
+  const loadCourses = useCallback(async () => {
     setLoading(true);
     try {
-      const params = user?.id ? `?limit=100&teacherId=${user.id}` : '?limit=100';
+      const params = teacherId ? `?limit=100&teacherId=${teacherId}` : '?limit=100';
       const { data } = await api.get(`/courses${params}`);
       setCourses(data.data ?? data);
     } catch {
@@ -40,9 +41,9 @@ export default function TeacherCoursesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [teacherId]);
 
-  useEffect(() => { loadCourses(); }, []);
+  useEffect(() => { loadCourses(); }, [loadCourses]);
 
   const handleDelete = async (courseId: string, title: string) => {
     if (!confirm(`"${title}" курсын жою керек пе?`)) return;

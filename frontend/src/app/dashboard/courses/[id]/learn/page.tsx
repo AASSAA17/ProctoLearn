@@ -81,8 +81,9 @@ export default function LearnPage() {
   const [course, setCourse] = useState<Course | null>(null);
   const [navList, setNavList] = useState<NavItem[]>([]);
   const [currentStepId, setCurrentStepId] = useState<string | null>(initialStepId);
-  const [currentStep, setCurrentStep] = useState<Step | null>(null);
-  const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
+  const currentLesson = course?.modules.flatMap((module) => module.lessons).find((lesson) => lesson.steps.some((step) => step.id === currentStepId)) ?? null;
+  const currentStep = currentLesson?.steps.find((step) => step.id === currentStepId) ?? null;
+  const navigateToStep = setCurrentStepId;
   const [completedStepIds, setCompletedStepIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -118,7 +119,7 @@ export default function LearnPage() {
 
         // Pick initial step
         const firstStepId = initialStepId ?? list[0]?.stepId ?? null;
-        if (firstStepId) navigateToStep(firstStepId, courseData);
+        if (firstStepId) navigateToStep(firstStepId);
       } catch {
         toast.error('Курс жүктеу қатесі');
         router.push(`/dashboard/courses/${courseId}`);
@@ -127,26 +128,7 @@ export default function LearnPage() {
       }
     };
     load();
-  }, [courseId]);
-
-  const navigateToStep = useCallback(
-    (stepId: string, courseData?: Course) => {
-      const c = courseData ?? course;
-      if (!c) return;
-      for (const mod of c.modules) {
-        for (const lesson of mod.lessons) {
-          const step = lesson.steps.find((s) => s.id === stepId);
-          if (step) {
-            setCurrentStepId(stepId);
-            setCurrentStep(step);
-            setCurrentLesson(lesson);
-            return;
-          }
-        }
-      }
-    },
-    [course],
-  );
+  }, [courseId, initialStepId, navigateToStep, router]);
 
   const handleStepComplete = useCallback(async () => {
     if (!currentStep || !currentLesson) return;

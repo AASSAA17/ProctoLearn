@@ -1,12 +1,14 @@
-FROM node:22-alpine
-RUN apk add --no-cache font-liberation fontconfig
+FROM node:24-alpine
+RUN apk add --no-cache openssl font-liberation fontconfig
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --legacy-peer-deps
+RUN npm ci
 
-COPY . .
-RUN ./node_modules/.bin/prisma generate
+COPY --chown=node:node . .
+RUN node_modules/.bin/prisma generate && chown -R node:node /app
+USER node
 
 EXPOSE 4000
-CMD ["/bin/sh", "-c", "node_modules/.bin/prisma generate && npm run start:dev"]
+ENTRYPOINT ["/bin/sh", "/app/docker/entrypoint.sh"]
+CMD ["node", "node_modules/@nestjs/cli/bin/nest.js", "start", "--watch"]

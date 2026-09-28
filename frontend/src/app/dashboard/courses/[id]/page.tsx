@@ -77,7 +77,7 @@ export default function CourseDetailPage() {
       }
     };
     load();
-  }, [id]);
+  }, [id, router]);
 
   if (loading) {
     return (
