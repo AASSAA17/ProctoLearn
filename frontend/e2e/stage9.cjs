@@ -182,6 +182,9 @@ async function main() {
     const publicCards = publicPage.locator('a[href^="/courses/"]');
     await publicCards.first().waitFor();
     assert.ok(await publicCards.count() <= 12);
+    await publicPage.getByRole('button', { name: 'Барлығы', exact: true }).click();
+    assert.equal(await publicPage.getByText('Курстар жүктелуде...', { exact: true }).count(), 0, 'reselecting the current filter must not leave the catalog loading');
+    assert.ok(await publicCards.count() > 0);
     assert.ok(await publicPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     if (await prisma.course.count() > 12) {
       const firstHref = await publicCards.first().getAttribute('href');

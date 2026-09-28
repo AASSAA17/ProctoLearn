@@ -35,7 +35,10 @@ export default function PublicCoursesPage() {
     return () => controller.abort();
   }, [level, page, reload]);
 
-  const chooseLevel = (value: Level) => { setLoading(true); setLevel(value); setPage(1); };
+  const chooseLevel = (value: Level) => {
+    if (value === level && page === 1) return;
+    setLoading(true); setLevel(value); setPage(1);
+  };
   const choosePage = (value: number) => { setLoading(true); setPage(value); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   return (
