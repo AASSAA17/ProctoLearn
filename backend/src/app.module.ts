@@ -37,11 +37,6 @@ import { OperationsModule } from './operations/operations.module';
         ttl: 60_000,   // 1 minute window
         limit: 1000,   // max 1000 requests per minute globally
       },
-      {
-        name: 'auth',
-        ttl: 60_000,   // 1 minute window
-        limit: 30,     // max 30 auth attempts per minute
-      },
     ]),
     PrismaModule,
     MinioModule,
