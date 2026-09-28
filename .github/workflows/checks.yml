@@ -25,6 +25,7 @@ jobs:
       - run: node --test scripts/check-secrets.test.cjs
       - run: node --test scripts/local-launch.test.cjs
       - run: node --test scripts/backup-cli.test.cjs
+      - run: node --test scripts/release-smoke.test.cjs
       - run: node scripts/check-secrets.cjs --staged
   backend:
     runs-on: ubuntu-latest
@@ -137,6 +138,8 @@ jobs:
         env:
           E2E_DISPOSABLE: 'true'
         run: npm --prefix frontend run test:e2e
+      - name: Run bounded read-only release smoke against the isolated stack
+        run: node scripts/release-smoke.cjs http://127.0.0.1:4000/
       - name: Stop this job's containers
         if: always()
         run: docker compose --project-name proctolearn-local --env-file .env.local -f docker-compose.local.yml down

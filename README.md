@@ -2,7 +2,7 @@
 
 > Запуск на Windows: [локальная инструкция](docs/WINDOWS_LOCAL.md). Состояние этапов и проверок: [DELIVERY_STATUS](docs/DELIVERY_STATUS.md); исходный аудит: [обзор платформы](docs/PLATFORM_REVIEW.md). Каждый завершённый этап публикуется в `main`; это не означает развёртывание на production. Общие пароли из старых примеров не используются: локальный запуск генерирует приватные ключи, demo seed включается явно. Старые опубликованные доступы нужно отозвать отдельно.
 
-> Қауіпсіздік жаңартуы: емтихан, сессия және видео жүктеу түзетілді. Қолданыстағы ДҚ үшін baseline пен `tokenVersion` миграциясын, жаңа JWT кілттерін және сыртқы MinIO URL-ін дайындаңыз: [көшіру нұсқаулығы](docs/SECURITY_PHASE_1.md). `docker-compose.server.yml` — dev/демо; production үшін `docker-compose.yml` қолданыңыз.
+> Қауіпсіздік жаңартуы: емтихан, сессия және видео жүктеу түзетілді. Қолданыстағы ДҚ үшін baseline пен `tokenVersion` миграциясын, жаңа JWT кілттерін және сыртқы MinIO URL-ін дайындаңыз: [көшіру нұсқаулығы](docs/SECURITY_PHASE_1.md). Қазіргі Compose файлдары production deployment ретінде расталмаған; [релиз тәртібін](docs/RELEASE_RUNBOOK.md) қараңыз.
 
 **ProctoLearn** — курстар, емтихандар және адам тексеретін прокторинг жазбалары бар онлайн оқыту платформасы. AI-көмекші сыртқы Groq кілті берілгенде ғана тілдік модельді қолданады; кілтсіз қарапайым жергілікті жауаптар қайтарады. Нақты мүмкіндіктер мен шектеулер: [AI_CAPABILITIES.md](docs/AI_CAPABILITIES.md).
 
@@ -121,9 +121,9 @@
 ### 5. 🐳 Контейнерлеу
 
 ```
-docker-compose.yml              — негізгі стек
+docker-compose.yml              — legacy стек (production емес)
 docker-compose.monitoring.yml   — мониторинг
-docker-compose.server.yml       — серверлік орналастыру
+docker-compose.server.yml       — legacy серверлік үлгі
 docker-compose.dev.yml          — әзірлеу
 ```
 
@@ -244,9 +244,9 @@ ProctoLearn/
 ├── scripts/                    # Bash/PowerShell скриптер
 ├── nginx/                      # Nginx кері прокси конфиг
 ├── Jenkinsfile                 # CI/CD pipeline
-├── docker-compose.yml          # Негізгі стек
+├── docker-compose.yml          # Legacy стек
 ├── docker-compose.monitoring.yml # Мониторинг стегі
-├── docker-compose.server.yml   # Продакшн стегі
+├── docker-compose.server.yml   # Legacy серверлік үлгі
 └── start-all.sh                # Барлық стекті бір командамен іске қосу
 ```
 
