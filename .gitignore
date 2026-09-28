@@ -46,6 +46,7 @@ infra/terraform/*.tfstate
 infra/terraform/*.tfstate.*
 infra/terraform/terraform.tfvars
 .idea/
+*.iml
 
 # Local backups may contain credentials, personal data and recordings.
 # Existing tracked/history entries require a separate, reviewed cleanup.
