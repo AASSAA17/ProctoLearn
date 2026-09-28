@@ -1,12 +1,13 @@
 import {
   ArrayMinSize, ArrayMaxSize, IsArray, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Max, Min, MaxLength, ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { QuestionType } from '@prisma/client';
 
 export class CreateQuestionDto {
   @ApiProperty({ example: '2 + 2 неге тең?' })
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @IsNotEmpty()
   @MaxLength(20000)
@@ -25,6 +26,7 @@ export class CreateQuestionDto {
   options?: string[];
 
   @ApiProperty({ example: '4' })
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @IsNotEmpty()
   @MaxLength(10000)
@@ -34,6 +36,7 @@ export class CreateQuestionDto {
 export class UpdateQuestionDto {
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @IsNotEmpty()
   @MaxLength(20000)
@@ -54,6 +57,7 @@ export class UpdateQuestionDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @IsNotEmpty()
   @MaxLength(10000)
@@ -62,6 +66,7 @@ export class UpdateQuestionDto {
 
 export class CreateExamDto {
   @ApiProperty({ example: 'Математика финалдық емтиханы' })
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @IsNotEmpty()
   title: string;
@@ -91,6 +96,7 @@ export class CreateExamDto {
 export class UpdateExamDto {
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @IsNotEmpty()
   title?: string;

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 require('reflect-metadata');
 const { BadRequestException, ForbiddenException, NotFoundException, ConflictException, ValidationPipe } = require('@nestjs/common');
 const { ExamsService } = require('../src/exams/exams.service');
-const { CreateExamDto, CreateQuestionDto } = require('../src/exams/dto/exam.dto');
+const { CreateExamDto, UpdateExamDto, CreateQuestionDto, UpdateQuestionDto } = require('../src/exams/dto/exam.dto');
 const { ProctorService } = require('../src/proctor/proctor.service');
 const { ProctorController } = require('../src/proctor/proctor.controller');
 const { ROLES_KEY } = require('../src/common/decorators/roles.decorator');
@@ -35,7 +35,7 @@ function fixture({ enrolled = false, active = 0, history = 0, questionExam = 'ex
     },
     answer: { count: async () => answers },
     question: {
-      findUnique: async () => ({ examId: questionExam }),
+      findUnique: async () => ({ examId: questionExam, ...question }),
       findMany: async ({ select }) => [Object.fromEntries(Object.entries({ id: 'question', ...question }).filter(([key]) => select[key]))],
       create: async ({ data }) => { writes.push(['createQuestion', data]); return data; },
       update: async ({ data }) => { writes.push(['updateQuestion', data]); return data; },
@@ -117,6 +117,41 @@ test('question DTO rejects nested answer-bearing options; a draft exam may conta
   await assert.rejects(pipe.transform({ ...question, options: [{ text: 'A', isCorrect: true }] }, { type: 'body', metatype: CreateQuestionDto }), BadRequestException);
   const draft = await pipe.transform({ title: 'Draft', duration: 30, questions: [] }, { type: 'body', metatype: CreateExamDto });
   assert.deepEqual(draft.questions, []);
+});
+
+test('exam and question DTOs trim text and reject whitespace-only values', async () => {
+  const pipe = new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true });
+  const parse = (value, metatype) => pipe.transform(value, { type: 'body', metatype });
+  for (const metatype of [CreateExamDto, UpdateExamDto]) {
+    const body = metatype === CreateExamDto ? { title: '   ', duration: 30, questions: [] } : { title: '   ' };
+    await assert.rejects(parse(body, metatype), BadRequestException);
+  }
+  for (const metatype of [CreateQuestionDto, UpdateQuestionDto]) {
+    await assert.rejects(parse({ ...question, text: '   ' }, metatype), BadRequestException);
+    await assert.rejects(parse({ ...question, answer: '   ' }, metatype), BadRequestException);
+  }
+  assert.equal((await parse({ ...question, text: '  Choose  ', answer: '  A  ' }, CreateQuestionDto)).answer, 'A');
+  assert.equal((await parse({ title: '  Final  ' }, UpdateExamDto)).title, 'Final');
+});
+
+test('API rejects invalid answer keys and preserves comma-containing multiple choices', async () => {
+  const { service, writes } = fixture();
+  for (const invalid of [
+    { ...question, options: ['A', 'A'] },
+    { ...question, options: ['A', 'B'], answer: 'C' },
+    { ...question, type: 'MULTIPLE_CHOICE', options: ['A', 'B'], answer: '["A","C"]' },
+    { ...question, type: 'MULTIPLE_CHOICE', options: ['A', 'B'], answer: '[]' },
+  ]) await assert.rejects(service.addQuestion('course', 'exam', invalid, teacher), BadRequestException);
+  assert.deepEqual(writes, []);
+  await assert.rejects(service.updateQuestion('course', 'exam', 'question', { options: ['C', 'D'] }, teacher), BadRequestException);
+  assert.deepEqual(writes, []);
+  const created = await service.addQuestion('course', 'exam', {
+    text: 'Multiple', type: 'MULTIPLE_CHOICE', options: ['A, B', 'C'], answer: '["A, B","C"]',
+  }, teacher);
+  assert.deepEqual(created.options, ['A, B', 'C']);
+  assert.deepEqual(JSON.parse(created.answer), ['A, B', 'C']);
+  const updated = await service.updateQuestion('course', 'exam', 'question', { answer: 'B' }, teacher);
+  assert.equal(updated.answer, 'B');
 });
 
 test('proctor candidate directory is restricted to course owner/admin and returns bounded minimal profiles', async () => {

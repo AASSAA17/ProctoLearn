@@ -306,6 +306,125 @@ async function verifyOutlineSettings(page, proctorContext, module, lesson) {
   return updates;
 }
 
+async function verifyTeacherExams(page, proctorContext, courseId) {
+  const listPath = `/courses/${courseId}/exams`;
+  await page.route(`**${listPath}`, route => route.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"unavailable"}' }));
+  await page.reload();
+  await page.getByRole('alert').getByText('Емтихандарды жүктеу мүмкін болмады.').waitFor();
+  assert.equal(await page.getByText('Емтихан жоқ. Алғашқы емтиханды қосыңыз.').count(), 0);
+  await page.unroute(`**${listPath}`);
+  await page.getByRole('alert').getByRole('button', { name: 'Қайта жүктеу' }).click();
+  await page.getByRole('alert').filter({ hasText: 'Емтихандарды жүктеу мүмкін болмады.' }).waitFor({ state: 'hidden' });
+  await page.getByRole('button', { name: '+ Емтихан қосу' }).click();
+  const title = `E2E authoring exam ${randomUUID()}`;
+  await page.getByPlaceholder('Емтихан атауы (мысалы: Финалдық емтихан)').fill(title);
+  await page.getByRole('button', { name: 'Емтихан қосу', exact: true }).click();
+  await page.getByRole('button', { name: `Емтиханды өңдеу: ${title}` }).waitFor();
+  const exam = await prisma.exam.findFirstOrThrow({ where: { courseId, title } });
+  const settings = page.getByRole('form', { name: 'Емтихан параметрлері' });
+  await page.getByRole('button', { name: `Емтиханды өңдеу: ${title}` }).click();
+  await settings.getByLabel('Емтихан атауы').fill('Unsaved exam');
+  await settings.getByRole('button', { name: 'Болдырмау' }).click();
+  assert.equal((await prisma.exam.findUniqueOrThrow({ where: { id: exam.id } })).title, title);
+  await page.getByRole('button', { name: `Емтиханды өңдеу: ${title}` }).click();
+  await settings.getByLabel('Емтихан атауы').fill('   ');
+  await settings.getByRole('button', { name: 'Сақтау' }).click();
+  await settings.getByRole('alert').waitFor();
+  const updatedTitle = `${title} edited`;
+  await settings.getByLabel('Емтихан атауы').fill(`  ${updatedTitle}  `);
+  await settings.getByLabel('Ұзақтығы (мин)').fill('35');
+  await settings.getByLabel('Өту балы (%)').fill('75');
+  const examPath = `/courses/${courseId}/exams/${exam.id}`;
+  await page.route(`**${examPath}`, route => route.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"unavailable"}' }));
+  await settings.getByRole('button', { name: 'Сақтау' }).click();
+  await settings.getByRole('alert').getByText('Емтихан сақталмады. Деректер сақталды, қайта көріңіз.').waitFor();
+  assert.equal(await settings.getByLabel('Емтихан атауы').inputValue(), `  ${updatedTitle}  `);
+  assert.equal((await prisma.exam.findUniqueOrThrow({ where: { id: exam.id } })).title, title);
+  await page.unroute(`**${examPath}`);
+  await settings.getByRole('button', { name: 'Сақтау' }).click();
+  await page.getByRole('button', { name: `Емтиханды өңдеу: ${updatedTitle}` }).waitFor();
+  const saved = await prisma.exam.findUniqueOrThrow({ where: { id: exam.id } });
+  assert.equal(saved.duration, 35); assert.equal(saved.passScore, 75);
+
+  await page.route(`**${examPath}`, route => route.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"unavailable"}' }));
+  await page.getByRole('button', { name: `Сұрақтарды көрсету: ${updatedTitle}` }).click();
+  await page.getByRole('alert').getByText('Сұрақтарды жүктеу мүмкін болмады.').waitFor();
+  assert.equal(await page.getByText('Сұрақтар жоқ', { exact: true }).count(), 0);
+  await page.unroute(`**${examPath}`);
+  await page.getByRole('alert').getByRole('button', { name: 'Қайта жүктеу' }).click();
+  await page.getByRole('alert').filter({ hasText: 'Сұрақтарды жүктеу мүмкін болмады.' }).waitFor({ state: 'hidden' });
+  const teacherCsrfResponse = await page.context().request.get(`${api}/auth/csrf`);
+  const teacherCsrf = (await teacherCsrfResponse.json()).csrfToken;
+  const rejectedQuestion = await page.context().request.post(`${api}${examPath}/questions`, {
+    data: { text: 'Invalid answer key', type: 'SINGLE_CHOICE', options: ['A', 'B'], answer: 'C' },
+    headers: { Origin: web, 'X-CSRF-Token': teacherCsrf },
+  });
+  assert.equal(rejectedQuestion.status(), 400);
+  assert.equal(await prisma.question.count({ where: { examId: exam.id } }), 0);
+  await page.getByRole('button', { name: '+ Сұрақ қосу' }).click();
+  const editor = page.getByRole('form', { name: 'Сұрақ редакторы' });
+  await editor.getByLabel('Сұрақ мәтіні').fill('   ');
+  await editor.getByLabel('Жауап нұсқасы 1').fill('A');
+  await editor.getByLabel('Жауап нұсқасы 2').fill('B');
+  await editor.getByRole('button', { name: 'Сұрақты қосу' }).click();
+  await editor.getByRole('alert').getByText('Сұрақ мәтінін енгізіңіз.').waitFor();
+  const questionText = `E2E authored question ${randomUUID()}`;
+  await editor.getByLabel('Сұрақ мәтіні').fill(questionText);
+  await editor.getByRole('button', { name: 'Сұрақты қосу' }).click();
+  await editor.getByRole('alert').getByText('Дұрыс жауапты белгілеңіз.').waitFor();
+  await editor.getByRole('radio', { name: 'Дұрыс жауап: 1-нұсқа' }).check();
+  await editor.getByRole('button', { name: 'Сұрақты қосу' }).click();
+  await page.getByRole('button', { name: `Сұрақты өңдеу: ${questionText}` }).waitFor();
+  const question = await prisma.question.findFirstOrThrow({ where: { examId: exam.id, text: questionText } });
+  assert.deepEqual(question.options, ['A', 'B']); assert.equal(question.answer, 'A');
+
+  await page.getByRole('button', { name: `Сұрақты өңдеу: ${questionText}` }).click();
+  await editor.getByLabel('Сұрақ мәтіні').fill('Unsaved question');
+  await editor.getByRole('button', { name: 'Болдырмау' }).click();
+  assert.equal((await prisma.question.findUniqueOrThrow({ where: { id: question.id } })).text, questionText);
+  await page.getByRole('button', { name: `Сұрақты өңдеу: ${questionText}` }).click();
+  const editedQuestion = `${questionText} edited`;
+  await editor.getByLabel('Сұрақ мәтіні').fill(editedQuestion);
+  await editor.getByLabel('Сұрақ түрі').selectOption('MULTIPLE_CHOICE');
+  await editor.getByLabel('Жауап нұсқасы 1').fill('A, B');
+  await editor.getByLabel('Жауап нұсқасы 2').fill('C');
+  await editor.getByRole('button', { name: '+ Нұсқа қосу' }).click();
+  await editor.getByLabel('Жауап нұсқасы 3').fill('D');
+  await editor.getByRole('checkbox', { name: 'Дұрыс жауап: 3-нұсқа' }).check();
+  await editor.getByRole('button', { name: 'Нұсқаны жою: 2' }).click();
+  const questionPath = `${examPath}/questions/${question.id}`;
+  await page.route(`**${questionPath}`, route => route.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"unavailable"}' }));
+  await editor.getByRole('button', { name: 'Сұрақты жаңарту' }).click();
+  await editor.getByRole('alert').getByText('Сұрақ сақталмады. Деректер сақталды, қайта көріңіз.').waitFor();
+  assert.equal(await editor.getByLabel('Сұрақ мәтіні').inputValue(), editedQuestion);
+  assert.equal((await prisma.question.findUniqueOrThrow({ where: { id: question.id } })).text, questionText);
+  await page.unroute(`**${questionPath}`);
+  await editor.getByRole('button', { name: 'Сұрақты жаңарту' }).click();
+  await page.getByRole('button', { name: `Сұрақты өңдеу: ${editedQuestion}` }).waitFor();
+  const edited = await prisma.question.findUniqueOrThrow({ where: { id: question.id } });
+  assert.deepEqual(edited.options, ['A, B', 'D']);
+  assert.deepEqual(JSON.parse(edited.answer), ['A, B', 'D']);
+
+  const csrfResponse = await proctorContext.request.get(`${api}/auth/csrf`);
+  const csrfToken = (await csrfResponse.json()).csrfToken;
+  for (const endpoint of [examPath, questionPath]) {
+    const denied = await proctorContext.request.patch(`${api}${endpoint}`, { data: { title: 'Forbidden', text: 'Forbidden' }, headers: { Origin: web, 'X-CSRF-Token': csrfToken } });
+    assert.equal(denied.status(), 403);
+  }
+  await page.reload();
+  await page.getByRole('button', { name: `Сұрақтарды көрсету: ${updatedTitle}` }).click();
+  await page.getByRole('button', { name: `Сұрақты өңдеу: ${editedQuestion}` }).waitFor();
+  await page.getByRole('button', { name: `Сұрақты өңдеу: ${editedQuestion}` }).click();
+  assert.equal(await editor.getByLabel('Сұрақ түрі').inputValue(), 'MULTIPLE_CHOICE');
+  assert.equal(await editor.getByRole('checkbox', { name: 'Дұрыс жауап: 1-нұсқа' }).isChecked(), true);
+  assert.equal(await editor.getByRole('checkbox', { name: 'Дұрыс жауап: 2-нұсқа' }).isChecked(), true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  await auditPage(page); assert.deepEqual(auditIssues, []);
+  await page.setViewportSize({ width: 1365, height: 900 });
+  console.log('PASS teacher edits exam and questions; answer keys, cancel, retry, reload, mobile and proctor denial');
+}
+
 async function main() {
   const ready = await fetch(`${api}/ready`);
   assert.equal(ready.status, 200);
@@ -497,6 +616,7 @@ async function main() {
       assert.equal(savedLesson.moduleId, savedModule.id);
       await verifyTeacherSteps(teacherPage, savedLesson.id);
       const updatedOutline = await verifyOutlineSettings(teacherPage, sessions.get('PROCTOR').context, savedModule, savedLesson);
+      await verifyTeacherExams(teacherPage, sessions.get('PROCTOR').context, saved.id);
 
       teacherPage.once('dialog', dialog => dialog.accept());
       await teacherPage.getByRole('button', { name: `Сабақты жою: ${updatedOutline.lesson.title}` }).click();

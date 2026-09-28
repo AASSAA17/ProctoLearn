@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback, useId } from 'react';
+import { useEffect, useState, useCallback, useId, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import ProctorAssignments from '@/components/ProctorAssignments';
 import OutlineSettings from '@/components/OutlineSettings';
+import { ExamSettings, QuestionEditor, type EditableQuestion } from '@/components/ExamEditor';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Step {
@@ -45,14 +46,6 @@ interface Exam {
   duration: number;
   passScore: number;
   _count?: { questions: number; attempts: number };
-}
-
-interface Question {
-  id: string;
-  text: string;
-  type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TEXT';
-  options: string[] | null;
-  answer: string;
 }
 
 const STEP_TYPE_LABELS: Record<string, string> = { VIDEO: '▶️ Бейне', TEXT: '📝 Мәтін', TASK: '✏️ Тапсырма' };
@@ -590,14 +583,19 @@ export default function EditCoursePage() {
 
   // Exam management state
   const [exams, setExams] = useState<Exam[]>([]);
+  const [examsLoading, setExamsLoading] = useState(true);
+  const [examsError, setExamsError] = useState(false);
   const [addingExam, setAddingExam] = useState(false);
   const [examForm, setExamForm] = useState({ title: '', duration: 30, passScore: 60 });
   const [savingExam, setSavingExam] = useState(false);
   const [expandedExam, setExpandedExam] = useState<string | null>(null);
-  const [examQuestions, setExamQuestions] = useState<Question[]>([]);
+  const [editingExam, setEditingExam] = useState<string | null>(null);
+  const [examQuestions, setExamQuestions] = useState<EditableQuestion[]>([]);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
+  const [questionsError, setQuestionsError] = useState(false);
+  const questionRequest = useRef(0);
   const [addingQuestion, setAddingQuestion] = useState(false);
-  const [qForm, setQForm] = useState({ text: '', type: 'SINGLE_CHOICE' as string, options: ['', ''], answer: '' });
-  const [savingQ, setSavingQ] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<string | null>(null);
 
   const loadCourse = useCallback(async () => {
     try {
@@ -613,18 +611,30 @@ export default function EditCoursePage() {
   }, [courseId, router]);
 
   const loadExams = useCallback(async () => {
+    setExamsLoading(true);
+    setExamsError(false);
     try {
       const { data } = await api.get(`/courses/${courseId}/exams`);
       setExams(data);
-    } catch { /* silent */ }
+    } catch {
+      setExamsError(true);
+    } finally {
+      setExamsLoading(false);
+    }
   }, [courseId]);
 
   const loadExamQuestions = async (examId: string) => {
+    const request = ++questionRequest.current;
+    setQuestionsLoading(true);
+    setQuestionsError(false);
+    setExamQuestions([]);
     try {
       const { data } = await api.get(`/courses/${courseId}/exams/${examId}`);
-      setExamQuestions(data.questions ?? []);
+      if (request === questionRequest.current) setExamQuestions(data.questions ?? []);
     } catch {
-      toast.error('Сұрақтарды жүктеу қатесі');
+      if (request === questionRequest.current) setQuestionsError(true);
+    } finally {
+      if (request === questionRequest.current) setQuestionsLoading(false);
     }
   };
 
@@ -673,28 +683,6 @@ export default function EditCoursePage() {
       if (expandedExam === examId) setExpandedExam(null);
     } catch {
       toast.error('Жою қатесі');
-    }
-  };
-
-  const handleAddQuestion = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!qForm.text.trim()) { toast.error('Сұрақ мәтінін енгізіңіз'); return; }
-    setSavingQ(true);
-    try {
-      const body: Record<string, any> = { text: qForm.text, type: qForm.type, answer: qForm.answer };
-      if (qForm.type !== 'TEXT') {
-        body.options = qForm.options.filter(Boolean);
-      }
-      await api.post(`/courses/${courseId}/exams/${expandedExam}/questions`, body);
-      toast.success('Сұрақ қосылды');
-      setAddingQuestion(false);
-      setQForm({ text: '', type: 'SINGLE_CHOICE', options: ['', ''], answer: '' });
-      loadExamQuestions(expandedExam!);
-      loadExams();
-    } catch {
-      toast.error('Сұрақ қосу қатесі');
-    } finally {
-      setSavingQ(false);
     }
   };
 
@@ -823,7 +811,11 @@ export default function EditCoursePage() {
       <div className="space-y-4">
         <h2 className="text-base font-semibold text-gray-800">Емтихандар</h2>
 
-        {exams.length === 0 && !addingExam && (
+        {examsLoading && <p role="status" className="text-sm text-gray-600">Емтихандар жүктелуде...</p>}
+        {examsError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          Емтихандарды жүктеу мүмкін болмады. <button type="button" onClick={() => void loadExams()} className="font-medium underline">Қайта жүктеу</button>
+        </div>}
+        {!examsLoading && !examsError && exams.length === 0 && !addingExam && (
           <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-200 text-gray-600">
             <p className="text-3xl mb-2">📝</p>
             <p className="text-sm">Емтихан жоқ. Алғашқы емтиханды қосыңыз.</p>
@@ -832,20 +824,10 @@ export default function EditCoursePage() {
 
         {exams.map((exam) => (
           <div key={exam.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div
-              className="flex items-center justify-between px-5 py-3 cursor-pointer hover:bg-gray-50 transition"
-              onClick={() => {
-                if (expandedExam === exam.id) {
-                  setExpandedExam(null);
-                } else {
-                  setExpandedExam(exam.id);
-                  loadExamQuestions(exam.id);
-                }
-              }}
-            >
-              <div>
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+              <div className="min-w-0">
                 <p className="font-medium text-gray-900">{exam.title}</p>
-                <div className="flex gap-3 text-xs text-gray-500 mt-1">
+                <div className="flex flex-wrap gap-3 text-xs text-gray-600 mt-1">
                   <span>⏱ {exam.duration} мин</span>
                   <span>✅ Өту: {exam.passScore}%</span>
                   <span>❓ {exam._count?.questions ?? 0} сұрақ</span>
@@ -853,136 +835,64 @@ export default function EditCoursePage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button type="button" aria-label={`Емтиханды өңдеу: ${exam.title}`} onClick={() => setEditingExam(exam.id)} className="text-blue-700 text-xs underline">Өңдеу</button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleDeleteExam(exam.id, exam.title); }}
-                  className="text-red-500 hover:text-red-700 text-xs"
+                  type="button"
+                  onClick={() => handleDeleteExam(exam.id, exam.title)}
+                  className="text-red-700 hover:text-red-800 text-xs"
                 >
                   🗑 Жою
                 </button>
-                <span className="text-gray-400">{expandedExam === exam.id ? '▲' : '▼'}</span>
+                <button type="button" aria-label={`Сұрақтарды көрсету: ${exam.title}`} aria-expanded={expandedExam === exam.id} onClick={() => {
+                  setAddingQuestion(false);
+                  setEditingQuestion(null);
+                  if (expandedExam === exam.id) {
+                    questionRequest.current++;
+                    setExpandedExam(null);
+                  } else {
+                    setExpandedExam(exam.id);
+                    void loadExamQuestions(exam.id);
+                  }
+                }} className="rounded px-2 py-1 text-sm text-blue-700">{expandedExam === exam.id ? '▲' : '▼'}</button>
               </div>
             </div>
+            {editingExam === exam.id && <div className="px-5 pb-4"><ExamSettings courseId={courseId} exam={exam} onSaved={() => { setEditingExam(null); void loadExams(); }} onCancel={() => setEditingExam(null)} /></div>}
 
             {expandedExam === exam.id && (
               <div className="border-t border-gray-100 px-5 py-4 space-y-3">
                 <ProctorAssignments examId={exam.id} />
                 {/* Existing questions */}
-                {examQuestions.length === 0 && !addingQuestion && (
-                  <p className="text-gray-400 text-sm text-center py-4">Сұрақтар жоқ</p>
+                {questionsLoading && <p role="status" className="text-gray-600 text-sm text-center py-4">Сұрақтар жүктелуде...</p>}
+                {questionsError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+                  Сұрақтарды жүктеу мүмкін болмады. <button type="button" onClick={() => void loadExamQuestions(exam.id)} className="font-medium underline">Қайта жүктеу</button>
+                </div>}
+                {!questionsLoading && !questionsError && examQuestions.length === 0 && !addingQuestion && (
+                  <p className="text-gray-600 text-sm text-center py-4">Сұрақтар жоқ</p>
                 )}
-                {examQuestions.map((q, qi) => (
+                {!questionsLoading && examQuestions.map((q, qi) => editingQuestion === q.id ? <QuestionEditor key={q.id} courseId={courseId} examId={exam.id} question={q} onSaved={() => { setEditingQuestion(null); void loadExamQuestions(exam.id); void loadExams(); }} onCancel={() => setEditingQuestion(null)} /> : (
                   <div key={q.id} className="bg-gray-50 rounded-lg p-3 flex items-start justify-between gap-2">
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-800">
                         {qi + 1}. {q.text}
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-gray-600 mt-0.5">
                         {q.type === 'SINGLE_CHOICE' ? '○ Бір жауап' : q.type === 'MULTIPLE_CHOICE' ? '☑ Бірнеше' : 'Аа Мәтін'}
                         {q.options && q.options.length > 0 && ` · ${q.options.length} нұсқа`}
                       </p>
                     </div>
-                    <button
-                      onClick={() => handleDeleteQuestion(q.id)}
-                      className="text-red-500 hover:text-red-700 text-xs flex-shrink-0"
-                    >
-                      ✕
-                    </button>
+                    <div className="flex shrink-0 gap-2">
+                      <button type="button" aria-label={`Сұрақты өңдеу: ${q.text}`} onClick={() => setEditingQuestion(q.id)} className="text-blue-700 text-xs underline">Өңдеу</button>
+                      <button type="button" aria-label={`Сұрақты жою: ${q.text}`} onClick={() => handleDeleteQuestion(q.id)} className="text-red-700 hover:text-red-800 text-xs">✕</button>
+                    </div>
                   </div>
                 ))}
 
                 {/* Add question form */}
                 {addingQuestion ? (
-                  <form onSubmit={handleAddQuestion} className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                    <p className="text-sm font-semibold text-blue-800">Жаңа сұрақ</p>
-                    <textarea
-                      value={qForm.text}
-                      onChange={(e) => setQForm((p) => ({ ...p, text: e.target.value }))}
-                      placeholder="Сұрақ мәтіні"
-                      className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm bg-white"
-                      rows={2}
-                      autoFocus
-                    />
-                    <div className="flex gap-2 items-center">
-                      <label className="text-xs text-gray-600">Түрі:</label>
-                      <select
-                        value={qForm.type}
-                        onChange={(e) => setQForm((p) => ({ ...p, type: e.target.value }))}
-                        className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
-                      >
-                        <option value="SINGLE_CHOICE">Бір жауап</option>
-                        <option value="MULTIPLE_CHOICE">Бірнеше жауап</option>
-                        <option value="TEXT">Мәтін жауабы</option>
-                      </select>
-                    </div>
-
-                    {qForm.type !== 'TEXT' && (
-                      <div className="space-y-1">
-                        <label className="text-xs text-gray-600">Нұсқалар:</label>
-                        {qForm.options.map((opt, i) => (
-                          <div key={i} className="flex gap-1 items-center">
-                            <input
-                              type="text"
-                              value={opt}
-                              onChange={(e) => {
-                                const next = [...qForm.options];
-                                next[i] = e.target.value;
-                                setQForm((p) => ({ ...p, options: next }));
-                              }}
-                              placeholder={`Нұсқа ${i + 1}`}
-                              className="flex-1 border border-gray-200 rounded px-2 py-1 text-sm"
-                            />
-                            {qForm.options.length > 2 && (
-                              <button
-                                type="button"
-                                onClick={() => setQForm((p) => ({ ...p, options: p.options.filter((_, j) => j !== i) }))}
-                                className="text-red-400 text-xs"
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => setQForm((p) => ({ ...p, options: [...p.options, ''] }))}
-                          className="text-xs text-primary-600 hover:underline"
-                        >
-                          + Нұсқа қосу
-                        </button>
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="text-xs text-gray-600">Дұрыс жауап:</label>
-                      <input
-                        type="text"
-                        value={qForm.answer}
-                        onChange={(e) => setQForm((p) => ({ ...p, answer: e.target.value }))}
-                        placeholder="Дұрыс жауапты жазыңыз"
-                        className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm mt-1"
-                      />
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        type="submit"
-                        disabled={savingQ}
-                        className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                      >
-                        {savingQ ? 'Қосылуда...' : 'Сұрақты қосу'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAddingQuestion(false)}
-                        className="px-4 py-1.5 bg-white text-gray-600 border border-gray-200 text-sm rounded-lg hover:bg-gray-50"
-                      >
-                        Болдырмау
-                      </button>
-                    </div>
-                  </form>
+                  <QuestionEditor courseId={courseId} examId={exam.id} onSaved={() => { setAddingQuestion(false); void loadExamQuestions(exam.id); void loadExams(); }} onCancel={() => setAddingQuestion(false)} />
                 ) : (
                   <button
-                    onClick={() => setAddingQuestion(true)}
+                    onClick={() => { setEditingQuestion(null); setAddingQuestion(true); }}
                     className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 py-1"
                   >
                     + Сұрақ қосу

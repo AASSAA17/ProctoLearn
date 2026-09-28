@@ -6,6 +6,7 @@ import { assertCourseReader, canManageCourse, LessonViewer } from '../lessons/le
 import { serializable } from '../prisma/serializable';
 import { attemptExpired } from '../attempts/attempt-policy';
 import { finalizeExpiredAttempt, snapshotDuration } from '../attempts/attempt-state';
+import { validatedQuestion } from './question-policy';
 
 @Injectable()
 export class ExamsService {
@@ -19,9 +20,7 @@ export class ExamsService {
     return this.prisma.exam.create({
       data: {
         ...examData, courseId,
-        questions: { create: questions.map((question) => ({
-          text: question.text, type: question.type, options: question.options, answer: question.answer,
-        })) },
+        questions: { create: questions.map((question) => validatedQuestion(question)) },
       },
       include: { questions: true },
     });
@@ -68,8 +67,9 @@ export class ExamsService {
   }
 
   private async assertQuestion(db: Prisma.TransactionClient, examId: string, questionId: string) {
-    const question = await db.question.findUnique({ where: { id: questionId }, select: { examId: true } });
+    const question = await db.question.findUnique({ where: { id: questionId } });
     if (!question || question.examId !== examId) throw new NotFoundException('Сұрақ табылмады');
+    return question;
   }
 
   async remove(courseId: string, id: string, viewer: LessonViewer) {
@@ -94,7 +94,7 @@ export class ExamsService {
     return serializable(this.prisma, async (db) => {
       await this.editableExam(db, courseId, examId, viewer);
       return db.question.create({ data: {
-        examId, text: dto.text, type: dto.type, options: dto.options, answer: dto.answer,
+        examId, ...validatedQuestion(dto),
       } });
     });
   }
@@ -102,13 +102,13 @@ export class ExamsService {
   async updateQuestion(courseId: string, examId: string, questionId: string, dto: UpdateQuestionDto, viewer: LessonViewer) {
     return serializable(this.prisma, async (db) => {
       await this.editableExam(db, courseId, examId, viewer);
-      await this.assertQuestion(db, examId, questionId);
-      return db.question.update({ where: { id: questionId }, data: {
-        ...(dto.text !== undefined && { text: dto.text }),
-        ...(dto.type !== undefined && { type: dto.type }),
-        ...(dto.options !== undefined && { options: dto.options }),
-        ...(dto.answer !== undefined && { answer: dto.answer }),
-      } });
+      const old = await this.assertQuestion(db, examId, questionId);
+      return db.question.update({ where: { id: questionId }, data: validatedQuestion({
+        text: dto.text ?? old.text,
+        type: dto.type ?? old.type,
+        options: dto.options ?? (Array.isArray(old.options) ? old.options as string[] : []),
+        answer: dto.answer ?? old.answer,
+      }) });
     });
   }
 
