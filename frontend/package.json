@@ -10,6 +10,7 @@
     "build": "next build",
     "typecheck": "next typegen && tsc --noEmit --incremental false",
     "test": "node test/recording.test.cjs && node test/learning-progress.test.cjs && node test/exam-draft.test.cjs && node test/durable-recording.test.cjs && node test/session-coordinator.test.cjs && node test/stage8-ui.test.cjs",
+    "test:e2e": "node e2e/stage9.cjs",
     "start": "next start",
     "lint": "eslint ."
   },
@@ -36,8 +37,10 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.20",
+    "axe-core": "4.11.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.3.6",
+    "playwright": "1.63.0",
     "postcss": "^8.5.28",
     "tailwindcss": "^3.4.16",
     "typescript": "5.9.2"

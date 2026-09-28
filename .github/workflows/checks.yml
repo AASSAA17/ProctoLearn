@@ -110,7 +110,7 @@ jobs:
 
   local-stack:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -126,6 +126,16 @@ jobs:
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:9000/)" = 403
       - name: Verify compiled demo seed with the container database configuration
         run: docker compose --project-name proctolearn-local --env-file .env.local -f docker-compose.local.yml exec -T -e ALLOW_DEMO_SEED=true -e RUN_MIGRATIONS=false api /bin/sh /app/docker/entrypoint.sh node dist/prisma/seed.js
+      - name: Install browser test dependencies
+        run: |
+          npm --prefix frontend ci
+          npm --prefix backend ci
+          npm --prefix backend run prisma:generate
+          ./frontend/node_modules/.bin/playwright install --with-deps chromium
+      - name: Verify all roles, mobile UI and recorded exam through the real local stack
+        env:
+          E2E_DISPOSABLE: 'true'
+        run: npm --prefix frontend run test:e2e
       - name: Stop this job's containers
         if: always()
         run: docker compose --project-name proctolearn-local --env-file .env.local -f docker-compose.local.yml down

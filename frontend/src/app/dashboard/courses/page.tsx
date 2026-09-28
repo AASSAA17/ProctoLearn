@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -97,6 +97,21 @@ export default function CoursesPage() {
   const [activeLevel, setActiveLevel] = useState<CourseLevel>('BEGINNER');
   const [enrollModal, setEnrollModal] = useState<{ course: Course } | null>(null);
   const [enrolling, setEnrolling] = useState(false);
+  const cancelEnrollmentRef = useRef<HTMLButtonElement>(null);
+  const enrollmentTriggerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!enrollModal) return;
+    cancelEnrollmentRef.current?.focus();
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !enrolling) {
+        setEnrollModal(null);
+        enrollmentTriggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', onEscape);
+    return () => document.removeEventListener('keydown', onEscape);
+  }, [enrollModal, enrolling]);
 
   // Free enrollment — no active-enrollment restriction
 
@@ -135,6 +150,7 @@ export default function CoursesPage() {
     const enrollment = getEnrollment(course.id);
     if (enrollment && !enrollment.completedAt) { router.push(`/dashboard/courses/${course.id}`); return; }
     if (certCourseIds.has(course.id)) { router.push(`/dashboard/courses/${course.id}`); return; }
+    enrollmentTriggerRef.current = document.activeElement as HTMLElement;
     setEnrollModal({ course });
   };
 
@@ -177,7 +193,7 @@ export default function CoursesPage() {
 
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
         {LEVEL_TABS.map(tab => (
-          <button key={tab.key} onClick={() => setActiveLevel(tab.key)}
+          <button key={tab.key} onClick={() => setActiveLevel(tab.key)} aria-pressed={activeLevel === tab.key}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold border-2 transition-all whitespace-nowrap ${
               activeLevel === tab.key ? `${tab.bg} ${tab.color} shadow-sm` : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
             }`}
@@ -202,12 +218,13 @@ export default function CoursesPage() {
             const cover = COURSE_COVERS[idx % COURSE_COVERS.length];
             let borderClass = 'border border-gray-200 hover:border-primary-300';
             let badgeEl: React.ReactNode = null;
-            if (hasCert) { borderClass = 'border-2 border-green-400'; badgeEl = <span className="absolute top-3 right-3 bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">✅ Сертификат</span>; }
-            else if (isActive) { borderClass = 'border-2 border-blue-400'; badgeEl = <span className="absolute top-3 right-3 bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">📚 Белсенді</span>; }
+            if (hasCert) { borderClass = 'border-2 border-green-400'; badgeEl = <span className="absolute top-3 right-3 bg-green-700 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">✅ Сертификат</span>; }
+            else if (isActive) { borderClass = 'border-2 border-blue-400'; badgeEl = <span className="absolute top-3 right-3 bg-blue-700 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">📚 Белсенді</span>; }
 
             return (
-              <div key={course.id} onClick={() => handleCourseClick(course)}
-                className={`rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white h-full flex flex-col cursor-pointer ${borderClass}`}
+              <button type="button" key={course.id} onClick={() => handleCourseClick(course)}
+                aria-label={`${course.title}: ${isActive ? 'Жалғастыру' : hasCert ? 'Курсты ашу' : 'Курсқа тіркелу'}`}
+                className={`text-left rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white h-full flex flex-col cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 ${borderClass}`}
               >
                 <div className="relative h-36 flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-800">
                   <img src={cover.img} alt={course.title} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
@@ -223,14 +240,14 @@ export default function CoursesPage() {
                   {course.description && (
                     <p className="text-sm mb-3 line-clamp-3 flex-1 text-gray-500">{course.description}</p>
                   )}
-                  <div className="flex items-center justify-between mt-auto pt-2 border-t text-xs text-gray-400 border-gray-100">
+                  <div className="flex items-center justify-between mt-auto pt-2 border-t text-xs text-gray-600 border-gray-100">
                     <span>👤 {course.teacher.name}</span>
                     <div className="flex gap-3"><span>📖 {course._count.lessons}</span><span>📝 {course._count.exams}</span></div>
                   </div>
                   {isActive && <p className="text-xs text-blue-600 mt-2 text-center font-medium">▶ Жалғастыру</p>}
                   {!hasCert && !isActive && <p className="text-xs text-primary-600 mt-2 text-center font-medium">+ Курсқа тіркелу</p>}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -238,17 +255,23 @@ export default function CoursesPage() {
 
       {enrollModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Курсқа тіркелу</h2>
+          <div role="dialog" aria-modal="true" aria-labelledby="enroll-dialog-title" onKeyDown={(event) => {
+            if (event.key !== 'Tab') return;
+            const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
+            if (buttons.length < 2) return;
+            if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1)?.focus(); }
+            else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0].focus(); }
+          }} className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <h2 id="enroll-dialog-title" className="text-xl font-bold text-gray-900 mb-2">Курсқа тіркелу</h2>
             <p className="text-gray-600 mb-4"><strong>{enrollModal.course.title}</strong> курсын таңдадыңыз.</p>
 
-            <div className="flex gap-2 mb-2 text-sm text-gray-500">
+            <div className="flex gap-2 mb-2 text-sm text-gray-700">
               <span className="bg-gray-100 rounded-lg px-3 py-1">Деңгей: <strong>{levelLabel(enrollModal.course.level)}</strong></span>
               <span className="bg-gray-100 rounded-lg px-3 py-1">📖 {enrollModal.course._count.lessons} сабақ</span>
               <span className="bg-gray-100 rounded-lg px-3 py-1">📝 {enrollModal.course._count.exams} тест</span>
             </div>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setEnrollModal(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium">Болдырмау</button>
+              <button ref={cancelEnrollmentRef} onClick={() => { setEnrollModal(null); enrollmentTriggerRef.current?.focus(); }} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium">Болдырмау</button>
               <button onClick={confirmEnroll} disabled={enrolling} className="flex-1 py-2.5 rounded-xl bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-50">
                 {enrolling ? 'Тіркелуде...' : 'Растаймын, тіркелемін'}
               </button>

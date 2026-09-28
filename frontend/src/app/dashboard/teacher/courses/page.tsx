@@ -130,7 +130,7 @@ export default function TeacherCoursesPage() {
                     {course.description && (
                       <p className="text-sm text-gray-500 mt-1 line-clamp-2">{course.description}</p>
                     )}
-                    <div className="flex flex-wrap gap-3 mt-3 text-xs text-gray-400">
+                    <div className="flex flex-wrap gap-3 mt-3 text-xs text-gray-600">
                       <span>📦 {moduleCount} модуль</span>
                       <span>📖 {course._count?.lessons ?? 0} сабақ</span>
                       <span>📝 {stepCount} қадам</span>

@@ -118,8 +118,8 @@ export default function ProctorDashboardPage() {
   };
 
   const trustColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 50) return 'text-yellow-600';
+    if (score >= 80) return 'text-green-700';
+    if (score >= 50) return 'text-yellow-700';
     return 'text-red-600';
   };
 
@@ -161,7 +161,7 @@ export default function ProctorDashboardPage() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
               </div>
             ) : attempts.length === 0 ? (
-              <p className="text-gray-400 text-center py-8">Талпыныс жоқ</p>
+              <p className="text-gray-600 text-center py-8">Талпыныс жоқ</p>
             ) : (
               <div className="space-y-3">
                 {attempts.map((attempt) => (
@@ -178,9 +178,10 @@ export default function ProctorDashboardPage() {
                       <div>
                         <p className="font-medium text-gray-900">{attempt.user?.name ?? '—'}</p>
                         <p className="text-sm text-gray-500">{attempt.user?.email ?? '—'}</p>
-                        <p className="text-sm text-gray-400">{attempt.exam?.title ?? '—'}</p>
+                        <p className="text-sm text-gray-600">{attempt.exam?.title ?? '—'}</p>
                       </div>
                       <div className="text-right">
+                        <button type="button" aria-label={`${attempt.user?.name ?? 'Талпыныс'}: оқиғаларды көру`} aria-pressed={selected === attempt.id} onClick={(event) => { event.stopPropagation(); setSelected(attempt.id); }} className="text-primary-700 underline text-sm mb-1">Оқиғаларды көру</button>
                         {statusBadge(attempt.status)}
                         {attempt.appealState === 'OPEN' && <p className="mt-2 rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">Апелляция · тәуелсіз тексеру қажет</p>}
                         {attempt.appealState && attempt.appealState !== 'OPEN' && <p className="mt-1 text-xs text-gray-600">{attempt.appealState === 'OVERTURNED' ? 'Апелляция қанағаттандырылды' : 'Апелляция: шешім сақталды'}</p>}
@@ -193,7 +194,7 @@ export default function ProctorDashboardPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
+                    <div className="flex items-center justify-between mt-2 text-xs text-gray-600">
                       <span>
                         {attempt._count?.events ?? 0} оқиға · {attempt._count?.evidences ?? 0} жазба
                       </span>
@@ -248,12 +249,12 @@ export default function ProctorDashboardPage() {
           {selected && (
             <div className="space-y-2 max-h-[500px] overflow-y-auto">
               {events.length === 0 ? (
-                <p className="text-gray-400 text-sm">Оқиға жоқ</p>
+                <p className="text-gray-600 text-sm">Оқиға жоқ</p>
               ) : (
                 events.map((ev, idx) => (
                   <div key={ev?.id ?? idx} className="p-2 bg-yellow-50 rounded text-sm border border-yellow-200">
                     <p className="font-medium">{eventTypeLabel(ev?.type ?? '')}</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-600">
                       {ev?.timestamp ? new Date(ev.timestamp).toLocaleTimeString('kk-KZ') : '—'}
                     </p>
                   </div>

@@ -121,7 +121,7 @@ export default function AdminUsersPage() {
           <h1 className="text-2xl font-bold text-gray-900 mt-1">Пайдаланушылар</h1>
         </div>
         <button onClick={downloadExcel}
-          className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg">
+          className="bg-green-700 hover:bg-green-800 text-white text-sm px-4 py-2 rounded-lg">
           📥 Excel жүктеу
         </button>
       </div>
@@ -134,7 +134,7 @@ export default function AdminUsersPage() {
       </form>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-400">Жүктелуде...</div>
+        <div className="text-center py-12 text-gray-600">Жүктелуде...</div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -154,13 +154,13 @@ export default function AdminUsersPage() {
                         <span className={`w-2 h-2 rounded-full ${u.isOnline ? 'bg-green-500' : 'bg-gray-300'}`} />
                         <div>
                           <p className="font-medium text-gray-900">{u.name}</p>
-                          <p className="text-gray-400 text-xs">{u.email}</p>
+                          <p className="text-gray-600 text-xs">{u.email}</p>
                           {u.mustChangePassword && <span className="text-xs bg-yellow-100 text-yellow-700 px-1 rounded">Пароль өзгерту керек</span>}
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <select value={u.role} onChange={e => updateRole(u.id, e.target.value)}
+                      <select value={u.role} aria-label={`${u.name}: рөл`} onChange={e => updateRole(u.id, e.target.value)}
                         className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer ${ROLE_COLORS[u.role]}`}>
                         {Object.keys(ROLE_LABELS).map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                       </select>
@@ -191,7 +191,7 @@ export default function AdminUsersPage() {
                 ))}
               </tbody>
             </table>
-            {users.length === 0 && <p className="text-center py-8 text-gray-400">Пайдаланушы табылмады</p>}
+            {users.length === 0 && <p className="text-center py-8 text-gray-600">Пайдаланушы табылмады</p>}
           </div>
         </div>
       )}
@@ -207,8 +207,9 @@ export default function AdminUsersPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Курс</label>
+                <label htmlFor="grant-course" className="block text-sm font-medium text-gray-700 mb-1">Курс</label>
                 <select
+                  id="grant-course"
                   value={selectedCourseId}
                   onChange={e => setSelectedCourseId(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"

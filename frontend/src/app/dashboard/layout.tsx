@@ -92,6 +92,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-white focus:p-3 focus:text-primary-700 focus:shadow-lg">Негізгі мазмұнға өту</a>
       {error && <div role="alert" className="bg-amber-50 p-3 text-center text-sm">{error}<button className="ml-3 underline" onClick={() => void fetchMe()}>Қайта тексеру</button></div>}
       {/* Password change banner */}
       {user.mustChangePassword && (
@@ -102,7 +103,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       {/* ─── Top Navbar ─── */}
-      <nav className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+      <nav aria-label="Негізгі навигация" className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -148,7 +149,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </div>
                   <div className="hidden sm:block text-left">
                     <p className="text-sm font-semibold text-gray-900 leading-tight">{user.name}</p>
-                    <p className="text-xs text-gray-400 leading-tight">{ROLE_LABEL[user.role] ?? user.role}</p>
+                    <p className="text-xs text-gray-600 leading-tight">{ROLE_LABEL[user.role] ?? user.role}</p>
                   </div>
                   <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -162,7 +163,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
                       <div className="px-4 py-3 border-b border-gray-100">
                         <p className="text-sm font-semibold text-gray-900">{user.name}</p>
-                        <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                        <p className="text-xs text-gray-600 truncate">{user.email}</p>
                       </div>
                       <Link
                         href="/dashboard/profile"
@@ -195,8 +196,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button
                 className="xl:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
                 onClick={() => setMenuOpen((v) => !v)}
-                aria-label="Мәзірді ашу"
+                  aria-label={menuOpen ? 'Мәзірді жабу' : 'Мәзірді ашу'}
                 aria-expanded={menuOpen}
+                  aria-controls="mobile-navigation"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -209,7 +211,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Mobile menu */}
         {menuOpen && (
-          <div className="xl:hidden border-t border-gray-100 bg-white px-4 pb-3 pt-2">
+          <div id="mobile-navigation" className="xl:hidden border-t border-gray-100 bg-white px-4 pb-3 pt-2">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -231,7 +233,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{children}</main>
+      <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{children}</main>
       <ChatWidget />
     </div>
   );
