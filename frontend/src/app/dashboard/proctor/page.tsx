@@ -5,6 +5,7 @@ import api, { WS_URL } from '@/lib/api';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import LoadFailure from '@/components/LoadFailure';
 
 interface AttemptSummary {
   id: string;
@@ -24,6 +25,7 @@ export default function ProctorDashboardPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [appealsOnly, setAppealsOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -40,11 +42,12 @@ export default function ProctorDashboardPage() {
         if (controller.signal.aborted) return;
         const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
         setAttempts(list);
+        setLoadError(false);
         const pages = Math.max(1, data?.meta?.totalPages ?? 1);
         setTotalPages(pages);
         if (page > pages) setPage(pages);
       })
-      .catch(() => { if (!controller.signal.aborted) { setAttempts([]); toast.error('Жүктеу қатесі'); } })
+      .catch(() => { if (!controller.signal.aborted) setLoadError(true); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [appealsOnly, page, refreshVersion]);
@@ -160,6 +163,8 @@ export default function ProctorDashboardPage() {
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
               </div>
+            ) : loadError ? (
+              <LoadFailure onRetry={() => setRefreshVersion((value) => value + 1)} />
             ) : attempts.length === 0 ? (
               <p className="text-gray-600 text-center py-8">Талпыныс жоқ</p>
             ) : (

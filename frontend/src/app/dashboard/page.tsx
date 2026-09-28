@@ -1,10 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useAuthStore } from '@/store/auth.store';
+import { useAuthStore, type User } from '@/store/auth.store';
 import Link from 'next/link';
 import api from '@/lib/api';
 import LoadFailure from '@/components/LoadFailure';
+import { staffHome } from '@/lib/role-navigation';
 
 interface Enrollment {
   id: string;
@@ -26,15 +27,32 @@ const LEVEL_COLOR: Record<string, string> = {
   ADVANCED: 'bg-red-100 text-red-700',
 };
 
-const ROLE_GRAD: Record<string, string> = {
-  STUDENT: 'from-primary-700 to-primary-500',
-  TEACHER: 'from-purple-700 to-purple-500',
-  PROCTOR: 'from-blue-700 to-blue-500',
-  ADMIN: 'from-gray-800 to-gray-600',
-};
-
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
+  if (!user) return null;
+  if (user.role !== 'STUDENT') return <StaffDashboard user={user} />;
+  return <StudentDashboard user={user} />;
+}
+
+function StaffDashboard({ user }: { user: User }) {
+  if (user.role === 'STUDENT') return null;
+  return <div className="space-y-6">
+    <div className="rounded-2xl bg-white p-6 shadow-sm">
+      <p className="text-sm text-gray-500">Қош келдіңіз!</p>
+      <h1 className="mt-1 text-2xl font-bold text-gray-900">{user.name}</h1>
+      <p className="mt-2 text-sm text-gray-600">Жұмысты өз рөліңіздің бөлімінен бастаңыз.</p>
+    </div>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {staffHome[user.role].map((item) => <Link key={item.href} href={item.href} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:border-primary-300 hover:shadow-md">
+        <h2 className="font-semibold text-gray-900">{item.title}</h2>
+        <p className="mt-2 text-sm text-gray-600">{item.description}</p>
+        <span className="mt-4 inline-block text-sm font-medium text-primary-700">Ашу →</span>
+      </Link>)}
+    </div>
+  </div>;
+}
+
+function StudentDashboard({ user }: { user: User }) {
   const [activeEnrollments, setActiveEnrollments] = useState<Enrollment[]>([]);
   const [attempts, setAttempts] = useState<number>(0);
   const [certs, setCerts] = useState<number>(0);
@@ -65,32 +83,20 @@ export default function DashboardPage() {
     void loadDashboard();
   };
 
-  if (!user) return null;
   if (loading) return <div role="status" className="py-16 text-center text-gray-500">Жүктелуде...</div>;
   if (loadError) return <LoadFailure onRetry={retry} />;
 
   const initials = user.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
-  const grad = ROLE_GRAD[user.role] ?? ROLE_GRAD.STUDENT;
-
   const quickLinks = [
     { href: '/dashboard/courses', icon: '📚', label: 'Курстарды қарау', desc: 'Барлық курстар' },
     { href: '/dashboard/my-attempts', icon: '📊', label: 'Нәтижелерім', desc: `${attempts} емтихан` },
     { href: '/dashboard/certificates', icon: '🏆', label: 'Сертификаттар', desc: `${certs} сертификат` },
-    ...(user.role === 'TEACHER' || user.role === 'ADMIN'
-      ? [{ href: '/dashboard/teacher/courses', icon: '🎓', label: 'Мұғалім панелі', desc: 'Курс басқару' }]
-      : []),
-    ...(user.role === 'PROCTOR' || user.role === 'ADMIN'
-      ? [{ href: '/dashboard/proctor', icon: '🔍', label: 'Проктор панелі', desc: 'Бақылау' }]
-      : []),
-    ...(user.role === 'ADMIN'
-      ? [{ href: '/dashboard/admin', icon: '⚙️', label: 'Админ панелі', desc: 'Жүйе' }]
-      : []),
   ];
 
   return (
     <div className="space-y-8">
       {/* ─── Hero / Welcome banner ─── */}
-      <div className={`relative bg-gradient-to-r ${grad} rounded-2xl p-8 text-white overflow-hidden`}>
+      <div className="relative bg-gradient-to-r from-primary-700 to-primary-500 rounded-2xl p-8 text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white blur-3xl transform translate-x-16 -translate-y-16" />
         </div>

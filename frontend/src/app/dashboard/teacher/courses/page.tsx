@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/auth.store';
+import LoadFailure from '@/components/LoadFailure';
 
 interface Course {
   id: string;
@@ -29,6 +30,7 @@ export default function TeacherCoursesPage() {
   const teacherId = user?.id;
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const loadCourses = useCallback(async () => {
     setLoading(true);
@@ -36,8 +38,9 @@ export default function TeacherCoursesPage() {
       const params = teacherId ? `?limit=100&teacherId=${teacherId}` : '?limit=100';
       const { data } = await api.get(`/courses${params}`);
       setCourses(data.data ?? data);
+      setLoadError(false);
     } catch {
-      toast.error('Жүктеу қатесі');
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -63,6 +66,7 @@ export default function TeacherCoursesPage() {
       </div>
     );
   }
+  if (loadError) return <LoadFailure onRetry={() => void loadCourses()} />;
 
   return (
     <div className="max-w-5xl space-y-6">

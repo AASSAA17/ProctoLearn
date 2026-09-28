@@ -8,6 +8,7 @@ import { NavIcon } from '@/components/nav-icon';
 import { Spinner } from '@/components/ui';
 import ChatWidget from '@/components/ai/ChatWidget';
 import toast from 'react-hot-toast';
+import { canVisitDashboardPath, dashboardLinks } from '@/lib/role-navigation';
 
 const ROLE_LABEL: Record<string, string> = {
   STUDENT: 'Студент',
@@ -50,6 +51,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user) return error ? <div className="min-h-screen flex items-center justify-center p-6"><div className="card space-y-4 max-w-md"><p role="alert">{error}</p><button className="btn-primary" onClick={() => void fetchMe()}>Қайта тексеру</button><Link className="block text-primary-700" href="/auth/login">Кіру беті</Link></div></div> : null;
 
+  if (!canVisitDashboardPath(user.role, pathname)) {
+    return <div className="min-h-screen bg-gray-50 p-6"><div role="alert" className="mx-auto max-w-lg rounded-xl border border-amber-200 bg-white p-6"><p className="font-semibold">Бұл бөлім сіздің рөліңізге қолжетімсіз.</p><Link href="/dashboard" className="mt-4 inline-block text-primary-700 underline">Өз панеліңізге қайту</Link></div></div>;
+  }
+
   // Exam mode: hide entire shell, render only the exam page
   if (pathname.startsWith('/dashboard/exam/')) {
     return <>{children}</>;
@@ -61,24 +66,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     catch { toast.error('Серверден шығу расталмады. Байланысты тексеріп, қайта көріңіз.'); }
   };
 
-  const navLinks = [
-    { href: '/dashboard', label: 'Басты бет', icon: '🏠', exact: true },
-    { href: '/dashboard/courses', label: 'Курстар', icon: '📚', exact: false },
-    { href: '/dashboard/my-attempts', label: 'Нәтижелер', icon: '📊', exact: false },
-    { href: '/dashboard/certificates', label: 'Сертификаттар', icon: '🏆', exact: false },
-    { href: '/dashboard/notifications', label: 'Хабарландырулар', icon: '🔔', exact: false },
-    ...(user.role === 'TEACHER' || user.role === 'ADMIN'
-      ? [
-          { href: '/dashboard/teacher/courses', label: 'Мұғалім', icon: '🎓', exact: false },
-        ]
-      : []),
-    ...(user.role === 'PROCTOR' || user.role === 'ADMIN'
-      ? [{ href: '/dashboard/proctor', label: 'Проктор', icon: '🔍', exact: false }]
-      : []),
-    ...(user.role === 'ADMIN'
-      ? [{ href: '/dashboard/admin', label: 'Админ', icon: '⚙️', exact: false }]
-      : []),
-  ];
+  const navLinks = dashboardLinks(user.role);
 
   const isActive = (link: { href: string; exact: boolean }) =>
     link.exact ? pathname === link.href : pathname.startsWith(link.href);
@@ -234,7 +222,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </nav>
 
       <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{children}</main>
-      <ChatWidget />
+      {user.role === 'STUDENT' && <ChatWidget />}
     </div>
   );
 }

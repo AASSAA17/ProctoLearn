@@ -110,6 +110,43 @@ async function main() {
       console.log(`PASS role ${role}: browser, API and private cookie`);
     }
 
+    for (const role of ['TEACHER', 'PROCTOR', 'ADMIN']) {
+      const { context, page } = sessions.get(role);
+      await page.goto(`${web}/dashboard`);
+      await page.getByRole('main').getByRole('heading').first().waitFor();
+      const nav = page.getByRole('navigation', { name: 'Негізгі навигация' });
+      for (const label of ['Курстар', 'Нәтижелер', 'Сертификаттар']) {
+        assert.equal(await nav.getByRole('link', { name: label, exact: true }).count(), 0, `${role}: ${label}`);
+      }
+      assert.equal((await context.request.get(`${api}/enrollments/my`)).status(), 403);
+      assert.equal((await context.request.post(`${api}/enrollments/courses/not-a-course`)).status(), 403);
+      await page.goto(`${web}/dashboard/courses`);
+      await page.getByRole('alert').getByText('Бұл бөлім сіздің рөліңізге қолжетімсіз.').waitFor();
+    }
+    console.log('PASS staff workspaces hide student tools and enrollment API rejects staff');
+
+    for (const [role, route, endpoint] of [
+      ['TEACHER', '/dashboard/teacher/courses', '/courses'],
+      ['PROCTOR', '/dashboard/proctor', '/attempts'],
+    ]) {
+      const page = sessions.get(role).page;
+      let fail = true;
+      const matches = url => url.pathname === endpoint && (role === 'PROCTOR' || url.searchParams.has('teacherId'));
+      const intercept = async (request) => {
+        if (fail) await request.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"unavailable"}' });
+        else await request.continue();
+      };
+      await page.route(matches, intercept);
+      await page.goto(web + route);
+      await page.getByRole('alert').getByText('Деректерді жүктеу мүмкін болмады.').waitFor();
+      assert.equal(await page.getByText(role === 'PROCTOR' ? 'Талпыныс жоқ' : 'Әзірге курстар жоқ').count(), 0);
+      fail = false;
+      await page.getByRole('button', { name: 'Қайта жүктеу' }).click();
+      await page.getByRole('alert').filter({ hasText: 'Деректерді жүктеу мүмкін болмады.' }).waitFor({ state: 'hidden' });
+      await page.unroute(matches, intercept);
+    }
+    console.log('PASS teacher and proctor load failures recover on retry');
+
     for (const [role, route, endpoint, readyText] of [
       ['STUDENT', '/dashboard', '/enrollments/my', 'Белсенді курс'],
       ['STUDENT', '/dashboard/certificates', '/certificates/my', 'Менің сертификаттарым'],
