@@ -22,16 +22,15 @@ export default function ChatWidget() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Hide on exam pages
-  if (pathname?.startsWith('/dashboard/exam/')) return null;
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     if (isOpen) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
       inputRef.current?.focus();
     }
   }, [isOpen, messages]);
+
+  // Keep hooks in the same order while navigating into or out of an exam.
+  if (pathname?.startsWith('/dashboard/exam/')) return null;
 
   const send = async (text?: string) => {
     const msg = (text ?? input).trim();
@@ -182,6 +181,7 @@ export default function ChatWidget() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Сұрағыңызды жазыңыз..."
+                maxLength={2000}
                 rows={1}
                 disabled={isLoading}
                 className="flex-1 resize-none rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 disabled:opacity-50 max-h-24 overflow-y-auto"
@@ -199,7 +199,7 @@ export default function ChatWidget() {
               </button>
             </div>
             <p className="text-[10px] text-gray-400 text-center mt-2">
-              Enter — жіберу · Shift+Enter — жол ауыстыру
+              Enter — жіберу · Shift+Enter — жол ауыстыру. Сыртқы AI қосылса, сұрағыңыз бен оқу контексті провайдерге жіберіледі.
             </p>
           </div>
         </div>

@@ -56,6 +56,7 @@ jobs:
       - run: npm ci
       - run: npm run prisma:generate
       - run: npm run build
+      - run: npm run test:ai
       - run: npm test
       - run: npm run test:migrations
       - run: npx --no-install prisma migrate deploy
