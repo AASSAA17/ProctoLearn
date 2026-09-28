@@ -7,7 +7,19 @@ const { JwtAuthGuard } = require('../src/common/guards/jwt-auth.guard');
 const { CoursesService } = require('../src/courses/courses.service');
 const { CoursesController } = require('../src/courses/courses.controller');
 const { ModulesService } = require('../src/modules/modules.service');
-const { ReorderModuleDto } = require('../src/modules/dto/module.dto');
+const { ReorderModuleDto, CreateModuleDto, UpdateModuleDto } = require('../src/modules/dto/module.dto');
+
+test('module titles are trimmed and cannot become blank on create or update', async () => {
+  const pipe = new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true });
+  for (const metatype of [CreateModuleDto, UpdateModuleDto]) {
+    for (const title of ['', '   ', '\n\t']) await assert.rejects(pipe.transform({ title, order: 1 }, { type: 'body', metatype }), BadRequestException);
+    const value = await pipe.transform({ title: '  Бөлім  ', order: 2 }, { type: 'body', metatype });
+    assert.equal(value.title, 'Бөлім');
+    assert.equal(value.order, 2);
+  }
+  const partial = await pipe.transform({ order: 3 }, { type: 'body', metatype: UpdateModuleDto });
+  assert.equal(partial.title, undefined);
+});
 
 function contentFixture() {
   const step = {

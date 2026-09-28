@@ -1,9 +1,10 @@
 import { IsNotEmpty, IsString, IsInt, IsOptional, Min, IsArray, ArrayMinSize, ArrayMaxSize, ArrayUnique, ValidateNested, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class CreateModuleDto {
   @ApiProperty({ example: '1-тарау: Алгебра негіздері' })
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @IsNotEmpty()
   title: string;
@@ -18,7 +19,9 @@ export class CreateModuleDto {
 export class UpdateModuleDto {
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
+  @IsNotEmpty()
   title?: string;
 
   @ApiPropertyOptional()

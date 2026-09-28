@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import ProctorAssignments from '@/components/ProctorAssignments';
+import OutlineSettings from '@/components/OutlineSettings';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Step {
@@ -331,13 +332,12 @@ function StepForm({
 // ─── Lesson Card ──────────────────────────────────────────────────────────────
 function LessonCard({
   lesson,
-  moduleId,
   onRefresh,
 }: {
   lesson: Lesson;
-  moduleId: string;
   onRefresh: () => void;
 }) {
+  const [editingSettings, setEditingSettings] = useState(false);
   const [addingStep, setAddingStep] = useState(false);
   const [editingStep, setEditingStep] = useState<Step | null>(null);
 
@@ -354,10 +354,12 @@ function LessonCard({
 
   return (
     <div className="pl-4 border-l-2 border-gray-200 ml-2 space-y-2">
-      <div className="flex items-center gap-2 py-1">
-        <span className="text-sm font-medium text-gray-700">📖 {lesson.order}. {lesson.title}</span>
+      <div className="flex flex-wrap items-center gap-2 py-1">
+        <span className="text-sm font-medium text-gray-700 break-words">📖 {lesson.order}. {lesson.title}</span>
         <span className="text-xs text-gray-600 ml-auto">{lesson.steps.length} қадам</span>
+        <button type="button" aria-label={`Сабақты өңдеу: ${lesson.title}`} onClick={() => setEditingSettings(true)} className="text-xs text-blue-700 underline">Өңдеу</button>
       </div>
+      {editingSettings && <OutlineSettings kind="lesson" item={lesson} onSaved={() => { setEditingSettings(false); onRefresh(); }} onCancel={() => setEditingSettings(false)} />}
 
       {/* Steps */}
       {lesson.steps.map((step) => (
@@ -434,6 +436,7 @@ function ModuleCard({
   const [lessonForm, setLessonForm] = useState({ title: '', content: ' ', order: mod.lessons.length + 1 });
   const [savingLesson, setSavingLesson] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [editingSettings, setEditingSettings] = useState(false);
 
   const handleAddLesson = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -481,14 +484,15 @@ function ModuleCard({
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
       {/* Module header */}
-      <div className="flex items-center gap-3 px-5 py-3.5 bg-gray-50 border-b border-gray-100">
+      <div className="flex flex-wrap items-center gap-3 px-5 py-3.5 bg-gray-50 border-b border-gray-100">
         <button aria-label={`Бөлім: ${mod.title}`} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)} className="text-gray-600 hover:text-gray-800 text-sm">
           {collapsed ? '▶' : '▼'}
         </button>
-        <span className="font-semibold text-gray-800 flex-1">
+        <span className="font-semibold text-gray-800 flex-1 min-w-0 break-words">
           {mod.order}. {mod.title}
         </span>
         <span className="text-xs text-gray-600">{mod.lessons.length} сабақ</span>
+        <button type="button" aria-label={`Бөлімді өңдеу: ${mod.title}`} onClick={() => setEditingSettings(true)} className="text-xs text-blue-700 underline">Өңдеу</button>
         <button
           onClick={deleteModule}
           className="text-xs text-red-700 hover:text-red-800 px-2 py-1 hover:bg-red-50 rounded"
@@ -497,14 +501,16 @@ function ModuleCard({
         </button>
       </div>
 
+      {editingSettings && <div className="p-4"><OutlineSettings kind="module" item={mod} onSaved={() => { setEditingSettings(false); onRefresh(); }} onCancel={() => setEditingSettings(false)} /></div>}
+
       {!collapsed && (
         <div className="p-4 space-y-3">
           {/* Lessons */}
           {mod.lessons.map((lesson) => (
             <div key={lesson.id} className="group">
               <div className="flex items-start gap-2">
-                <div className="flex-1">
-                  <LessonCard lesson={lesson} moduleId={mod.id} onRefresh={onRefresh} />
+                <div className="flex-1 min-w-0">
+                  <LessonCard lesson={lesson} onRefresh={onRefresh} />
                 </div>
                 <button
                   aria-label={`Сабақты жою: ${lesson.title}`}

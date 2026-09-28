@@ -1,8 +1,10 @@
 import { IsInt, IsNotEmpty, IsOptional, IsString, IsUrl, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 
 export class CreateLessonDto {
   @ApiProperty({ example: '1-сабақ: Кіріспе' })
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @IsNotEmpty()
   title: string;

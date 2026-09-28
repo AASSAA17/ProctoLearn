@@ -282,6 +282,10 @@ test('lesson PATCH has a concrete whitelist and rejects ownership/relation mass 
   }
   const valid = await pipe.transform({ assignmentAnswer: 'grading answer' }, { type: 'body', metatype: UpdateLessonDto });
   assert.equal(valid.assignmentAnswer, 'grading answer');
+  for (const title of ['', '   ', '\n\t']) await assert.rejects(pipe.transform({ title }, { type: 'body', metatype: UpdateLessonDto }), BadRequestException);
+  const title = await pipe.transform({ title: '  Сабақ  ', order: 2 }, { type: 'body', metatype: UpdateLessonDto });
+  assert.equal(title.title, 'Сабақ');
+  assert.equal(title.order, 2);
 });
 
 test('real HTTP routes enforce JWT, enrollment, roles, parent relations and PATCH DTOs', async (t) => {

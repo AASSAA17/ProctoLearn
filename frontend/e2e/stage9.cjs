@@ -245,6 +245,67 @@ async function verifyTeacherSteps(page, lessonId) {
   console.log('PASS teacher creates/edits every step/task type, preserves comma answers, retries failed saves and cancels drafts');
 }
 
+async function verifyOutlineSettings(page, proctorContext, module, lesson) {
+  const csrfResponse = await proctorContext.request.get(`${api}/auth/csrf`);
+  assert.equal(csrfResponse.status(), 200);
+  const csrfToken = (await csrfResponse.json()).csrfToken;
+  const updates = {};
+  const stepsBefore = await prisma.step.findMany({ where: { lessonId: lesson.id }, orderBy: { id: 'asc' } });
+  for (const { kind, label, item, model, order } of [
+    { kind: 'module', label: 'Бөлім', item: module, model: prisma.courseModule, order: 3 },
+    { kind: 'lesson', label: 'Сабақ', item: lesson, model: prisma.lesson, order: 4 },
+  ]) {
+    const editName = kind === 'module' ? 'Бөлімді өңдеу' : 'Сабақты өңдеу';
+    const endpoint = `/${kind === 'module' ? 'modules' : 'lessons'}/${item.id}`;
+    const form = page.getByRole('form', { name: `${label} параметрлері` });
+    await page.getByRole('button', { name: `${editName}: ${item.title}`, exact: true }).click();
+    await form.getByLabel(`${label} атауы`, { exact: true }).fill('Unsaved title');
+    await form.getByLabel(`${label} реті`, { exact: true }).fill('99');
+    await form.getByRole('button', { name: 'Болдырмау', exact: true }).click();
+    assert.equal((await model.findUniqueOrThrow({ where: { id: item.id } })).title, item.title);
+    assert.equal((await model.findUniqueOrThrow({ where: { id: item.id } })).order, item.order);
+    await page.getByRole('button', { name: `${editName}: ${item.title}`, exact: true }).click();
+    await form.getByLabel(`${label} атауы`, { exact: true }).fill('   ');
+    await form.getByRole('button', { name: 'Сақтау', exact: true }).click();
+    await form.getByRole('alert').getByText('Атауды енгізіңіз.').waitFor();
+    const title = `${item.title} edited`;
+    await form.getByLabel(`${label} атауы`, { exact: true }).fill(`  ${title}  `);
+    await form.getByLabel(`${label} реті`, { exact: true }).fill(String(order));
+    await page.route(`**${endpoint}`, route => route.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"unavailable"}' }));
+    await form.getByRole('button', { name: 'Сақтау', exact: true }).click();
+    await form.getByRole('alert').getByText('Өзгерістер сақталмады. Енгізілген деректер сақталды, қайта көріңіз.').waitFor();
+    assert.equal((await model.findUniqueOrThrow({ where: { id: item.id } })).title, item.title);
+    assert.equal(await form.getByLabel(`${label} атауы`, { exact: true }).inputValue(), `  ${title}  `);
+    await page.unroute(`**${endpoint}`);
+    const responsePromise = page.waitForResponse(response => new URL(response.url()).pathname === endpoint && response.request().method() === 'PATCH');
+    await form.getByRole('button', { name: 'Сақтау', exact: true }).click();
+    assert.equal((await responsePromise).status(), 200);
+    await form.waitFor({ state: 'hidden' });
+    const saved = await model.findUniqueOrThrow({ where: { id: item.id } });
+    assert.equal(saved.title, title); assert.equal(saved.order, order);
+    if (kind === 'lesson') {
+      assert.equal(saved.content, item.content);
+      assert.equal(saved.moduleId, item.moduleId);
+      assert.deepEqual(await prisma.step.findMany({ where: { lessonId: item.id }, orderBy: { id: 'asc' } }), stepsBefore);
+    } else assert.equal(saved.courseId, item.courseId);
+    const forbidden = await proctorContext.request.patch(`${api}${endpoint}`, { data: { title: 'Forbidden change' }, headers: { Origin: web, 'X-CSRF-Token': csrfToken } });
+    assert.equal(forbidden.status(), 403);
+    assert.equal((await model.findUniqueOrThrow({ where: { id: item.id } })).title, title);
+    await page.reload();
+    await page.getByRole('button', { name: `${editName}: ${title}`, exact: true }).click();
+    assert.equal(await form.getByLabel(`${label} атауы`, { exact: true }).inputValue(), title);
+    assert.equal(await form.getByLabel(`${label} реті`, { exact: true }).inputValue(), String(order));
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    await auditPage(page); assert.deepEqual(auditIssues, []);
+    await form.getByRole('button', { name: 'Болдырмау', exact: true }).click();
+    await page.setViewportSize({ width: 1365, height: 900 });
+    updates[kind] = saved;
+  }
+  console.log('PASS teacher edits module/lesson titles and order without losing material; cancel, 503 retry, mobile UI and proctor denial');
+  return updates;
+}
+
 async function main() {
   const ready = await fetch(`${api}/ready`);
   assert.equal(ready.status, 200);
@@ -435,16 +496,17 @@ async function main() {
       const savedLesson = await prisma.lesson.findFirstOrThrow({ where: { title: lessonTitle } });
       assert.equal(savedLesson.moduleId, savedModule.id);
       await verifyTeacherSteps(teacherPage, savedLesson.id);
+      const updatedOutline = await verifyOutlineSettings(teacherPage, sessions.get('PROCTOR').context, savedModule, savedLesson);
 
       teacherPage.once('dialog', dialog => dialog.accept());
-      await teacherPage.getByRole('button', { name: `Сабақты жою: ${lessonTitle}` }).click();
-      await teacherPage.getByRole('button', { name: `Сабақты жою: ${lessonTitle}` }).waitFor({ state: 'hidden' });
-      assert.equal(await prisma.lesson.count({ where: { title: lessonTitle } }), 0);
+      await teacherPage.getByRole('button', { name: `Сабақты жою: ${updatedOutline.lesson.title}` }).click();
+      await teacherPage.getByRole('button', { name: `Сабақты жою: ${updatedOutline.lesson.title}` }).waitFor({ state: 'hidden' });
+      assert.equal(await prisma.lesson.count({ where: { id: savedLesson.id } }), 0);
 
       teacherPage.once('dialog', dialog => dialog.accept());
-      await teacherPage.getByText(`1. ${moduleTitle}`).locator('..').getByRole('button', { name: 'Жою' }).click();
-      await teacherPage.getByText(`1. ${moduleTitle}`).waitFor({ state: 'hidden' });
-      assert.equal(await prisma.courseModule.count({ where: { courseId: saved.id, title: moduleTitle } }), 0);
+      await teacherPage.getByText(`${updatedOutline.module.order}. ${updatedOutline.module.title}`).locator('..').getByRole('button', { name: 'Жою', exact: true }).click();
+      await teacherPage.getByText(`${updatedOutline.module.order}. ${updatedOutline.module.title}`).waitFor({ state: 'hidden' });
+      assert.equal(await prisma.courseModule.count({ where: { id: savedModule.id } }), 0);
 
       await teacherPage.goto(`${web}/dashboard/teacher/courses`);
       await teacherPage.getByText(courseTitle).first().waitFor();
