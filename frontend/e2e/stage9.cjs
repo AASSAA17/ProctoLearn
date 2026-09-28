@@ -159,10 +159,13 @@ async function main() {
       const query = new URL((await requestPromise).url()).searchParams;
       assert.equal(query.get('teacherId'), role === 'TEACHER' ? (await prisma.user.findUniqueOrThrow({ where: { email: 'teacher@proctolearn.kz' } })).id : null);
       await page.getByRole('heading', { name: role === 'ADMIN' ? 'Барлық курстар' : 'Менің курстарым' }).waitFor();
+      assert.equal(await page.locator('a[href^="/dashboard/courses/"]').count(), 0, `${role} must not receive blocked student links`);
     }
     console.log('PASS teacher sees owned courses while admin sees the full catalog');
 
     const courseTitle = `E2E teacher course ${randomUUID()}`;
+    const moduleTitle = `E2E module ${randomUUID()}`;
+    const lessonTitle = `E2E lesson ${randomUUID()}`;
     try {
       const teacherPage = sessions.get('TEACHER').page;
       await teacherPage.goto(`${web}/dashboard/teacher/courses/new`);
@@ -171,11 +174,43 @@ async function main() {
       await teacherPage.getByLabel('Деңгей').selectOption('INTERMEDIATE');
       await teacherPage.getByRole('button', { name: 'Курс жасау →' }).click();
       await teacherPage.waitForURL(/\/dashboard\/teacher\/courses\/[^/]+\/edit$/);
+      assert.equal(await teacherPage.locator('a[href^="/dashboard/courses/"]').count(), 0);
+      await auditPage(teacherPage);
+      assert.deepEqual(auditIssues, []);
       const saved = await prisma.course.findFirstOrThrow({ where: { title: courseTitle } });
       assert.equal(saved.level, 'INTERMEDIATE');
       assert.equal(saved.teacherId, (await prisma.user.findUniqueOrThrow({ where: { email: 'teacher@proctolearn.kz' } })).id);
       assert.equal((await sessions.get('PROCTOR').context.request.post(`${api}/courses`, { data: { title: 'Forbidden' } })).status(), 403);
-      console.log('PASS teacher creates a course through the browser; proctor cannot create one');
+      await teacherPage.getByRole('button', { name: '+ Бөлім қосу' }).click();
+      await teacherPage.getByRole('textbox', { name: 'Бөлім атауы' }).fill(moduleTitle);
+      await teacherPage.getByRole('button', { name: 'Бөлімді қосу' }).click();
+      await teacherPage.getByText(`1. ${moduleTitle}`).waitFor();
+      const savedModule = await prisma.courseModule.findFirstOrThrow({ where: { courseId: saved.id, title: moduleTitle } });
+      assert.equal(savedModule.title, moduleTitle);
+
+      await teacherPage.getByRole('button', { name: '+ Сабақ қосу' }).click();
+      await teacherPage.getByRole('textbox', { name: 'Сабақ атауы' }).fill(lessonTitle);
+      await teacherPage.getByRole('button', { name: 'Қосу', exact: true }).click();
+      await teacherPage.getByText(lessonTitle).first().waitFor();
+      assert.equal((await prisma.lesson.findFirstOrThrow({ where: { title: lessonTitle } })).moduleId, savedModule.id);
+
+      teacherPage.once('dialog', dialog => dialog.accept());
+      await teacherPage.getByRole('button', { name: `Сабақты жою: ${lessonTitle}` }).click();
+      await teacherPage.getByRole('button', { name: `Сабақты жою: ${lessonTitle}` }).waitFor({ state: 'hidden' });
+      assert.equal(await prisma.lesson.count({ where: { title: lessonTitle } }), 0);
+
+      teacherPage.once('dialog', dialog => dialog.accept());
+      await teacherPage.getByText(`1. ${moduleTitle}`).locator('..').getByRole('button', { name: 'Жою' }).click();
+      await teacherPage.getByText(`1. ${moduleTitle}`).waitFor({ state: 'hidden' });
+      assert.equal(await prisma.courseModule.count({ where: { courseId: saved.id, title: moduleTitle } }), 0);
+
+      await teacherPage.goto(`${web}/dashboard/teacher/courses`);
+      await teacherPage.getByText(courseTitle).first().waitFor();
+      teacherPage.once('dialog', dialog => dialog.accept());
+      await teacherPage.getByRole('button', { name: `Курсты жою: ${courseTitle}` }).click();
+      await teacherPage.getByText(courseTitle).waitFor({ state: 'hidden' });
+      assert.equal(await prisma.course.count({ where: { id: saved.id } }), 0);
+      console.log('PASS teacher creates and deletes course structure; proctor cannot author');
     } finally {
       const created = await prisma.course.findFirst({ where: { title: courseTitle } });
       if (created) await prisma.course.delete({ where: { id: created.id } });

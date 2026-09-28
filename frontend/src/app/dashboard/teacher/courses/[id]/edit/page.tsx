@@ -452,8 +452,9 @@ function ModuleCard({
                   <LessonCard lesson={lesson} moduleId={mod.id} onRefresh={onRefresh} />
                 </div>
                 <button
+                  aria-label={`Сабақты жою: ${lesson.title}`}
                   onClick={() => deleteLesson(lesson.id)}
-                  className="text-xs text-red-400 hover:text-red-600 mt-2 opacity-0 group-hover:opacity-100 transition"
+                  className="text-xs text-red-700 hover:text-red-800 mt-2 opacity-0 group-hover:opacity-100 focus:opacity-100 transition"
                 >
                   ✕
                 </button>
@@ -466,6 +467,7 @@ function ModuleCard({
             <form onSubmit={handleAddLesson} className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
               <p className="text-sm font-medium text-gray-700">Жаңа сабақ</p>
               <input
+                aria-label="Сабақ атауы"
                 type="text"
                 value={lessonForm.title}
                 onChange={(e) => setLessonForm((p) => ({ ...p, title: e.target.value }))}
@@ -476,6 +478,7 @@ function ModuleCard({
               <div className="flex items-center gap-2">
                 <label className="text-xs text-gray-500">Рет:</label>
                 <input
+                  aria-label="Сабақ реті"
                   type="number"
                   value={lessonForm.order}
                   onChange={(e) => setLessonForm((p) => ({ ...p, order: Number(e.target.value) }))}
@@ -684,12 +687,6 @@ export default function EditCoursePage() {
             <span>📝 {exams.length} емтихан</span>
           </div>
         </div>
-        <Link
-          href={`/dashboard/courses/${courseId}/learn`}
-          className="px-4 py-2 bg-primary-50 text-primary-700 rounded-xl text-sm hover:bg-primary-100 transition flex-shrink-0"
-        >
-          👁 Алдын ала қарау
-        </Link>
       </div>
 
       {/* Modules */}
@@ -697,7 +694,7 @@ export default function EditCoursePage() {
         <h2 className="text-base font-semibold text-gray-800">Курс құрылымы</h2>
 
         {course.modules.length === 0 && (
-          <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-200 text-gray-400">
+          <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-200 text-gray-600">
             <p className="text-3xl mb-2">📦</p>
             <p className="text-sm">Бөлімдер жоқ. Алғашқы бөлімді қосыңыз.</p>
           </div>
@@ -715,6 +712,7 @@ export default function EditCoursePage() {
           >
             <p className="text-sm font-semibold text-indigo-800">Жаңа бөлім</p>
             <input
+              aria-label="Бөлім атауы"
               type="text"
               value={moduleForm.title}
               onChange={(e) => setModuleForm((p) => ({ ...p, title: e.target.value }))}
@@ -725,6 +723,7 @@ export default function EditCoursePage() {
             <div className="flex items-center gap-2">
               <label className="text-xs text-gray-500">Рет:</label>
               <input
+                aria-label="Бөлім реті"
                 type="number"
                 value={moduleForm.order}
                 onChange={(e) => setModuleForm((p) => ({ ...p, order: Number(e.target.value) }))}
@@ -764,7 +763,7 @@ export default function EditCoursePage() {
         <h2 className="text-base font-semibold text-gray-800">Емтихандар</h2>
 
         {exams.length === 0 && !addingExam && (
-          <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-200 text-gray-400">
+          <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-200 text-gray-600">
             <p className="text-3xl mb-2">📝</p>
             <p className="text-sm">Емтихан жоқ. Алғашқы емтиханды қосыңыз.</p>
           </div>

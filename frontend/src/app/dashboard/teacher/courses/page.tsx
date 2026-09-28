@@ -149,13 +149,8 @@ export default function TeacherCoursesPage() {
                     >
                       ✏️ Өңдеу
                     </Link>
-                    <Link
-                      href={`/dashboard/courses/${course.id}`}
-                      className="px-4 py-2 bg-primary-50 text-primary-700 rounded-lg text-sm hover:bg-primary-100 transition"
-                    >
-                      👁 Қарау
-                    </Link>
                     <button
+                      aria-label={`Курсты жою: ${course.title}`}
                       onClick={() => handleDelete(course.id, course.title)}
                       className="px-4 py-2 bg-red-50 text-red-700 rounded-lg text-sm hover:bg-red-100 transition"
                     >
