@@ -99,7 +99,7 @@ export class CertificatesService {
       throw new ConflictException('Жазбалардың жүктелуі әлі аяқталған жоқ');
     }
     const files = await db.evidenceFile.findMany({
-      where: { attemptId, type: { in: ['recording_camera', 'recording_screen'] } },
+      where: { attemptId, type: { in: ['recording_camera', 'recording_screen'] }, deletionRequestedAt: null, deletedAt: null },
       select: { id: true, type: true, url: true },
     });
     if (uploads.some((upload) => upload.state === 'COMPLETE' && !files.some((file) =>
@@ -125,13 +125,23 @@ export class CertificatesService {
   async verify(qrCode: string) {
     const cert = await this.prisma.certificate.findUnique({
       where: { qrCode },
-      include: {
-        user:   { select: { id: true, name: true, email: true } },
-        course: { select: { id: true, title: true } },
+      select: {
+        issuedAt: true,
+        issuedVia: true,
+        user: { select: { name: true } },
+        course: { select: { title: true } },
       },
     });
     if (!cert) return { valid: false };
-    return { valid: true, certificate: cert };
+    return {
+      valid: true,
+      certificate: {
+        recipientName: cert.user.name,
+        courseTitle: cert.course.title,
+        issuedAt: cert.issuedAt,
+        issuedVia: cert.issuedVia,
+      },
+    };
   }
 
   async generatePdf(certId: string, userId: string): Promise<Buffer> {

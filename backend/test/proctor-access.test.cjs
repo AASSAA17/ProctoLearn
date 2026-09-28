@@ -15,6 +15,7 @@ const { AttemptsController } = require('../src/attempts/attempts.controller');
 const { AttemptsService } = require('../src/attempts/attempts.service');
 const { EvidenceController } = require('../src/evidence/evidence.controller');
 const { EvidenceService } = require('../src/evidence/evidence.service');
+const { EvidenceRetentionService } = require('../src/evidence/evidence-retention.service');
 const { RecordingUploadsService } = require('../src/evidence/recording-uploads.service');
 const { MinioService } = require('../src/minio/minio.service');
 const { CertificatesService } = require('../src/certificates/certificates.service');
@@ -60,6 +61,7 @@ async function fixture(withGateway = false) {
     user: users.get(attempt.userId), evidences: [{ id: `evidence-${attempt.id}`, url: `private/${attempt.id}.webm` }],
   });
   const db = {
+    auditEvent: { create: async ({ data }) => data },
     user: {
       findUnique: async ({ where }) => users.get(where.id) && { ...users.get(where.id) },
       update: async ({ where, data }) => Object.assign(users.get(where.id), data),
@@ -93,6 +95,7 @@ async function fixture(withGateway = false) {
     controllers: [AttemptsController, EvidenceController, ProctorController],
     providers: [JwtStrategy, AttemptsService, EvidenceService, ProctorService,
       { provide: RecordingUploadsService, useValue: {} },
+      { provide: EvidenceRetentionService, useValue: {} },
       ...(withGateway ? [ProctorGateway] : []),
       { provide: PrismaService, useValue: db },
       { provide: ConfigService, useValue: config },

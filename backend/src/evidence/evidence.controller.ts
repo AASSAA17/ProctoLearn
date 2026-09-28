@@ -18,6 +18,8 @@ import { RecordingUploadsService } from './recording-uploads.service';
 import { RecordingUploadOwnerGuard } from './recording-upload-owner.guard';
 import { CHUNK_LIMIT } from './recording-upload-policy';
 import { CompleteRecordingUploadDto, CreateRecordingUploadDto } from './recording-upload.dto';
+import { EvidenceRetentionService } from './evidence-retention.service';
+import { EvidenceHoldDto } from './evidence-retention.dto';
 
 export const RECORDING_DIRECTORY = join(tmpdir(), 'proctolearn-recording-chunks');
 mkdirSync(RECORDING_DIRECTORY, { recursive: true, mode: 0o700 });
@@ -27,7 +29,14 @@ mkdirSync(RECORDING_DIRECTORY, { recursive: true, mode: 0o700 });
 @UseGuards(JwtAuthGuard)
 @Controller('evidence')
 export class EvidenceController {
-  constructor(private readonly evidenceService: EvidenceService, private readonly uploads: RecordingUploadsService) {}
+  constructor(private readonly evidenceService: EvidenceService, private readonly uploads: RecordingUploadsService, private readonly retention: EvidenceRetentionService) {}
+
+  @Post(':attemptId/hold')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  setHold(@Param('attemptId') attemptId: string, @Body() dto: EvidenceHoldDto, @CurrentUser() actor: Actor) {
+    return this.retention.setHold(attemptId, actor, dto.onHold, dto.reason);
+  }
 
   @Post(':attemptId/uploads')
   createUpload(@Param('attemptId') attemptId: string, @Body() dto: CreateRecordingUploadDto, @CurrentUser('id') userId: string) {

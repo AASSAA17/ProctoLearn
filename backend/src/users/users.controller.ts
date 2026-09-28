@@ -50,7 +50,7 @@ export class UsersController {
   @Patch(':id/role')
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Рөлді өзгерту (тек Admin)' })
-  updateRole(@Param('id') id: string, @Body('role') role: Role) {
-    return this.usersService.updateRole(id, role);
+  updateRole(@Param('id') id: string, @Body('role') role: Role, @CurrentUser('id') actorId: string) {
+    return this.usersService.updateRole(id, role, actorId);
   }
 }

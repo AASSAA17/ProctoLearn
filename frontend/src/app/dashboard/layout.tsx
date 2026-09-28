@@ -66,6 +66,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard/courses', label: 'Курстар', icon: '📚', exact: false },
     { href: '/dashboard/my-attempts', label: 'Нәтижелер', icon: '📊', exact: false },
     { href: '/dashboard/certificates', label: 'Сертификаттар', icon: '🏆', exact: false },
+    { href: '/dashboard/notifications', label: 'Хабарландырулар', icon: '🔔', exact: false },
     ...(user.role === 'TEACHER' || user.role === 'ADMIN'
       ? [
           { href: '/dashboard/teacher/courses', label: 'Мұғалім', icon: '🎓', exact: false },
@@ -112,7 +113,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </Link>
 
               {/* Desktop nav links */}
-              <div className="hidden md:flex items-center gap-1">
+              <div className="hidden xl:flex items-center gap-1">
                 {navLinks.map((link) => (
                   <Link
                     key={link.href}
@@ -192,7 +193,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
               {/* Mobile hamburger */}
               <button
-                className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+                className="xl:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-label="Мәзірді ашу"
                 aria-expanded={menuOpen}
@@ -208,7 +209,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Mobile menu */}
         {menuOpen && (
-          <div className="md:hidden border-t border-gray-100 bg-white px-4 pb-3 pt-2">
+          <div className="xl:hidden border-t border-gray-100 bg-white px-4 pb-3 pt-2">
             {navLinks.map((link) => (
               <Link
                 key={link.href}

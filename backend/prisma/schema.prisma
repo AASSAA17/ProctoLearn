@@ -239,6 +239,10 @@ model Attempt {
   reviewedAt DateTime?
   reviewedBy String?
   reviewReason String?
+  evidenceLegalHold Boolean @default(false)
+  evidenceHoldReason String?
+  evidenceHoldAt DateTime?
+  evidenceHoldBy String?
   exam       Exam          @relation(fields: [examId], references: [id])
   user       User          @relation(fields: [userId], references: [id])
   events     ProctorEvent[]
@@ -283,9 +287,31 @@ model EvidenceFile {
   type      String
   url       String
   createdAt DateTime @default(now())
+  deletionRequestedAt DateTime?
+  deletedAt DateTime?
+  deletionJob EvidenceDeletionJob?
   attempt   Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
 
+  @@index([deletedAt, createdAt])
   @@map("evidence_files")
+}
+
+model EvidenceDeletionJob {
+  id String @id @default(uuid())
+  evidenceId String @unique
+  state String @default("PENDING")
+  retentionDays Int
+  attempts Int @default(0)
+  leaseToken String?
+  leaseUntil DateTime?
+  lastError String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  completedAt DateTime?
+  evidence EvidenceFile @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@index([state, leaseUntil])
+  @@map("evidence_deletion_jobs")
 }
 
 model Certificate {
@@ -375,4 +401,36 @@ model PasswordResetToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("password_reset_tokens")
+}
+
+// Actor/target identifiers intentionally survive account and entity deletion.
+model AuditEvent {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  actorId String?
+  action String
+  targetType String
+  targetId String
+  metadata Json
+
+  @@index([createdAt, id])
+  @@index([targetType, targetId])
+  @@map("audit_events")
+}
+
+// Durable in-app delivery; created in the business transaction, not sent over a network.
+model UserNotification {
+  id String @id @default(uuid())
+  userId String
+  type String
+  title String
+  body String
+  targetPath String
+  dedupeKey String @unique
+  createdAt DateTime @default(now())
+  readAt DateTime?
+
+  @@index([userId, createdAt, id])
+  @@index([userId, readAt])
+  @@map("user_notifications")
 }

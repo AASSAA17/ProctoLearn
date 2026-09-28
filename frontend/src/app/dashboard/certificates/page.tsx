@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api, { API_URL } from '@/lib/api';
+import api from '@/lib/api';
+import Link from 'next/link';
+import { certificateVerificationUrl } from '@/lib/public-links';
 import toast from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -16,8 +18,10 @@ interface Certificate {
 export default function CertificatesPage() {
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [origin, setOrigin] = useState('');
 
   useEffect(() => {
+    setOrigin(window.location.origin);
     api
       .get('/certificates/my')
       .then(({ data }) => setCerts(data))
@@ -32,9 +36,6 @@ export default function CertificatesPage() {
       </div>
     );
   }
-
-  const verifyUrl = (code: string) =>
-    `${API_URL}/certificates/verify/${code}`;
 
   const downloadPdf = async (certId: string, courseTitle: string) => {
     try {
@@ -71,9 +72,10 @@ export default function CertificatesPage() {
                 {new Date(cert.issuedAt).toLocaleDateString('kk-KZ')}
               </p>
               <div className="flex justify-center mb-4">
-                <QRCodeSVG value={verifyUrl(cert.qrCode)} size={120} />
+                {origin && <QRCodeSVG value={certificateVerificationUrl(origin, cert.qrCode)} size={120} />}
               </div>
               <p className="text-xs text-gray-400 mb-4">Тексеру үшін QR кодын сканерлеңіз</p>
+              <Link href={`/verify/${encodeURIComponent(cert.qrCode)}`} className="block text-sm text-primary-700 underline mb-4">Сертификатты тексеру</Link>
               <button
                 onClick={() => downloadPdf(cert.id, cert.course.title)}
                 className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"

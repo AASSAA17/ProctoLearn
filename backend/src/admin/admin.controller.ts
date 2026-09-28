@@ -59,8 +59,8 @@ export class AdminController {
 
   @Post('users/:userId/reset-password')
   @ApiOperation({ summary: 'Уақытша пароль жіберу' })
-  resetPassword(@Param('userId') id: string) {
-    return this.adminService.resetUserPassword(id);
+  resetPassword(@Param('userId') id: string, @CurrentUser('id') actorId: string) {
+    return this.adminService.resetUserPassword(id, actorId);
   }
 
   @Post('users/:userId/grant-certificate/:courseId')

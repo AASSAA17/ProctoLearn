@@ -22,12 +22,13 @@ function fixture() {
       finishedAt: new Date(), reviewStatus: 'REJECTED', reviewedAt: new Date(), reviewedBy: 'original', reviewReason: 'Missing screen',
       examSnapshot: { id: 'exam', courseId: 'course', passScore: 70 }, draftAnswers: ['secret'], submissionDigest: 'secret' },
     reviews: [{ id: 'initial', attemptId: 'attempt', reviewerId: 'original', decision: 'REJECTED', reason: 'Missing screen', source: 'INITIAL', createdAt: new Date() }],
-    appeal: null, certificates: [], uploads: [],
+    appeal: null, certificates: [], uploads: [], notifications: [],
     evidence: [{ id: 'camera', type: 'recording_camera', url: 'camera.webm' }, { id: 'screen', type: 'recording_screen', url: 'screen.webm' }],
     enrollment: { completedAt: null }, assigned: ['original', 'independent'],
   };
   const failures = { certificate: false, enrollment: false, history: false, cas: false };
   const db = {
+    userNotification: { createMany: async ({ data }) => { for (const item of data) if (!state.notifications.some(n => n.dedupeKey === item.dedupeKey)) state.notifications.push(item); return { count: data.length }; } },
     attempt: {
       findUnique: async ({ where }) => where.id === 'attempt' ? structuredClone(state.attempt) : null,
       updateMany: async ({ where, data }) => {

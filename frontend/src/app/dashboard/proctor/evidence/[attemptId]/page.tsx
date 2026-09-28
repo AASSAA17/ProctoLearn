@@ -9,7 +9,9 @@ import { useAuthStore } from '@/store/auth.store';
 interface Evidence {
   id: string;
   type: string;
-  url: string;
+  url?: string;
+  state: 'AVAILABLE' | 'DELETION_PENDING' | 'DELETED';
+  deletedAt?: string | null;
   createdAt: string;
 }
 
@@ -24,6 +26,9 @@ interface ReviewSummary {
   reviewReason: string | null;
   reviewedAt: string | null;
   reviewedBy: string | null;
+  evidenceLegalHold: boolean;
+  evidenceHoldReason?: string | null;
+  evidenceHoldAt?: string | null;
   appeal: { id: string; reason: string; state: string; response: string | null; createdAt: string; decidedAt: string | null } | null;
   history: { id: string; reviewerId: string; decision: string; source: string; reason: string; createdAt: string }[];
   recordingUploads: { id: string; kind: string; state: string; interrupted: boolean; bytes: number }[];
@@ -32,6 +37,7 @@ interface ReviewSummary {
 
 function EvidenceCard({ ev, revision, onRefresh }: { ev: Evidence; revision: number; onRefresh: () => void }) {
   const isVideo = ev.type?.startsWith('recording_');
+  const available = ev.state === 'AVAILABLE' && !!ev.url;
   const label = ev.type === 'recording_camera' ? 'Камера' : ev.type === 'recording_screen' ? 'Экран' : 'Файл';
   const videoRef = useRef<HTMLVideoElement>(null);
   const playbackRef = useRef({ time: 0, paused: true });
@@ -46,7 +52,7 @@ function EvidenceCard({ ev, revision, onRefresh }: { ev: Evidence; revision: num
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !ev.url || !available) return;
     if (video.readyState > 0 && !video.error && !restoringRef.current) {
       playbackRef.current = { time: video.currentTime, paused: video.paused };
     }
@@ -55,7 +61,7 @@ function EvidenceCard({ ev, revision, onRefresh }: { ev: Evidence; revision: num
     // reset currentTime before the effect could capture the previous position.
     video.src = ev.url;
     video.load();
-  }, [ev.url, revision]);
+  }, [ev.url, revision, available]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -80,7 +86,10 @@ function EvidenceCard({ ev, revision, onRefresh }: { ev: Evidence; revision: num
   return (
     <div className="card p-3 flex flex-col">
       <span className="text-xs font-medium text-primary-600 mb-2">{label}</span>
-      {isVideo ? (
+      {!available ? <p className="rounded bg-gray-50 p-4 text-sm text-gray-600" role="status">
+        {ev.state === 'DELETED' ? 'Сақтау мерзімі аяқталып, жазба жойылған.' : 'Жазбаны жою басталды; ойнату қолжетімсіз.'}
+        {ev.deletedAt && <time className="block mt-2 text-xs" dateTime={ev.deletedAt}>{new Date(ev.deletedAt).toLocaleString('kk-KZ')}</time>}
+      </p> : isVideo ? (
         <video
           ref={videoRef}
           controls
@@ -122,6 +131,11 @@ export default function EvidencePage() {
   const [reviewing, setReviewing] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [reviewMessage, setReviewMessage] = useState<string | null>(null);
+  const [holdReason, setHoldReason] = useState('');
+  const [holding, setHolding] = useState(false);
+  const [holdError, setHoldError] = useState('');
+  const [holdMessage, setHoldMessage] = useState('');
+  const holdRequestRef = useRef<AbortController | null>(null);
   const reviewRequestRef = useRef<AbortController | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -134,7 +148,7 @@ export default function EvidencePage() {
 
   const refresh = useCallback((reason: 'initial' | 'timer' | 'error' | 'manual' = 'manual') => {
     if (!activeRef.current || (deniedRef.current && reason !== 'manual')) return;
-    if (reviewRequestRef.current) return;
+    if (reviewRequestRef.current || holdRequestRef.current) return;
     if (pendingRef.current) return pendingRef.current.promise;
     // Multiple videos can fail together; retry once and avoid a source-error loop.
     if (reason === 'error') {
@@ -186,6 +200,7 @@ export default function EvidencePage() {
     setReviewError(null);
     setReviewMessage(null);
     setReviewing(false);
+    setHolding(false); setHoldReason(''); setHoldError(''); setHoldMessage('');
     setError(null);
     void refresh('initial');
     // API URLs last five minutes. Refresh before expiry so later range requests
@@ -199,6 +214,8 @@ export default function EvidencePage() {
       pendingRef.current = null;
       reviewRequestRef.current?.abort();
       reviewRequestRef.current = null;
+      holdRequestRef.current?.abort();
+      holdRequestRef.current = null;
     };
   }, [refresh]);
 
@@ -214,14 +231,17 @@ export default function EvidencePage() {
   const unfinishedUploads = summary?.recordingUploads?.filter((upload) => !['COMPLETE', 'ABORTED'].includes(upload.state)) ?? [];
   const interruptedUploads = summary?.recordingUploads?.filter((upload) => upload.interrupted || upload.state === 'ABORTED') ?? [];
   const evidenceReady = summary?.status === 'FINISHED' && summary.score !== null
-    && summary.score >= summary.exam.passScore && cameras.length > 0 && screens.length > 0 && unfinishedUploads.length === 0;
+    && summary.score >= summary.exam.passScore
+    && cameras.some((file) => file.state === 'AVAILABLE' && !!file.url)
+    && screens.some((file) => file.state === 'AVAILABLE' && !!file.url)
+    && !evidences.some((file) => file.state !== 'AVAILABLE') && unfinishedUploads.length === 0;
   const canApprove = canReview && evidenceReady;
   const originalReviewer = summary?.history?.find((review) => review.source === 'INITIAL')?.reviewerId ?? summary?.reviewedBy;
   const canResolveAppeal = finished && summary?.appeal?.state === 'OPEN' && !ownAttempt && !!originalReviewer && originalReviewer !== user?.id;
 
   const submitReview = async (decision: 'APPROVED' | 'REJECTED' | 'UPHELD' | 'OVERTURNED') => {
     const appealDecision = decision === 'UPHELD' || decision === 'OVERTURNED';
-    if (reviewRequestRef.current || (appealDecision ? !canResolveAppeal : !canReview)
+    if (reviewRequestRef.current || holdRequestRef.current || (appealDecision ? !canResolveAppeal : !canReview)
       || ((decision === 'APPROVED' || decision === 'OVERTURNED') && !evidenceReady)) return;
     const reason = reviewReason.trim();
     if (reason.length < 3 || reason.length > 2000) {
@@ -259,6 +279,34 @@ export default function EvidencePage() {
     }
   };
 
+  const changeHold = async () => {
+    if (user?.role !== 'ADMIN' || !summary || holdRequestRef.current || reviewRequestRef.current) return;
+    const reason = holdReason.trim();
+    if (reason.length < 3 || reason.length > 2000) { setHoldError('Себепті жазыңыз (3–2000 таңба).'); return; }
+    const epoch = epochRef.current;
+    const controller = new AbortController();
+    pendingRef.current?.controller.abort(); pendingRef.current = null;
+    holdRequestRef.current = controller;
+    setHolding(true); setHoldError(''); setHoldMessage('');
+    try {
+      const { data } = await api.post(`/evidence/${attemptId}/hold`, {
+        onHold: !summary.evidenceLegalHold, reason,
+      }, { signal: controller.signal });
+      if (controller.signal.aborted || !activeRef.current || epoch !== epochRef.current) return;
+      setSummary((previous) => previous ? { ...previous, evidenceLegalHold: data.onHold, evidenceHoldReason: data.reason, evidenceHoldAt: data.changedAt } : previous);
+      setHoldReason('');
+      setHoldMessage(data.onHold ? 'Жазбаларды жою уақытша тоқтатылды.' : 'Жоюға қойылған шектеу алынды. Сақтау мерзімі саясаты қолданылады.');
+    } catch (failure: any) {
+      if (controller.signal.aborted || !activeRef.current || epoch !== epochRef.current) return;
+      setHoldError(failure?.response?.data?.code === 'RETENTION_ALREADY_STARTED'
+        ? 'Жазбаларды жою басталып кеткен. Сақтау шектеуін қосу мүмкін емес.'
+        : 'Сақтау шектеуін өзгерту расталмады. Қайта көріңіз.');
+    } finally {
+      if (holdRequestRef.current === controller) holdRequestRef.current = null;
+      if (activeRef.current && epoch === epochRef.current) setHolding(false);
+    }
+  };
+
   return (
     <div>
       <div className="mb-6">
@@ -285,6 +333,18 @@ export default function EvidencePage() {
           </p>
           {summary.reviewReason && <p className="text-sm whitespace-pre-wrap">Себеп: {summary.reviewReason}</p>}
           {summary.reviewedAt && <p className="text-xs text-gray-500">{new Date(summary.reviewedAt).toLocaleString('kk-KZ')}</p>}
+          <p className="text-sm">Жазбаларды сақтау: {summary.evidenceLegalHold ? 'жою уақытша тоқтатылған' : 'әдеттегі сақтау мерзімі қолданылады'}.</p>
+          {user?.role === 'ADMIN' && <div className="border-t pt-3 space-y-3">
+            <h3 className="font-semibold">Жазбаларды жоюға шектеу</h3>
+            {summary.evidenceHoldReason && <p className="text-sm whitespace-pre-wrap">Соңғы өзгерістің себебі: {summary.evidenceHoldReason}</p>}
+            {summary.evidenceHoldAt && <time className="block text-xs text-gray-500" dateTime={summary.evidenceHoldAt}>{new Date(summary.evidenceHoldAt).toLocaleString('kk-KZ')}</time>}
+            <p className="text-sm text-gray-600">Тексеру үшін жазбаларды сақтау қажет болса, жоюды уақытша тоқтатыңыз. Шектеу алынғанда сақтау мерзімі саясаты қайта қолданылады.</p>
+            <label htmlFor="hold-reason" className="block text-sm font-medium">Өзгерістің себебі</label>
+            <textarea id="hold-reason" value={holdReason} onChange={(event) => setHoldReason(event.target.value)} minLength={3} maxLength={2000} rows={3} disabled={holding || reviewing} className="w-full rounded-lg border border-gray-300 p-3 text-sm" />
+            <button type="button" disabled={holding || reviewing || holdReason.trim().length < 3} onClick={() => void changeHold()} className="btn-secondary disabled:opacity-50">{holding ? 'Сақталуда...' : summary.evidenceLegalHold ? 'Жоюға шектеуді алып тастау' : 'Жоюды уақытша тоқтату'}</button>
+            {holdError && <p role="alert" className="text-sm text-red-700">{holdError}</p>}
+            {holdMessage && <p role="status" className="text-sm text-green-800">{holdMessage}</p>}
+          </div>}
           {!finished && <p className="text-sm text-gray-600">Студент емтиханды аяқтағаннан кейін шешім қабылдауға болады.</p>}
           {ownAttempt && <p className="text-sm text-amber-800">Өз талпынысыңызды тексеруге болмайды.</p>}
           {unfinishedUploads.length > 0 && <p className="text-sm text-amber-800">Жүктелуі аяқталмаған жазбалар: {unfinishedUploads.length}. Мақұлдау үшін жүктеудің аяқталуын күтіңіз.</p>}

@@ -6,6 +6,9 @@ import { AppealAttemptDto, ResolveAppealDto, ReviewAttemptDto, TRUST_SCORE_DEDUC
 import { Actor, assertProctorAccess } from './proctor-access';
 import { CertificatesService } from '../certificates/certificates.service';
 import { safeAttempt, snapshotDuration } from '../attempts/attempt-state';
+import { notifyUser, recordAudit } from '../operations/operation-events';
+import { Prisma } from '@prisma/client';
+import { evidenceMetadata } from '../evidence/evidence-retention-policy';
 
 @Injectable()
 export class ProctorService {
@@ -86,6 +89,7 @@ export class ProctorService {
       const certificate = dto.decision === 'APPROVED'
         ? await this.certificatesService.issueForAttempt(attemptId, tx)
         : null;
+      await notifyUser(tx, { userId: attempt.userId, type: 'REVIEW_DECIDED', title: 'Тексеру аяқталды', body: dto.decision === 'APPROVED' ? 'Емтихан нәтижесі мақұлданды. Шешім мен сертификатты нәтижелер бөлімінен ашыңыз.' : 'Тексеру нәтижесі қабылданбады. Себебін оқып, қажет болса апелляция беруге болады.', targetPath: `/dashboard/my-attempts/${attemptId}`, dedupeKey: `review:${attemptId}:initial` });
       return this.reviewResult({ ...attempt, reviewStatus: dto.decision, reviewedAt, reviewedBy: actor.id, reviewReason: reason }, certificate);
     });
   }
@@ -124,6 +128,7 @@ export class ProctorService {
         where: { attemptId, state: { in: ['OPEN', 'FINALIZING'] }, expiresAt: { lt: expiresAt } },
         data: { expiresAt },
       });
+      await notifyUser(tx, { userId: attempt.userId, type: 'APPEAL_RECEIVED', title: 'Апелляция қабылданды', body: 'Өтінішіңіз сақталды. Шешім осы бөлімде көрсетіледі.', targetPath: `/dashboard/my-attempts/${attemptId}`, dedupeKey: `appeal:${appeal.id}:received` });
       return appeal;
     });
   }
@@ -171,6 +176,7 @@ export class ProctorService {
         reviewedAttempt = { ...attempt, reviewStatus: 'APPROVED', reviewedAt: decidedAt, reviewedBy: actor.id, reviewReason: reason };
       }
       await tx.attemptReview.create({ data: { attemptId, reviewerId: actor.id, decision: dto.decision, reason, source: 'APPEAL' } });
+      await notifyUser(tx, { userId: attempt.userId, type: 'APPEAL_DECIDED', title: 'Апелляция қаралды', body: dto.decision === 'OVERTURNED' ? 'Бастапқы шешім өзгертілді. Нәтижені ашып, жаңа шешімді оқыңыз.' : 'Бастапқы шешім күшінде қалды. Толық жауап нәтижелер бөлімінде.', targetPath: `/dashboard/my-attempts/${attemptId}`, dedupeKey: `appeal:${appeal.id}:decided` });
       return { appeal: { ...appeal, state: dto.decision, response: reason, decidedAt, decidedBy: actor.id }, ...this.reviewResult(reviewedAttempt, certificate) };
     });
   }
@@ -215,12 +221,14 @@ export class ProctorService {
       },
     });
     if (!attempt) throw new NotFoundException('Талпыныс табылмады');
-    return { ...safeAttempt(attempt), events: attempt.events, evidences: attempt.evidences,
+    return { ...safeAttempt(attempt), events: attempt.events, evidences: attempt.evidences.map(evidenceMetadata),
+      evidenceLegalHold: attempt.evidenceLegalHold,
+      ...(actor.role === 'ADMIN' ? { evidenceHoldReason: attempt.evidenceHoldReason, evidenceHoldAt: attempt.evidenceHoldAt } : {}),
       appeal: attempt.appeal, history: attempt.reviews, recordingUploads: attempt.recordingUploads };
   }
 
-  private async assertAssignmentManager(examId: string, actor: Actor) {
-    const exam = await this.prisma.exam.findUnique({ where: { id: examId }, include: { course: true } });
+  private async assertAssignmentManager(examId: string, actor: Actor, db: Prisma.TransactionClient = this.prisma) {
+    const exam = await db.exam.findUnique({ where: { id: examId }, include: { course: true } });
     if (!exam) throw new NotFoundException('Емтихан табылмады');
     if (actor.role !== 'ADMIN' && !(actor.role === 'TEACHER' && exam.course.teacherId === actor.id)) throw new ForbiddenException('Рұқсат жоқ');
   }
@@ -241,15 +249,23 @@ export class ProctorService {
   }
 
   async assign(examId: string, proctorId: string, actor: Actor) {
-    await this.assertAssignmentManager(examId, actor);
-    const user = await this.prisma.user.findUnique({ where: { id: proctorId }, select: { role: true } });
-    if (user?.role !== 'PROCTOR') throw new BadRequestException('Проктор рөлі қажет');
-    return this.prisma.examProctor.upsert({ where: { examId_proctorId: { examId, proctorId } }, create: { examId, proctorId }, update: {} });
+    return serializable(this.prisma, async tx => {
+      await this.assertAssignmentManager(examId, actor, tx);
+      const user = await tx.user.findUnique({ where: { id: proctorId }, select: { role: true } });
+      if (user?.role !== 'PROCTOR') throw new BadRequestException('Проктор рөлі қажет');
+      const existing = await tx.examProctor.findUnique({ where: { examId_proctorId: { examId, proctorId } } });
+      const assignment = await tx.examProctor.upsert({ where: { examId_proctorId: { examId, proctorId } }, create: { examId, proctorId }, update: {} });
+      if (!existing) await recordAudit(tx, { actorId: actor.id, action: 'PROCTOR_ASSIGNED', targetType: 'EXAM', targetId: examId, metadata: { proctorId } });
+      return assignment;
+    });
   }
 
   async unassign(examId: string, proctorId: string, actor: Actor) {
-    await this.assertAssignmentManager(examId, actor);
-    await this.prisma.examProctor.deleteMany({ where: { examId, proctorId } });
-    return { success: true };
+    return serializable(this.prisma, async tx => {
+      await this.assertAssignmentManager(examId, actor, tx);
+      const changed = await tx.examProctor.deleteMany({ where: { examId, proctorId } });
+      if (changed.count) await recordAudit(tx, { actorId: actor.id, action: 'PROCTOR_REVOKED', targetType: 'EXAM', targetId: examId, metadata: { proctorId } });
+      return { success: true };
+    });
   }
 }

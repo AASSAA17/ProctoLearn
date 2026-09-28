@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Role } from '@prisma/client';
+import { serializable } from '../prisma/serializable';
+import { notifyUser, recordAudit } from '../operations/operation-events';
 
 export class UpdateProfileDto {
   name?: string;
@@ -34,11 +36,20 @@ export class UsersService {
     return user;
   }
 
-  async updateRole(id: string, role: Role) {
-    return this.prisma.user.update({
-      where: { id },
-      data: { role },
-      select: { id: true, name: true, email: true, role: true },
+  async updateRole(id: string, role: Role, actorId: string) {
+    if (!Object.values(Role).includes(role)) throw new BadRequestException('Рөл жарамсыз');
+    return serializable(this.prisma, async tx => {
+      const previous = await tx.user.findUnique({ where: { id }, select: { role: true, tokenVersion: true } });
+      if (!previous) throw new NotFoundException('Пайдаланушы табылмады');
+      const user = await tx.user.update({
+        where: { id }, data: { role, ...(previous.role !== role ? { tokenVersion: { increment: 1 }, refreshToken: null } : {}) },
+        select: { id: true, name: true, email: true, role: true },
+      });
+      if (previous.role !== role) {
+        await recordAudit(tx, { actorId, action: 'USER_ROLE_CHANGED', targetType: 'USER', targetId: id, metadata: { previousRole: previous.role, role } });
+        await notifyUser(tx, { userId: id, type: 'ROLE_CHANGED', title: 'Рөліңіз өзгертілді', body: 'Әкімші тіркелгі рөлін өзгертті. Қайта кіріңіз.', targetPath: '/dashboard', dedupeKey: `role:${id}:${previous.tokenVersion + 1}` });
+      }
+      return user;
     });
   }
 

@@ -97,7 +97,7 @@ test('baselined legacy database preserves users and course enrollment during upg
   });
 });
 
-test('recording and appeal upgrade preserves initial review audit and historical certificates', async () => {
+test('recording, retention and audit upgrades preserve historical decisions, evidence and certificates', async () => {
   await isolatedSchema(async (db, url) => {
     const upgrade = '20260928020000_recording_uploads_appeals';
     const earlier = readdirSync(path.join(backend, 'prisma/migrations'), { withFileTypes: true })
@@ -111,10 +111,11 @@ test('recording and appeal upgrade preserves initial review audit and historical
     const course = await db.course.create({ data: { title: 'Review migration fixture', teacherId: teacher.id } });
     const exam = await db.exam.create({ data: { courseId: course.id, title: 'Exam', duration: 1 } });
     const reviewedAt = new Date('2026-09-27T12:00:00Z');
-    const attempt = await db.attempt.create({ data: { examId: exam.id, userId: student.id, score: 100,
-      status: 'FINISHED', finishedAt: reviewedAt, reviewStatus: 'REJECTED', reviewedAt,
-      reviewedBy: teacher.id, reviewReason: 'Preserve original decision',
-    } });
+    // Seed the historical schema without asking the current client to insert new defaults.
+    const attempt = { id: randomUUID() };
+    await db.$executeRaw`INSERT INTO "attempts" ("id", "examId", "userId", "score", "status", "finishedAt", "reviewStatus", "reviewedAt", "reviewedBy", "reviewReason") VALUES (${attempt.id}, ${exam.id}, ${student.id}, 100, 'FINISHED', ${reviewedAt.toISOString()}::timestamp, 'REJECTED', ${reviewedAt.toISOString()}::timestamp, ${teacher.id}, 'Preserve original decision')`;
+    const evidence = { id: randomUUID(), url: `recordings/${attempt.id}/preserved.webm` };
+    await db.$executeRaw`INSERT INTO "evidence_files" ("id", "attemptId", "type", "url") VALUES (${evidence.id}, ${attempt.id}, 'recording_camera', ${evidence.url})`;
     const certificate = await db.certificate.create({ data: { userId: student.id, courseId: course.id, qrCode: randomUUID(), issuedVia: 'LEGACY' } });
     prisma(url, 'migrate', 'deploy');
     prisma(url, 'migrate', 'deploy');
@@ -127,6 +128,12 @@ test('recording and appeal upgrade preserves initial review audit and historical
     assert.equal(history[0].createdAt.toISOString(), reviewedAt.toISOString());
     assert.deepEqual(await db.certificate.findUnique({ where: { id: certificate.id } }), certificate);
     assert.equal(await db.recordingUpload.count(), 0, 'upgrade must not invent completed recordings');
+    const retained = await db.evidenceFile.findUnique({ where: { id: evidence.id } });
+    assert.equal(retained.url, evidence.url); assert.equal(retained.deletedAt, null); assert.equal(retained.deletionRequestedAt, null);
+    assert.equal((await db.attempt.findUnique({ where: { id: attempt.id } })).evidenceLegalHold, false);
+    assert.equal(await db.evidenceDeletionJob.count(), 0, 'migration must not schedule deletion');
+    assert.equal(await db.auditEvent.count(), 0, 'migration must not invent historic administrator actions');
+    assert.equal(await db.userNotification.count(), 0);
     await verifyHistory(db);
     verifyNoDrift(url);
   });

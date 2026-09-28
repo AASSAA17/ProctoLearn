@@ -27,11 +27,12 @@ function fixture() {
       { type: 'recording_camera', url: 'recordings/attempt/camera.webm' },
       { type: 'recording_screen', url: 'recordings/attempt/screen.webm' },
     ],
-    certificates: [], events: [], reviews: [], recordingUploads: [], enrollment: { userId: 'student', courseId: 'course', completedAt: null },
+    certificates: [], events: [], reviews: [], recordingUploads: [], notifications: [], enrollment: { userId: 'student', courseId: 'course', completedAt: null },
     assigned: true,
   };
   const failures = { certificate: false, enrollment: false, cas: false };
   const db = {
+    userNotification: { createMany: async ({ data }) => { for (const item of data) if (!state.notifications.some(n => n.dedupeKey === item.dedupeKey)) state.notifications.push(item); return { count: data.length }; } },
     attempt: {
       findUnique: async ({ where }) => where.id === 'attempt' ? structuredClone({
         ...state.attempt, events: state.events, evidences: state.evidence, reviews: state.reviews, recordingUploads: state.recordingUploads, appeal: null,
@@ -163,6 +164,7 @@ test('same decision and normalized reason are idempotent, conflicting retries ar
     assert.deepEqual(second, first);
     assert.equal(f.state.certificates.length, decision.decision === 'APPROVED' ? 1 : 0);
     assert.equal(f.state.reviews.length, 1);
+    assert.equal(f.state.notifications.length, 1);
     await assert.rejects(f.service.reviewAttempt('attempt', reviewer, { ...decision, reason: 'Changed audit reason' }), ConflictException);
     await assert.rejects(f.service.reviewAttempt('attempt', reviewer, decision === approval ? rejection : approval), ConflictException);
   }
@@ -178,6 +180,7 @@ test('storage failures and a lost compare-and-set roll back the whole review', a
     assert.equal(f.state.certificates.length, 0);
     assert.equal(f.state.enrollment.completedAt, null);
     assert.equal(f.state.reviews.length, 0);
+    assert.equal(f.state.notifications.length, 0);
   }
 });
 

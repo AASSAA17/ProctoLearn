@@ -7,6 +7,7 @@ import { io, Socket } from 'socket.io-client';
 import api, { WS_URL } from '@/lib/api';
 import { observeRecorderStop, stopRecorder } from '@/lib/recording';
 import { answerList, answerMap, DraftAnswer, DraftState, ExamDraft, ExamDraftSaver } from '@/lib/exam-draft';
+import { finishExpiredConflict, isClosedExamError } from '@/lib/exam-expiry';
 import { IndexedDbRecordingStore, LocalRecording } from '@/lib/recording-store';
 import { DurableRecording, RecordingQueueState } from '@/lib/durable-recording';
 import { claimRecording, recordingTransport } from '@/lib/recording-upload';
@@ -413,7 +414,30 @@ function ExamSession({ examId }: { examId: string }) {
   const handleSubmit = useCallback(async () => {
     if (!attempt || startingRef.current || submittingRef.current || endedRef.current) return;
     if (draftRef.current?.state.status === 'conflict' && !submissionRef.current) {
-      setSubmitError('Басқа қойынды жауаптарды өзгертті. Алдымен сервердегі нұсқаны жүктеңіз.');
+      // eslint-disable-next-line react-hooks/purity -- Invoked by the submit button or deadline timer, never during render.
+      if (performance.now() < deadlineRef.current) {
+        setSubmitError('Басқа қойынды жауаптарды өзгертті. Алдымен сервердегі нұсқаны жүктеңіз.');
+        return;
+      }
+      submittingRef.current = true;
+      endedRef.current = true;
+      setEnded(true); setSubmitting(true); setSubmissionFrozen(true);
+      draftRef.current.dispose();
+      try {
+        const data = await finishExpiredConflict(
+          async () => (await api.get<ExamDraft>(`/attempts/${attempt.id}/draft`)).data,
+          async (savedAnswers) => (await api.post<ExamResult>(`/attempts/${attempt.id}/submit`, { answers: savedAnswers }, { timeout: 20000 })).data,
+          () => uploadRecordings(attempt.id),
+        );
+        if (mountedRef.current) { setSubmitError(''); setResult(data); }
+      } catch (error) {
+        if (mountedRef.current) setSubmitError(isClosedExamError(error)
+          ? 'Емтихан уақыты аяқталды. Сервердегі соңғы жауаптар бойынша нәтижені көріңіз.'
+          : 'Емтихан уақыты аяқталды, жазба тоқтатылды. Байланыс қалпына келгенде нәтижелер бетін ашыңыз: серверде сақталған жауаптар есепке алынады.');
+      } finally {
+        submittingRef.current = false;
+        if (mountedRef.current) setSubmitting(false);
+      }
       return;
     }
     submittingRef.current = true;
@@ -431,8 +455,7 @@ function ExamSession({ examId }: { examId: string }) {
       if (mountedRef.current) setResult(data);
       await uploadRecordings(attempt.id);
     } catch (error: any) {
-      const code = error?.response?.data?.code;
-      if (['EXAM_EXPIRED', 'ATTEMPT_CLOSED', 'SUBMISSION_CONFLICT'].includes(code)) {
+      if (isClosedExamError(error)) {
         endedRef.current = true;
         if (mountedRef.current) setEnded(true);
         if (mountedRef.current) setSubmitError(error?.response?.data?.message || 'Бұл емтихан жабылған. Нәтижені тексеріңіз.');
@@ -477,7 +500,15 @@ function ExamSession({ examId }: { examId: string }) {
       answersRef.current = answerMap(data);
       setAnswers(answersRef.current);
       setSubmitError('');
-    } catch { toast.error('Сервердегі жауаптарды жүктеу мүмкін болмады.'); }
+    } catch (error) {
+      if (isClosedExamError(error)) {
+        endedRef.current = true;
+        setEnded(true); setSubmissionFrozen(true);
+        draftRef.current?.dispose();
+        setSubmitError('Емтихан серверде аяқталған. Сақталған нәтижені көріңіз.');
+        await uploadRecordings(attempt.id);
+      } else toast.error('Сервердегі жауаптарды жүктеу мүмкін болмады.');
+    }
     finally { if (mountedRef.current) setLoadingDraft(false); }
   };
 

@@ -21,6 +21,7 @@ const { JwtStrategy } = require('../src/auth/strategies/jwt.strategy');
 const { PrismaService } = require('../src/prisma/prisma.service');
 const { MailService } = require('../src/mail/mail.service');
 const { EvidenceController, RECORDING_DIRECTORY } = require('../src/evidence/evidence.controller');
+const { EvidenceRetentionService } = require('../src/evidence/evidence-retention.service');
 const { EvidenceService } = require('../src/evidence/evidence.service');
 const { RecordingUploadsService } = require('../src/evidence/recording-uploads.service');
 const { ProctorGateway } = require('../src/proctor/proctor.gateway');
@@ -70,6 +71,7 @@ async function fixture(production = false) {
       { provide: ConfigService, useValue: config }, { provide: JwtService, useValue: jwt },
       { provide: PrismaService, useValue: db }, { provide: MailService, useValue: mail },
       { provide: EvidenceService, useValue: {} }, { provide: RecordingUploadsService, useValue: uploads },
+      { provide: EvidenceRetentionService, useValue: {} },
       { provide: ProctorService, useValue: proctor },
     ],
   }).compile();

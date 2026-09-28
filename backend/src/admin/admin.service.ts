@@ -5,6 +5,7 @@ import { CertificatesService } from '../certificates/certificates.service';
 import * as bcrypt from 'bcryptjs';
 import { randomInt } from 'crypto';
 import { serializable } from '../prisma/serializable';
+import { notifyUser, recordAudit } from '../operations/operation-events';
 import writeXlsxFile, { type CellObject, type SheetData } from 'write-excel-file/node';
 
 function writeReport(
@@ -236,7 +237,7 @@ export class AdminService {
 
   // ─── Пароль басқару ────────────────────────────────────────────────────────
 
-  async resetUserPassword(userId: string) {
+  async resetUserPassword(userId: string, actorId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Пайдаланушы табылмады');
 
@@ -267,11 +268,13 @@ export class AdminService {
     const hashed = await bcrypt.hash(shuffled, 12);
 
     await serializable(this.prisma, async (tx) => {
-      await tx.user.update({
+      const updated = await tx.user.update({
         where: { id: userId },
         data: { password: hashed, mustChangePassword: true, refreshToken: null, tokenVersion: { increment: 1 } },
       });
       await tx.passwordResetToken.deleteMany({ where: { userId } });
+      await recordAudit(tx, { actorId, action: 'ADMIN_PASSWORD_RESET', targetType: 'USER', targetId: userId });
+      await notifyUser(tx, { userId, type: 'PASSWORD_RESET', title: 'Құпиясөз жаңартылды', body: 'Әкімші уақытша құпиясөз орнатты. Кірген соң оны ауыстырыңыз.', targetPath: '/dashboard/change-password', dedupeKey: `password-reset:${userId}:${updated.tokenVersion}` });
     });
 
     // Try to send email (non-blocking)
@@ -303,6 +306,8 @@ export class AdminService {
         update: { completedAt: now, examAccessGrantedAt: now, examAccessGrantedBy: adminId },
       });
       const certificate = await this.certificatesService.issue(userId, courseId, tx, 'ADMIN_OVERRIDE');
+      await recordAudit(tx, { actorId: adminId, action: 'ADMIN_CERTIFICATE_GRANTED', targetType: 'USER', targetId: userId, metadata: { courseId, certificateId: certificate.id } });
+      await notifyUser(tx, { userId, type: 'CERTIFICATE_ISSUED', title: 'Сертификат берілді', body: 'Әкімші шешімімен сертификат берілді. Оны сертификаттар бөлімінен ашуға болады.', targetPath: '/dashboard/certificates', dedupeKey: `certificate:${certificate.id}` });
       return { message: 'Сертификат әкімші шешімімен берілді', certificate };
     });
   }
@@ -317,6 +322,8 @@ export class AdminService {
         where: { userId_courseId: { userId, courseId } },
         create: { userId, courseId, ...grant }, update: grant,
       });
+      await recordAudit(tx, { actorId: adminId, action: 'ADMIN_EXAM_ACCESS_GRANTED', targetType: 'USER', targetId: userId, metadata: { courseId } });
+      await notifyUser(tx, { userId, type: 'EXAM_ACCESS_GRANTED', title: 'Емтиханға рұқсат берілді', body: 'Әкімші курс емтиханына тікелей рұқсат берді.', targetPath: `/dashboard/courses/${courseId}`, dedupeKey: `exam-access:${userId}:${courseId}` });
       return { message: 'Экзаменге кіру рұқсаты берілді' };
     });
   }

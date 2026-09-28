@@ -95,6 +95,7 @@ export default function AdminPage() {
             { href: '/dashboard/admin/users', label: '👥 Пайдаланушылар', desc: 'Тізім, пароль жаңарту', color: 'bg-blue-50 border-blue-200 hover:bg-blue-100' },
             { href: '/dashboard/admin/courses', label: '📚 Курстар', desc: 'Статистика, белсенділік', color: 'bg-green-50 border-green-200 hover:bg-green-100' },
             { href: '/dashboard/admin/online', label: '🟢 Онлайн', desc: 'Қазіргі белсенді қолданушылар', color: 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100' },
+            { href: '/dashboard/admin/audit', label: 'Әрекеттер журналы', desc: 'Әкімшілік әрекеттер мен жазбаларды жою', color: 'bg-indigo-50 border-indigo-200 hover:bg-indigo-100' },
           ].map((item) => (
             <Link key={item.href} href={item.href}
               className={`border rounded-xl p-5 transition-colors ${item.color}`}>

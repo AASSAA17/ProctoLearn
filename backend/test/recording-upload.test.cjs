@@ -6,6 +6,7 @@ require('reflect-metadata');
 const { Test } = require('@nestjs/testing');
 const { ValidationPipe, ForbiddenException, BadRequestException } = require('@nestjs/common');
 const { EvidenceController, RECORDING_DIRECTORY } = require('../src/evidence/evidence.controller');
+const { EvidenceRetentionService } = require('../src/evidence/evidence-retention.service');
 const { EvidenceService } = require('../src/evidence/evidence.service');
 const { RecordingUploadsService } = require('../src/evidence/recording-uploads.service');
 const { JwtAuthGuard } = require('../src/common/guards/jwt-auth.guard');
@@ -45,6 +46,7 @@ test('HTTP chunk transport authorizes before parsing, caps disk writes, cleans t
     providers: [
       { provide: EvidenceService, useValue: { assertOwner: async (id) => { if (id !== 'own') throw new ForbiddenException(); } } },
       { provide: RecordingUploadsService, useValue: uploads },
+      { provide: EvidenceRetentionService, useValue: {} },
     ],
   }).overrideGuard(JwtAuthGuard).useValue({ canActivate(context) { context.switchToHttp().getRequest().user = { id: 'student' }; return true; } }).compile();
   const app = module.createNestApplication({ logger: false });

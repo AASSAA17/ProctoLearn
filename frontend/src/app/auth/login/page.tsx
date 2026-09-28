@@ -58,8 +58,10 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
+              id="login-email"
+              autoComplete="username"
               type="email"
               className="input"
               value={email}
@@ -70,9 +72,11 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
+            <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
             <div className="relative">
               <input
+                id="login-password"
+                autoComplete="current-password"
                 type={showPassword ? 'text' : 'password'}
                 className="input pr-10"
                 value={password}
@@ -82,6 +86,8 @@ export default function LoginPage() {
               />
               <button
                 type="button"
+                aria-label={showPassword ? 'Парольді жасыру' : 'Парольді көрсету'}
+                aria-pressed={showPassword}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 onClick={() => setShowPassword((v) => !v)}
               >

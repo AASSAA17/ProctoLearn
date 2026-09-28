@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException, GoneException } from
 import { PrismaService } from '../prisma/prisma.service';
 import { MinioService } from '../minio/minio.service';
 import { Actor, assertProctorAccess } from '../proctor/proctor-access';
+import { evidenceMetadata } from './evidence-retention-policy';
 
 @Injectable()
 export class EvidenceService {
@@ -40,8 +41,8 @@ export class EvidenceService {
     // Return presigned URLs so frontend can access MinIO objects directly
     return Promise.all(
       files.map(async (f) => ({
-        ...f,
-        url: await this.minio.getPresignedUrl(f.url, 300),
+        ...evidenceMetadata(f),
+        ...(!f.deletionRequestedAt && !f.deletedAt ? { url: await this.minio.getPresignedUrl(f.url, 300) } : {}),
       })),
     );
   }

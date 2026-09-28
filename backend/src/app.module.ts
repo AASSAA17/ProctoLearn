@@ -26,6 +26,7 @@ import { GraphiteService } from './common/services/graphite.service';
 import { validateEnvironment } from './common/config/environment';
 import { CsrfGuard } from './auth/csrf.guard';
 import { HealthModule } from './health/health.module';
+import { OperationsModule } from './operations/operations.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { HealthModule } from './health/health.module';
     PrismaModule,
     MinioModule,
     HealthModule,
+    OperationsModule,
     MailModule,
     AuthModule,
     UsersModule,

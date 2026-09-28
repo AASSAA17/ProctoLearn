@@ -2,12 +2,14 @@
   "name": "proctolearn-web",
   "version": "1.0.0",
   "private": true,
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "typecheck": "next typegen && tsc --noEmit --incremental false",
-    "test": "node test/recording.test.cjs && node test/learning-progress.test.cjs && node test/exam-draft.test.cjs && node test/durable-recording.test.cjs && node test/session-coordinator.test.cjs",
+    "test": "node test/recording.test.cjs && node test/learning-progress.test.cjs && node test/exam-draft.test.cjs && node test/durable-recording.test.cjs && node test/session-coordinator.test.cjs && node test/stage8-ui.test.cjs",
     "start": "next start",
     "lint": "eslint ."
   },

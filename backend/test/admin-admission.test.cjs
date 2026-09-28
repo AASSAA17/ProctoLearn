@@ -7,6 +7,8 @@ const { EnrollmentsService } = require('../src/enrollments/enrollments.service')
 function fixture() {
   const writes = [];
   const db = {
+    auditEvent: { create: async ({ data }) => { assert.equal(data.actorId, 'administrator'); writes.push(['audit', data]); return data; } },
+    userNotification: { createMany: async ({ data }) => { writes.push(['notification', data]); return { count: data.length }; } },
     $transaction: async (work, options) => { assert.equal(options.isolationLevel, 'Serializable'); return work(db); },
     user: { findUnique: async () => ({ id: 'student' }) },
     course: { findUnique: async () => ({ id: 'course' }) },
@@ -32,14 +34,16 @@ test('admin exam admission records an explicit exemption without fabricated less
   assert.equal(grant.examAccessGrantedBy, 'administrator');
   assert.ok(grant.examAccessGrantedAt instanceof Date);
   assert.equal(grant.completedAt, undefined);
-  assert.equal(f.writes.length, 1);
+  assert.equal(f.writes.length, 3);
+  assert.equal(f.writes[1][1].action, 'ADMIN_EXAM_ACCESS_GRANTED');
 });
 
 test('admin certificate override uses the same transaction and a distinct issuance source', async () => {
   const f = fixture();
   const result = await f.service.grantFullCertificate('student', 'course', 'administrator');
   assert.equal(result.certificate.issuedVia, 'ADMIN_OVERRIDE');
-  assert.deepEqual(f.writes.map(([type]) => type), ['enrollment', 'certificate']);
+  assert.deepEqual(f.writes.map(([type]) => type), ['enrollment', 'certificate', 'audit', 'notification']);
+  assert.equal(f.writes[2][1].action, 'ADMIN_CERTIFICATE_GRANTED');
   assert.equal(f.writes[0][1].update.examAccessGrantedBy, 'administrator');
 });
 
