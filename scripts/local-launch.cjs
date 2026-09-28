@@ -183,7 +183,7 @@ async function native(env, options) {
     await run(process.execPath, [path.join(ROOT, 'backend/node_modules/prisma/build/index.js'), 'migrate', 'deploy'], { cwd: path.join(ROOT, 'backend'), env: runtime });
     if (options.demo) {
       await fsp.copyFile(path.join(ROOT, 'backend/prisma/demo-seed.cjs'), path.join(ROOT, 'backend/dist/prisma/demo-seed.cjs'));
-      await run(process.execPath, [path.join(ROOT, 'backend/dist/prisma/seed.js')], { cwd: path.join(ROOT, 'backend'), env: { ...runtime, ALLOW_DEMO_SEED: 'true' } });
+      await run(process.execPath, [path.join(ROOT, 'backend/dist/prisma/seed.js')], { cwd: path.join(ROOT, 'backend'), env: { ...runtime, ALLOW_DEMO_SEED: 'true', DEMO_SEED_MODE: options.minimalDemo ? 'minimal' : 'full' } });
       demoAccess(env);
     }
     const api = launch('api', process.execPath, [path.join(ROOT, 'backend/dist/src/main.js')], runtime, path.join(ROOT, 'backend'));
@@ -199,12 +199,13 @@ async function native(env, options) {
 async function main() {
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major < 24 || (major === 24 && minor < 15)) throw new Error('Use Node.js 24.15 or newer LTS.');
-  const allowed = new Set(['--native', '--demo', '--skip-build', '--prepare-only']);
+  const allowed = new Set(['--native', '--demo', '--demo-minimal', '--skip-build', '--prepare-only']);
   if (process.argv.slice(2).some(arg => !allowed.has(arg))) throw new Error('Unknown launcher option');
+  if (process.argv.includes('--demo') && process.argv.includes('--demo-minimal')) throw new Error('Choose --demo or --demo-minimal');
   const env = ensureLocalEnvironment();
   await fsp.mkdir(LOCAL, { recursive: true });
   if (process.argv.includes('--prepare-only')) { console.log('Private .env.local is ready. Original .env and databases were not changed.'); return; }
-  const options = { demo: process.argv.includes('--demo'), skipBuild: process.argv.includes('--skip-build') };
+  const options = { demo: process.argv.includes('--demo') || process.argv.includes('--demo-minimal'), minimalDemo: process.argv.includes('--demo-minimal'), skipBuild: process.argv.includes('--skip-build') };
   if (process.argv.includes('--native')) return native(env, options);
   const docker = spawnSync('docker', ['info', '--format', '{{.ServerVersion}}'], { windowsHide: true, stdio: 'ignore', timeout: 15000 });
   if (docker.status !== 0) throw new Error('Start Docker Desktop and wait for Engine running, or use .\\start-local.cmd --native (PostgreSQL required).');
@@ -213,7 +214,7 @@ async function main() {
   // the same local credentials even if this shell was used for an older installation.
   const composeEnvironment = { ...process.env, ...env };
   await run('docker', [...compose, 'up', '-d', ...(options.skipBuild ? [] : ['--build']), '--wait', '--wait-timeout', '180'], { env: composeEnvironment });
-  if (options.demo) { await run('docker', [...compose, 'exec', '-T', '-e', 'ALLOW_DEMO_SEED=true', '-e', 'RUN_MIGRATIONS=false', 'api', '/bin/sh', '/app/docker/entrypoint.sh', 'node', 'dist/prisma/seed.js'], { env: composeEnvironment }); demoAccess(env); }
+  if (options.demo) { await run('docker', [...compose, 'exec', '-T', '-e', 'ALLOW_DEMO_SEED=true', '-e', `DEMO_SEED_MODE=${options.minimalDemo ? 'minimal' : 'full'}`, '-e', 'RUN_MIGRATIONS=false', 'api', '/bin/sh', '/app/docker/entrypoint.sh', 'node', 'dist/prisma/seed.js'], { env: composeEnvironment }); demoAccess(env); }
   console.log('ProctoLearn is ready: http://localhost:3000. Local data uses separate proctolearn-local volumes.');
 }
 

@@ -1,4 +1,4 @@
-param([switch]$Native, [switch]$Demo, [switch]$SkipBuild, [switch]$PrepareOnly)
+param([switch]$Native, [switch]$Demo, [switch]$DemoMinimal, [switch]$SkipBuild, [switch]$PrepareOnly)
 $ErrorActionPreference = 'Stop'
 $nodeCommand = Get-Command node.exe -ErrorAction SilentlyContinue
 $nodePath = if ($nodeCommand) { $nodeCommand.Source } else { Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe' }
@@ -6,6 +6,7 @@ if (-not (Test-Path -LiteralPath $nodePath)) { throw 'Install Node.js 24 LTS fro
 $launchArgs = @((Join-Path $PSScriptRoot 'local-launch.cjs'))
 if ($Native) { $launchArgs += '--native' }
 if ($Demo) { $launchArgs += '--demo' }
+if ($DemoMinimal) { $launchArgs += '--demo-minimal' }
 if ($SkipBuild) { $launchArgs += '--skip-build' }
 if ($PrepareOnly) { $launchArgs += '--prepare-only' }
 & $nodePath @launchArgs

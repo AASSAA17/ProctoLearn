@@ -8,4 +8,9 @@ function demoSeedPassword(key, env = process.env) {
   }
   return value;
 }
-module.exports = { demoSeedPassword };
+function demoSeedMode(env = process.env) {
+  const mode = env.DEMO_SEED_MODE || 'full';
+  if (!['full', 'minimal'].includes(mode)) throw new Error('DEMO_SEED_MODE must be full or minimal');
+  return mode;
+}
+module.exports = { demoSeedPassword, demoSeedMode };

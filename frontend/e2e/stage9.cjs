@@ -85,6 +85,14 @@ async function main() {
   const contexts = [];
   const sessions = new Map();
   try {
+    const publicPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await publicPage.goto(web);
+    await publicPage.getByRole('heading', { name: 'Курстар', exact: true }).waitFor();
+    assert.ok(await publicPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    assert.equal(await publicPage.getByText('1 000+').count(), 0);
+    await publicPage.close();
+    console.log('PASS public landing width and verified-only content');
+
     for (const [role, route, heading] of [
       ['STUDENT', '/dashboard/courses', 'Курстар'],
       ['TEACHER', '/dashboard/teacher/courses', 'Менің курстарым'],

@@ -1,6 +1,6 @@
 ﻿import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-const { demoSeedPassword } = require('./demo-seed.cjs');
+const { demoSeedPassword, demoSeedMode } = require('./demo-seed.cjs');
 
 const prisma = new PrismaClient();
 
@@ -9,6 +9,7 @@ async function main() {
 
   // Validate every credential before the first database mutation.
   const passwords = Object.fromEntries(['ADMIN', 'TEACHER', 'STUDENT', 'PROCTOR'].map(role => [role, demoSeedPassword(`DEMO_${role}_PASSWORD`)]));
+  const seedMode = demoSeedMode();
   const hash = async (pw: string) => bcrypt.hash(pw, 12);
 
   // ── Users ────────────────────────────────────────────────────
@@ -24,17 +25,45 @@ async function main() {
     create: { name: 'Системный преподаватель', email: 'teacher@proctolearn.kz', phone: '+77002220000', password: await hash(passwords.TEACHER as string), role: 'TEACHER' },
   });
 
-  await prisma.user.upsert({
+  const student = await prisma.user.upsert({
     where: { email: 'student@proctolearn.kz' },
     update: {},
     create: { name: 'Студент Алибек', email: 'student@proctolearn.kz', phone: '+77003330000', password: await hash(passwords.STUDENT as string), role: 'STUDENT' },
   });
 
-  await prisma.user.upsert({
+  const proctor = await prisma.user.upsert({
     where: { email: 'proctor@proctolearn.kz' },
     update: {},
     create: { name: 'Проктор Бауыржан', email: 'proctor@proctolearn.kz', phone: '+77004440000', password: await hash(passwords.PROCTOR as string), role: 'PROCTOR' },
   });
+
+  if (seedMode === 'minimal') {
+    const title = 'Демо: HTML негіздері';
+    let course = await prisma.course.findFirst({ where: { title, teacherId: teacher.id } });
+    if (!course) course = await prisma.course.create({ data: {
+      title, teacherId: teacher.id,
+      description: 'HTML құжатының құрылымын үйренуге арналған шағын оқу үлгісі.',
+    } });
+    const lesson = await prisma.lesson.findFirst({ where: { courseId: course.id, order: 1 } });
+    if (!lesson) await prisma.lesson.create({ data: {
+      courseId: course.id, order: 1, title: 'Алғашқы HTML құжаты',
+      content: 'HTML құжаты <!doctype html> жолынан басталады. <html> ішіндегі <head> метадеректерді, ал <body> пайдаланушыға көрінетін мазмұнды сақтайды. <h1> негізгі тақырыпты, <p> абзацты белгілейді. Өз бетіңізше осы элементтері бар шағын бет құрастырыңыз.',
+    } });
+    const examTitle = 'Демо емтихан: HTML';
+    const exam = await prisma.exam.findFirst({ where: { courseId: course.id, title: examTitle } });
+    if (!exam) await prisma.exam.create({ data: {
+      courseId: course.id, title: examTitle, duration: 10, passScore: 60,
+      questions: { create: { text: 'Көрінетін мазмұн қай элементтің ішінде орналасады?', type: 'SINGLE_CHOICE', options: ['head', 'body'], answer: 'body' } },
+      proctorAssignments: { create: { proctorId: proctor.id } },
+    } });
+    await prisma.enrollment.upsert({
+      where: { userId_courseId: { userId: student.id, courseId: course.id } },
+      update: {},
+      create: { userId: student.id, courseId: course.id, examAccessGrantedAt: new Date(), examAccessGrantedBy: teacher.id },
+    });
+    console.log('Минимальный demo seed готов: 4 роли, 1 курс, 1 урок и 1 экзамен.');
+    return;
+  }
 
   // ── Courses + Lessons ────────────────────────────────────────
   const coursesData = [

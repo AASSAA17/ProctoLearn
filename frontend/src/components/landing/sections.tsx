@@ -121,10 +121,9 @@ export function TechCategoriesSection() {
         <p className="text-gray-500 text-center mb-10">Заманауи IT индустриясының ең сұранысты бағыттары</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {TECH_CATEGORIES.map((cat) => (
-            <Link
+            <div
               key={cat.name}
-              href="/auth/register"
-              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 border border-gray-100 flex items-center gap-3"
+              className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-3"
             >
               <div
                 className={`w-12 h-12 rounded-xl bg-gradient-to-br ${cat.color} flex items-center justify-center text-2xl`}
@@ -136,7 +135,7 @@ export function TechCategoriesSection() {
                 <p className="font-bold text-gray-900 text-sm">{cat.name}</p>
                 <p className="text-xs text-gray-500">{cat.desc}</p>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       </div>
@@ -200,7 +199,7 @@ export function HowItWorksSection() {
     <section className="py-16 bg-primary-700 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <h2 className="text-3xl font-bold mb-2 text-center">Қалай жұмыс істейді?</h2>
-        <p className="text-primary-200 text-center mb-12">4 қадамда мамандық алыңыз</p>
+        <p className="text-primary-200 text-center mb-12">Оқудың төрт негізгі қадамы</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {STEPS_DATA.map((item) => (
             <div key={item.step} className="text-center">
@@ -270,7 +269,7 @@ export function CTABanner() {
     <section className="py-20 bg-gradient-to-r from-primary-700 to-primary-500 text-white text-center">
       <div className="max-w-2xl mx-auto px-4">
         <h2 className="text-4xl font-extrabold mb-4">Бүгін бастаңыз!</h2>
-        <p className="text-primary-200 text-lg mb-8">Тіркелу тегін. Бірінші курсты тегін бастаңыз.</p>
+        <p className="text-primary-200 text-lg mb-8">Тіркеліп, қолжетімді курстарды қараңыз.</p>
         <Link
           href="/auth/register"
           className="inline-block bg-white text-primary-700 font-extrabold text-lg px-10 py-4 rounded-2xl hover:bg-gray-100 transition-colors shadow-xl"
@@ -303,10 +302,7 @@ export function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-3">Курстар</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/auth/register" className="hover:text-white transition-colors">HTML & CSS</Link></li>
-              <li><Link href="/auth/register" className="hover:text-white transition-colors">JavaScript</Link></li>
-              <li><Link href="/auth/register" className="hover:text-white transition-colors">Python</Link></li>
-              <li><Link href="/auth/register" className="hover:text-white transition-colors">React</Link></li>
+              <li><a href="#courses" className="hover:text-white transition-colors">Қолжетімді курстар</a></li>
             </ul>
           </div>
           <div>
@@ -314,17 +310,6 @@ export function Footer() {
             <ul className="space-y-2 text-sm">
               <li><Link href="/auth/login" className="hover:text-white transition-colors">Жүйеге кіру</Link></li>
               <li><Link href="/auth/register" className="hover:text-white transition-colors">Тіркелу</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-white font-semibold mb-3">Байланыс</h4>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <a href="mailto:info@proctolearn.kz" className="hover:text-white transition-colors">
-                  📧 info@proctolearn.kz
-                </a>
-              </li>
-              <li>🌐 Қазақстан, Алматы</li>
             </ul>
           </div>
         </div>

@@ -4,11 +4,9 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { API_URL } from '@/lib/api';
 import {
-  StatsBar,
   TechCategoriesSection,
   FeaturesSection,
   HowItWorksSection,
-  TestimonialsSection,
   CTABanner,
   Footer,
 } from '@/components/landing/sections';
@@ -34,7 +32,7 @@ const FEATURES = [
   {
     icon: '🏆',
     title: 'Сертификат аласыз',
-    desc: 'Курсты аяқтаған соң ресми сертификат беріледі. PDF форматта жүктеп, LinkedIn-ге қоюға болады.',
+    desc: 'Курсты аяқтап, емтихан нәтижесін тексеруден өткізген соң PDF сертификатын жүктей аласыз.',
   },
   {
     icon: '👁️',
@@ -54,7 +52,7 @@ const FEATURES = [
   {
     icon: '🌐',
     title: 'Қазақ тілінде',
-    desc: 'Барлық курстар қазақ тілінде жасалған. Ана тіліңізде технологияларды үйрен.',
+    desc: 'Платформа интерфейсі қазақ тілінде. Оқу материалдарының тілі курсқа байланысты.',
   },
   {
     icon: '💻',
@@ -63,45 +61,29 @@ const FEATURES = [
   },
 ];
 
-const TESTIMONIALS = [
-  {
-    name: 'Алибек Жаксенов',
-    role: 'Frontend Developer @ KazMunayGas IT',
-    text: 'ProctoLearn-де HTML мен JavaScript-ті үйреніп, 3 айда жұмысқа орналасты. Аты-жөнді курстар!',
-    avatar: 'АЖ',
-    stars: 5,
-  },
-  {
-    name: 'Айгерім Сейткалиева',
-    role: 'Junior Python Dev @ Kolesa Group',
-    text: 'Прокторинг жүйесі алдауды мүмкін емес қылады. Сертификат жұмыс берушіге сенімді болды.',
-    avatar: 'АС',
-    stars: 5,
-  },
-  {
-    name: 'Санат Досжанов',
-    role: 'Student @ IITU',
-    text: 'Кезекпен сабақтар өту менің оқу тәртібімді жақсартты. Қазақ тілінде болуы өте ыңғайлы!',
-    avatar: 'СД',
-    stars: 5,
-  },
-];
-
 export default function HomePage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [coursesError, setCoursesError] = useState(false);
+  const [reloadCourses, setReloadCourses] = useState(0);
+
+  const retryCourses = () => {
+    setLoadingCourses(true);
+    setCoursesError(false);
+    setReloadCourses((value) => value + 1);
+  };
   const [activeLevel, setActiveLevel] = useState<string>('ALL');
 
   useEffect(() => {
-    fetch(`${API_URL}/courses?limit=12`)
-      .then((r) => r.json())
+    fetch(`${API_URL}/courses?limit=100`)
+      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((data) => {
         const list = Array.isArray(data) ? data : data?.data ?? [];
         setCourses(list);
       })
-      .catch(() => setCourses([]))
+      .catch(() => { setCourses([]); setCoursesError(true); })
       .finally(() => setLoadingCourses(false));
-  }, []);
+  }, [reloadCourses]);
 
   const filtered = activeLevel === 'ALL' ? courses : courses.filter((c) => c.level === activeLevel);
 
@@ -115,12 +97,11 @@ export default function HomePage() {
             <span className="text-2xl font-extrabold text-gray-800">Learn</span>
           </Link>
           
-          <div className="flex-1 max-w-sm">
+          <div className="hidden lg:block flex-1 max-w-sm">
             <GooeyNav
               items={[
                 { label: 'Курстар', href: '#courses' },
                 { label: 'Мүмкіндіктер', href: '#features' },
-                { label: 'Пікірлер', href: '#reviews' },
               ]}
               initialActiveIndex={0}
               animationTime={600}
@@ -160,14 +141,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      <StatsBar />
       <TechCategoriesSection />
 
       {/* ─── Featured Courses ─── */}
       <section id="courses" className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Танымал курстар</h2>
-          <p className="text-gray-500 mb-8">Мыңдаған студент оқып жатқан курстар</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Курстар</h2>
+          <p className="text-gray-500 mb-8">Қазір қолжетімді оқу бағыттары</p>
 
           {/* Level filter tabs */}
           <div className="flex gap-2 mb-8 flex-wrap">
@@ -194,6 +174,13 @@ export default function HomePage() {
                 <div key={i} className="bg-gray-100 rounded-2xl h-56 animate-pulse"></div>
               ))}
             </div>
+          ) : coursesError ? (
+            <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-8 text-center text-red-800">
+              <p>Курстарды жүктеу мүмкін болмады.</p>
+              <button type="button" className="mt-3 underline" onClick={retryCourses}>Қайта жүктеу</button>
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="rounded-xl border border-gray-200 bg-gray-50 p-8 text-center text-gray-600">Бұл деңгейде әзірге курс жоқ.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filtered.slice(0, 9).map((course) => {
@@ -241,7 +228,7 @@ export default function HomePage() {
               href="/auth/register"
               className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold px-8 py-3 rounded-xl transition-colors"
             >
-              Барлық курстарды көру →
+              Тіркеліп барлық курстарды көру →
             </Link>
           </div>
         </div>
@@ -249,7 +236,6 @@ export default function HomePage() {
 
       <FeaturesSection features={FEATURES} />
       <HowItWorksSection />
-      <TestimonialsSection testimonials={TESTIMONIALS} />
       <CTABanner />
       <Footer />
     </div>
