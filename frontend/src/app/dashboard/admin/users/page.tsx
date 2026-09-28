@@ -5,6 +5,7 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { downloadFile } from '@/lib/download';
 import toast from 'react-hot-toast';
+import LoadFailure from '@/components/LoadFailure';
 
 interface User {
   id: string; name: string; email: string; phone: string | null;
@@ -30,9 +31,11 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [resetting, setResetting] = useState<string | null>(null);
   const [tempPassModal, setTempPassModal] = useState<{ email: string; pass: string } | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [coursesError, setCoursesError] = useState(false);
 
   // Grant access modal
   const [grantModal, setGrantModal] = useState<{ user: User } | null>(null);
@@ -47,17 +50,24 @@ export default function AdminUsersPage() {
         const raw = r.data;
         const list = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
         setUsers(list);
+        setLoadError(false);
       })
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => {
-    load();
+  const loadCourses = () => {
     api.get('/courses').then(r => {
       const raw = r.data;
       const list = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
       setCourses(list);
-    });
+      setCoursesError(false);
+    }).catch(() => setCoursesError(true));
+  };
+
+  useEffect(() => {
+    load();
+    loadCourses();
   }, []);
 
   const handleSearch = (e: React.FormEvent) => { e.preventDefault(); load(search); };
@@ -127,7 +137,7 @@ export default function AdminUsersPage() {
       </div>
 
       <form onSubmit={handleSearch} className="flex gap-2">
-        <input className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <input aria-label="Пайдаланушыны іздеу" className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={search} onChange={e => setSearch(e.target.value)} placeholder="Атауы немесе email бойынша іздеу..." />
         <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg">Іздеу</button>
         {search && <button type="button" onClick={() => { setSearch(''); load(''); }} className="text-gray-500 px-3">✕</button>}
@@ -135,6 +145,8 @@ export default function AdminUsersPage() {
 
       {loading ? (
         <div className="text-center py-12 text-gray-600">Жүктелуде...</div>
+      ) : loadError ? (
+        <LoadFailure onRetry={() => load(search)} />
       ) : (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -177,10 +189,10 @@ export default function AdminUsersPage() {
                           className="text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 px-2 py-1 rounded">
                           Барыс
                         </Link>
-                        <button onClick={() => openGrantModal(u)}
+                        {u.role === 'STUDENT' && <button onClick={() => openGrantModal(u)}
                           className="text-xs bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1 rounded">
                           🎓 Рұқсат
-                        </button>
+                        </button>}
                         <button onClick={() => resetPassword(u.id)} disabled={resetting === u.id}
                           className="text-xs bg-red-50 text-red-700 hover:bg-red-100 px-2 py-1 rounded disabled:opacity-50">
                           {resetting === u.id ? '...' : 'Пароль'}
@@ -206,6 +218,7 @@ export default function AdminUsersPage() {
             </p>
 
             <div className="space-y-4">
+              {coursesError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">Курстарды жүктеу мүмкін болмады. <button type="button" onClick={loadCourses} className="font-semibold underline">Қайта жүктеу</button></div>}
               <div>
                 <label htmlFor="grant-course" className="block text-sm font-medium text-gray-700 mb-1">Курс</label>
                 <select
@@ -263,7 +276,7 @@ export default function AdminUsersPage() {
               </button>
               <button
                 onClick={handleGrant}
-                disabled={grantLoading || !selectedCourseId}
+                disabled={grantLoading || coursesError || !selectedCourseId}
                 className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg py-2.5 font-semibold disabled:opacity-50"
               >
                 {grantLoading ? '...' : 'Растау'}

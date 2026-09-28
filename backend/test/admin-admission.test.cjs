@@ -10,7 +10,7 @@ function fixture() {
     auditEvent: { create: async ({ data }) => { assert.equal(data.actorId, 'administrator'); writes.push(['audit', data]); return data; } },
     userNotification: { createMany: async ({ data }) => { writes.push(['notification', data]); return { count: data.length }; } },
     $transaction: async (work, options) => { assert.equal(options.isolationLevel, 'Serializable'); return work(db); },
-    user: { findUnique: async () => ({ id: 'student' }) },
+    user: { findUnique: async () => ({ id: 'student', role: 'STUDENT' }) },
     course: { findUnique: async () => ({ id: 'course' }) },
     enrollment: {
       upsert: async (query) => { writes.push(['enrollment', query]); return query.create; },
@@ -45,6 +45,16 @@ test('admin certificate override uses the same transaction and a distinct issuan
   assert.deepEqual(f.writes.map(([type]) => type), ['enrollment', 'certificate', 'audit', 'notification']);
   assert.equal(f.writes[2][1].action, 'ADMIN_CERTIFICATE_GRANTED');
   assert.equal(f.writes[0][1].update.examAccessGrantedBy, 'administrator');
+});
+
+test('admin admission cannot grant staff student enrollment or certificates', async () => {
+  for (const role of ['TEACHER', 'PROCTOR', 'ADMIN']) {
+    const f = fixture();
+    f.db.user.findUnique = async () => ({ id: 'staff', role });
+    await assert.rejects(f.service.grantExamAccess('staff', 'course', 'administrator'), (e) => e.getStatus() === 403);
+    await assert.rejects(f.service.grantFullCertificate('staff', 'course', 'administrator'), (e) => e.getStatus() === 403);
+    assert.deepEqual(f.writes, []);
+  }
 });
 
 test('student completion endpoint cannot manufacture course completion before a certificate exists', async () => {

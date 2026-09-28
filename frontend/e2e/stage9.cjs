@@ -152,6 +152,46 @@ async function main() {
     assert.deepEqual(auditIssues, []);
     console.log('PASS role pages, profile, inbox and administration smoke with WCAG A/AA');
 
+    const adminPage = sessions.get('ADMIN').page;
+    await adminPage.goto(`${web}/dashboard/admin/users`);
+    await adminPage.getByRole('row').filter({ hasText: 'student@proctolearn.kz' }).getByRole('button', { name: '🎓 Рұқсат' }).waitFor();
+    for (const role of ['teacher', 'proctor', 'admin']) {
+      assert.equal(await adminPage.getByRole('row').filter({ hasText: `${role}@proctolearn.kz` }).getByRole('button', { name: '🎓 Рұқсат' }).count(), 0);
+    }
+    const courseForGrant = await prisma.course.findFirstOrThrow();
+    const csrfResponse = await sessions.get('ADMIN').context.request.get(`${api}/auth/csrf`);
+    assert.equal(csrfResponse.status(), 200);
+    const csrfToken = (await csrfResponse.json()).csrfToken;
+    for (const role of ['TEACHER', 'PROCTOR', 'ADMIN']) {
+      const staff = await prisma.user.findUniqueOrThrow({ where: { email: `${role.toLowerCase()}@proctolearn.kz` } });
+      const before = await prisma.enrollment.count({ where: { userId: staff.id, courseId: courseForGrant.id } });
+      for (const action of ['grant-exam-access', 'grant-certificate']) {
+        const response = await sessions.get('ADMIN').context.request.post(`${api}/admin/users/${staff.id}/${action}/${courseForGrant.id}`, {
+          headers: { Origin: web, 'X-CSRF-Token': csrfToken },
+        });
+        assert.equal(response.status(), 403, `${role}: ${action}`);
+      }
+      assert.equal(await prisma.enrollment.count({ where: { userId: staff.id, courseId: courseForGrant.id } }), before);
+    }
+    console.log('PASS admin grant controls and API accept students only');
+
+    let coursesUnavailable = true;
+    const interceptCourses = async (request) => {
+      if (coursesUnavailable) await request.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"unavailable"}' });
+      else await request.continue();
+    };
+    await adminPage.route('**/courses', interceptCourses);
+    await adminPage.goto(`${web}/dashboard/admin/users`);
+    await adminPage.getByRole('row').filter({ hasText: 'student@proctolearn.kz' }).getByRole('button', { name: '🎓 Рұқсат' }).click();
+    await adminPage.getByRole('alert').getByText('Курстарды жүктеу мүмкін болмады.').waitFor();
+    coursesUnavailable = false;
+    await adminPage.getByRole('alert').getByRole('button', { name: 'Қайта жүктеу' }).click();
+    await adminPage.getByRole('alert').filter({ hasText: 'Курстарды жүктеу мүмкін болмады.' }).waitFor({ state: 'hidden' });
+    assert.ok(await adminPage.getByLabel('Курс', { exact: true }).selectOption({ index: 1 }));
+    await adminPage.getByRole('button', { name: 'Болдырмау' }).click();
+    await adminPage.unroute('**/courses', interceptCourses);
+    console.log('PASS admin grant course picker recovers from API outage');
+
     for (const role of ['TEACHER', 'ADMIN']) {
       const page = sessions.get(role).page;
       const requestPromise = page.waitForRequest(request => new URL(request.url()).pathname === '/courses' && new URL(request.url()).searchParams.has('limit'));
@@ -245,6 +285,7 @@ async function main() {
       ['ADMIN', '/dashboard/admin', '/admin/stats', 'Жалпы статистика және басқару'],
       ['ADMIN', '/dashboard/admin/courses', '/admin/courses/stats', 'Курстар статистикасы'],
       ['ADMIN', '/dashboard/admin/online', '/admin/users/online', /Онлайн пайдаланушылар/],
+      ['ADMIN', '/dashboard/admin/users', '/admin/users', 'Пайдаланушылар'],
     ]) {
       const page = sessions.get(role).page;
       let fail = true;
@@ -252,7 +293,8 @@ async function main() {
         if (fail) await request.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"unavailable"}' });
         else await request.continue();
       };
-      await page.route(`**${endpoint}`, intercept);
+      const matches = url => url.pathname === endpoint;
+      await page.route(matches, intercept);
       await page.goto(web + route);
       await page.getByRole('alert').getByText('Деректерді жүктеу мүмкін болмады.').waitFor();
       assert.equal(await page.getByText('Курстар жоқ').count(), 0);
@@ -260,7 +302,7 @@ async function main() {
       await page.getByRole('button', { name: 'Қайта жүктеу' }).click();
       await page.getByRole('alert').filter({ hasText: 'Деректерді жүктеу мүмкін болмады.' }).waitFor({ state: 'hidden' });
       await page.getByText(readyText, { exact: typeof readyText === 'string' }).first().waitFor();
-      await page.unroute(`**${endpoint}`, intercept);
+      await page.unroute(matches, intercept);
     }
     console.log('PASS dashboard, certificates and admin load failures recover on retry');
 

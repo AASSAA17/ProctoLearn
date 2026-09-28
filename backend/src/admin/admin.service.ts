@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { CertificatesService } from '../certificates/certificates.service';
@@ -297,6 +297,7 @@ export class AdminService {
     return serializable(this.prisma, async (tx) => {
       const user = await tx.user.findUnique({ where: { id: userId } });
       if (!user) throw new NotFoundException('Пайдаланушы табылмады');
+      if (user.role !== 'STUDENT') throw new ForbiddenException('Тек студентке рұқсат беріледі');
       const course = await tx.course.findUnique({ where: { id: courseId } });
       if (!course) throw new NotFoundException('Курс табылмады');
       const now = new Date();
@@ -315,7 +316,9 @@ export class AdminService {
   /** An explicit administrative exemption never fabricates lesson submissions. */
   async grantExamAccess(userId: string, courseId: string, adminId: string) {
     return serializable(this.prisma, async (tx) => {
-      if (!await tx.user.findUnique({ where: { id: userId } })) throw new NotFoundException('Пайдаланушы табылмады');
+      const user = await tx.user.findUnique({ where: { id: userId } });
+      if (!user) throw new NotFoundException('Пайдаланушы табылмады');
+      if (user.role !== 'STUDENT') throw new ForbiddenException('Тек студентке рұқсат беріледі');
       if (!await tx.course.findUnique({ where: { id: courseId } })) throw new NotFoundException('Курс табылмады');
       const grant = { examAccessGrantedAt: new Date(), examAccessGrantedBy: adminId };
       await tx.enrollment.upsert({
