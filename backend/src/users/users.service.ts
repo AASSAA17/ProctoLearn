@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Role } from '@prisma/client';
 import { serializable } from '../prisma/serializable';
@@ -41,6 +41,7 @@ export class UsersService {
     return serializable(this.prisma, async tx => {
       const previous = await tx.user.findUnique({ where: { id }, select: { role: true, tokenVersion: true } });
       if (!previous) throw new NotFoundException('Пайдаланушы табылмады');
+      if (id === actorId && previous.role !== role) throw new ForbiddenException('Өз рөліңізді өзгертуге болмайды');
       const user = await tx.user.update({
         where: { id }, data: { role, ...(previous.role !== role ? { tokenVersion: { increment: 1 }, refreshToken: null } : {}) },
         select: { id: true, name: true, email: true, role: true },

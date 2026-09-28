@@ -155,6 +155,7 @@ async function main() {
     const adminPage = sessions.get('ADMIN').page;
     await adminPage.goto(`${web}/dashboard/admin/users`);
     await adminPage.getByRole('row').filter({ hasText: 'student@proctolearn.kz' }).getByRole('button', { name: '🎓 Рұқсат' }).waitFor();
+    assert.equal(await adminPage.getByRole('row').filter({ hasText: 'admin@proctolearn.kz' }).getByRole('combobox').isDisabled(), true);
     for (const role of ['teacher', 'proctor', 'admin']) {
       assert.equal(await adminPage.getByRole('row').filter({ hasText: `${role}@proctolearn.kz` }).getByRole('button', { name: '🎓 Рұқсат' }).count(), 0);
     }

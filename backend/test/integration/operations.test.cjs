@@ -13,8 +13,8 @@ if (!url || !['localhost', '127.0.0.1'].includes(new URL(url).hostname) || new U
 
 test('real transactions keep audit and inbox atomic with administrative effects', async t => {
   const db = new PrismaClient({ datasources: { db: { url } } });
-  const [actor, recipient, other, course] = Array.from({ length: 4 }, () => randomUUID());
-  const users = [actor, recipient, other];
+  const [actor, recipient, other, certificateRecipient, course] = Array.from({ length: 5 }, () => randomUUID());
+  const users = [actor, recipient, other, certificateRecipient];
   const operations = new OperationsService(db);
   try {
     await db.user.createMany({ data: users.map((id, i) => ({ id, email: `${id}@example.invalid`, name: 'Operations fixture', password: 'not-a-login-hash', role: i === 0 ? 'ADMIN' : 'STUDENT' })) });
@@ -30,6 +30,17 @@ test('real transactions keep audit and inbox atomic with administrative effects'
       assert.deepEqual(events[0].metadata, { previousRole: 'STUDENT', role: 'TEACHER' });
       assert.equal(await db.userNotification.count({ where: { userId: recipient } }), 1);
     });
+    await t.test('an administrator cannot demote their own account', async () => {
+      const service = new UsersService(db);
+      const before = await db.user.findUnique({ where: { id: actor } });
+      const auditCount = await db.auditEvent.count({ where: { targetId: actor } });
+      await assert.rejects(service.updateRole(actor, 'STUDENT', actor), error => error.getStatus() === 403);
+      const after = await db.user.findUnique({ where: { id: actor } });
+      assert.equal(after.role, 'ADMIN');
+      assert.equal(after.tokenVersion, before.tokenVersion);
+      assert.equal(await db.auditEvent.count({ where: { targetId: actor } }), auditCount);
+      assert.equal(await db.userNotification.count({ where: { userId: actor } }), 0);
+    });
     await t.test('an audit storage failure rolls back the role and notification', async () => {
       const failing = { $transaction: (fn, options) => db.$transaction(tx => fn(new Proxy(tx, { get(target, key) { return key === 'auditEvent' ? { create: async () => { throw new Error('fixture audit outage'); } } : target[key]; } })), options) };
       await assert.rejects(new UsersService(failing).updateRole(recipient, 'PROCTOR', actor), /fixture audit outage/);
@@ -38,11 +49,11 @@ test('real transactions keep audit and inbox atomic with administrative effects'
     });
     await t.test('certificate grant audit and inbox persist with the certificate; retries deduplicate inbox', async () => {
       const admin = new AdminService(db, {}, new CertificatesService(db));
-      await admin.grantFullCertificate(recipient, course, actor);
-      await admin.grantFullCertificate(recipient, course, actor);
-      assert.equal(await db.certificate.count({ where: { userId: recipient, courseId: course } }), 1);
-      assert.equal(await db.userNotification.count({ where: { userId: recipient, type: 'CERTIFICATE_ISSUED' } }), 1);
-      assert.equal(await db.auditEvent.count({ where: { actorId: actor, targetId: recipient, action: 'ADMIN_CERTIFICATE_GRANTED' } }), 2);
+      await admin.grantFullCertificate(certificateRecipient, course, actor);
+      await admin.grantFullCertificate(certificateRecipient, course, actor);
+      assert.equal(await db.certificate.count({ where: { userId: certificateRecipient, courseId: course } }), 1);
+      assert.equal(await db.userNotification.count({ where: { userId: certificateRecipient, type: 'CERTIFICATE_ISSUED' } }), 1);
+      assert.equal(await db.auditEvent.count({ where: { actorId: actor, targetId: certificateRecipient, action: 'ADMIN_CERTIFICATE_GRANTED' } }), 2);
     });
     await t.test('notification storage failure rolls back the role, session revocation and audit together', async () => {
       const failing = { $transaction: (fn, options) => db.$transaction(tx => fn(new Proxy(tx, { get(target, key) { return key === 'userNotification' ? { createMany: async () => { throw new Error('fixture inbox outage'); } } : target[key]; } })), options) };
@@ -54,6 +65,7 @@ test('real transactions keep audit and inbox atomic with administrative effects'
       assert.equal(await db.auditEvent.count({ where: { targetId: recipient } }), auditCount);
     });
     await t.test('inbox pagination does not leak delivery keys or other users; read acknowledgements are idempotent and scoped', async () => {
+      await db.$transaction(tx => notifyUser(tx, { userId: recipient, type: 'TEST', title: 'Second item', body: 'Pagination fixture', targetPath: '/dashboard', dedupeKey: `fixture:${recipient}` }));
       await db.$transaction(tx => notifyUser(tx, { userId: other, type: 'TEST', title: 'Private', body: 'Private', targetPath: '/dashboard', dedupeKey: `fixture:${other}` }));
       const privateItem = await db.userNotification.findFirst({ where: { userId: other } });
       await assert.rejects(operations.markRead(privateItem.id, recipient), e => e.getStatus() === 404);

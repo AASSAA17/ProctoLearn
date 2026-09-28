@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import { downloadFile } from '@/lib/download';
 import toast from 'react-hot-toast';
 import LoadFailure from '@/components/LoadFailure';
+import { useAuthStore } from '@/store/auth.store';
 
 interface User {
   id: string; name: string; email: string; phone: string | null;
@@ -28,6 +29,7 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 export default function AdminUsersPage() {
+  const currentUserId = useAuthStore(state => state.user?.id);
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -173,7 +175,9 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <select value={u.role} aria-label={`${u.name}: рөл`} onChange={e => updateRole(u.id, e.target.value)}
-                        className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer ${ROLE_COLORS[u.role]}`}>
+                        disabled={u.id === currentUserId}
+                        title={u.id === currentUserId ? 'Өз рөліңізді өзгертуге болмайды' : undefined}
+                        className={`text-xs font-medium px-2 py-1 rounded-full border-0 ${u.id === currentUserId ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'} ${ROLE_COLORS[u.role]}`}>
                         {Object.keys(ROLE_LABELS).map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                       </select>
                     </td>
