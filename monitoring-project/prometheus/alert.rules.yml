@@ -29,13 +29,22 @@ groups:
           description: "Бос орын {{ $value | printf \"%.1f\" }}% ғана"
 
       - alert: ServiceDown
-        expr: up{job=~"prometheus|node_exporter|nginx|postgres|proctolearn_api"} == 0
+        expr: up{job=~"prometheus|node_exporter|nginx|postgres|proctolearn_api|proctolearn_api_ready"} == 0
         for: 1m
         labels:
           severity: critical
         annotations:
           summary: "Сервис өшіп қалды: {{ $labels.instance }}"
           description: "1 минуттан астам уақыт бойы байланыс жоқ"
+
+      - alert: ProctoLearnApiNotReady
+        expr: probe_success{job="proctolearn_api_ready"} == 0 and on() up{job="proctolearn_api"} == 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ProctoLearn API dependencies are not ready"
+          description: "The API metrics endpoint is reachable but /ready has failed for over one minute."
 
       - alert: PostgreSQLExporterDown
         expr: up{job="postgres"} == 0

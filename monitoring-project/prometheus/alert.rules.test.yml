@@ -1,0 +1,112 @@
+rule_files:
+- alert.rules.yml
+evaluation_interval: 1m
+tests:
+- name: healthy
+  interval: 1m
+  input_series:
+  - series: up{job="proctolearn_api",instance="api:4000"}
+    values: 1+0x6
+  - series: probe_success{job="proctolearn_api_ready",instance="http://api:4000/ready"}
+    values: 1+0x6
+  - series: node_filesystem_avail_bytes{job="node_exporter",scope="host",mountpoint="/",instance="node_exporter:9100"}
+    values: 20+0x6
+  - series: node_filesystem_size_bytes{job="node_exporter",scope="host",mountpoint="/",instance="node_exporter:9100"}
+    values: 100+0x6
+  promql_expr_test:
+  - expr: count(ALERTS{alertname="ServiceDown",alertstate="firing"}) or vector(0)
+    eval_time: 6m
+    exp_samples:
+    - labels: '{}'
+      value: 0
+  - expr: count(ALERTS{alertname="ProctoLearnApiNotReady",alertstate="firing"}) or vector(0)
+    eval_time: 6m
+    exp_samples:
+    - labels: '{}'
+      value: 0
+  - expr: count(ALERTS{alertname="DiskSpaceLow",alertstate="firing"}) or vector(0)
+    eval_time: 6m
+    exp_samples:
+    - labels: '{}'
+      value: 0
+- name: API unavailable
+  interval: 1m
+  input_series:
+  - series: up{job="proctolearn_api",instance="api:4000"}
+    values: 0+0x6
+  - series: probe_success{job="proctolearn_api_ready",instance="http://api:4000/ready"}
+    values: 0+0x6
+  - series: node_filesystem_avail_bytes{job="node_exporter",scope="host",mountpoint="/",instance="node_exporter:9100"}
+    values: 20+0x6
+  - series: node_filesystem_size_bytes{job="node_exporter",scope="host",mountpoint="/",instance="node_exporter:9100"}
+    values: 100+0x6
+  promql_expr_test:
+  - expr: count(ALERTS{alertname="ServiceDown",alertstate="firing"}) or vector(0)
+    eval_time: 6m
+    exp_samples:
+    - labels: '{}'
+      value: 1
+  - expr: count(ALERTS{alertname="ProctoLearnApiNotReady",alertstate="firing"}) or vector(0)
+    eval_time: 6m
+    exp_samples:
+    - labels: '{}'
+      value: 0
+  - expr: count(ALERTS{alertname="DiskSpaceLow",alertstate="firing"}) or vector(0)
+    eval_time: 6m
+    exp_samples:
+    - labels: '{}'
+      value: 0
+- name: dependencies unavailable
+  interval: 1m
+  input_series:
+  - series: up{job="proctolearn_api",instance="api:4000"}
+    values: 1+0x6
+  - series: probe_success{job="proctolearn_api_ready",instance="http://api:4000/ready"}
+    values: 0+0x6
+  - series: node_filesystem_avail_bytes{job="node_exporter",scope="host",mountpoint="/",instance="node_exporter:9100"}
+    values: 20+0x6
+  - series: node_filesystem_size_bytes{job="node_exporter",scope="host",mountpoint="/",instance="node_exporter:9100"}
+    values: 100+0x6
+  promql_expr_test:
+  - expr: count(ALERTS{alertname="ServiceDown",alertstate="firing"}) or vector(0)
+    eval_time: 6m
+    exp_samples:
+    - labels: '{}'
+      value: 0
+  - expr: count(ALERTS{alertname="ProctoLearnApiNotReady",alertstate="firing"}) or vector(0)
+    eval_time: 6m
+    exp_samples:
+    - labels: '{}'
+      value: 1
+  - expr: count(ALERTS{alertname="DiskSpaceLow",alertstate="firing"}) or vector(0)
+    eval_time: 6m
+    exp_samples:
+    - labels: '{}'
+      value: 0
+- name: host root low space
+  interval: 1m
+  input_series:
+  - series: up{job="proctolearn_api",instance="api:4000"}
+    values: 1+0x6
+  - series: probe_success{job="proctolearn_api_ready",instance="http://api:4000/ready"}
+    values: 1+0x6
+  - series: node_filesystem_avail_bytes{job="node_exporter",scope="host",mountpoint="/",instance="node_exporter:9100"}
+    values: 10+0x6
+  - series: node_filesystem_size_bytes{job="node_exporter",scope="host",mountpoint="/",instance="node_exporter:9100"}
+    values: 100+0x6
+  promql_expr_test:
+  - expr: count(ALERTS{alertname="ServiceDown",alertstate="firing"}) or vector(0)
+    eval_time: 6m
+    exp_samples:
+    - labels: '{}'
+      value: 0
+  - expr: count(ALERTS{alertname="ProctoLearnApiNotReady",alertstate="firing"}) or vector(0)
+    eval_time: 6m
+    exp_samples:
+    - labels: '{}'
+      value: 0
+  - expr: count(ALERTS{alertname="DiskSpaceLow",alertstate="firing"}) or vector(0)
+    eval_time: 6m
+    exp_samples:
+    - labels: '{}'
+      value: 1
