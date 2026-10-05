@@ -14,10 +14,10 @@ const foreign = { id: 'foreign', role: 'TEACHER' };
 const student = { id: 'student', role: 'STUDENT' };
 const question = { text: 'Choose', type: 'SINGLE_CHOICE', options: ['A', 'B'], answer: 'A' };
 
-function fixture({ enrolled = false, active = 0, history = 0, questionExam = 'exam', answers = 0 } = {}) {
+function fixture({ enrolled = false, active = 0, history = 0, questionExam = 'exam', answers = 0, questionCount = 0 } = {}) {
   const writes = [];
   const course = { id: 'course', teacherId: 'teacher' };
-  const exam = { id: 'exam', courseId: 'course', course, title: 'Exam', duration: 30 };
+  const exam = { id: 'exam', courseId: 'course', course, title: 'Exam', duration: 30, questions: Array.from({ length: questionCount }, () => question) };
   const db = {
     $transaction: async (work, options) => { assert.equal(options.isolationLevel, 'Serializable'); return work(db); },
     course: { findUnique: async () => course },
@@ -172,4 +172,18 @@ test('proctor candidate directory is restricted to course owner/admin and return
   assert.deepEqual(queries[0].select, { id: true, name: true });
   assert.equal(queries[0].take, 100);
   assert.deepEqual(Reflect.getMetadata(ROLES_KEY, ProctorController.prototype.listCandidates), ['TEACHER', 'ADMIN']);
+});
+
+test('exam creation and serializable additions enforce the same 1000-question maximum', async () => {
+  const oversized = fixture();
+  await assert.rejects(oversized.service.create('course', { title: 'Large', duration: 30, questions: Array(1001).fill(question) }, teacher), BadRequestException);
+  assert.deepEqual(oversized.writes, []);
+  const maximum = await fixture().service.create('course', { title: 'Maximum', duration: 30, questions: Array(1000).fill(question) }, teacher);
+  assert.equal(maximum.questions.create.length, 1000);
+  assert.equal((await fixture({ questionCount: 999 }).service.addQuestion('course', 'exam', question, teacher)).answer, 'A');
+  for (const questionCount of [1000, 1001]) {
+    const full = fixture({ questionCount });
+    await assert.rejects(full.service.addQuestion('course', 'exam', question, teacher), (error) => error.getResponse().code === 'EXAM_QUESTION_LIMIT');
+    assert.deepEqual(full.writes, []);
+  }
 });

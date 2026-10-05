@@ -1,6 +1,7 @@
 import { ArrayMaxSize, ArrayUnique, IsArray, IsInt, IsNotEmpty, IsString, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { MAX_EXAM_QUESTIONS } from '../../exams/question-limit';
 
 export class AnswerDto {
   @ApiProperty()
@@ -19,7 +20,7 @@ export class AnswerDto {
 export class SubmitAnswersDto {
   @ApiProperty({ type: [AnswerDto] })
   @IsArray()
-  @ArrayMaxSize(1000)
+  @ArrayMaxSize(MAX_EXAM_QUESTIONS)
   @ArrayUnique((answer: AnswerDto) => answer?.questionId)
   @ValidateNested({ each: true })
   @Type(() => AnswerDto)
