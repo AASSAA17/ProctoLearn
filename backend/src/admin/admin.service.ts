@@ -212,7 +212,9 @@ export class AdminService {
     const courseMap = new Map<string, any>();
     for (const p of progressRecords) {
       if (!courseMap.has(p.courseId)) {
-        const totalLessons = await this.prisma.lesson.count({ where: { courseId: p.courseId } });
+        const totalLessons = await this.prisma.lesson.count({
+          where: { OR: [{ courseId: p.courseId }, { module: { courseId: p.courseId } }] },
+        });
         courseMap.set(p.courseId, {
           courseId: p.courseId,
           courseTitle: p.course.title,
@@ -230,7 +232,7 @@ export class AdminService {
       user,
       courses: Array.from(courseMap.values()).map((c) => ({
         ...c,
-        progress: Math.round((c.viewedLessons.length / (c.totalLessons || 1)) * 100),
+        progress: c.totalLessons === 0 ? 0 : Math.round((c.viewedLessons.length / c.totalLessons) * 100),
       })),
     };
   }

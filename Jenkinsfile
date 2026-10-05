@@ -46,7 +46,18 @@ pipeline {
 
     stage('Backend Tests') {
       steps {
-        sh 'docker run --rm proctolearn-api sh -lc "npm run test --if-present"'
+        sh 'docker run --rm -e RUN_MIGRATIONS=false proctolearn-api sh -lc "npm run test"'
+      }
+    }
+
+    stage('Backend Integration Tests') {
+      steps {
+        withCredentials([string(credentialsId: 'proctolearn-test-database-url', variable: 'TEST_DATABASE_URL')]) {
+          sh '''#!/bin/sh
+            set -eu
+            docker run --rm --network host -e RUN_MIGRATIONS=false -e TEST_DATABASE_URL proctolearn-api sh -lc 'DATABASE_URL="$TEST_DATABASE_URL" node node_modules/prisma/build/index.js migrate deploy && npm run test:integration'
+          '''
+        }
       }
     }
 
