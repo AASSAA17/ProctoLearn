@@ -65,3 +65,42 @@ test('student completion endpoint cannot manufacture course completion before a 
   await f.enrollments.completeEnrollment('student', 'course');
   assert.equal(f.writes[0][0], 'complete');
 });
+
+test('admin course progress counts direct and module-backed lessons with the same membership', async () => {
+  const counts = [];
+  const db = {
+    user: { findUnique: async () => ({ id: 'student', name: 'Student', email: 'student@example.invalid' }) },
+    lessonProgress: { findMany: async () => [
+      { courseId: 'module-course', viewedAt: new Date('2026-01-02'), course: { id: 'module-course', title: 'Module course' }, lesson: { id: 'module-1', title: 'Module 1', order: 1 } },
+      { courseId: 'module-course', viewedAt: new Date('2026-01-03'), course: { id: 'module-course', title: 'Module course' }, lesson: { id: 'module-2', title: 'Module 2', order: 2 } },
+      { courseId: 'mixed-course', viewedAt: new Date('2026-01-04'), course: { id: 'mixed-course', title: 'Mixed course' }, lesson: { id: 'direct-1', title: 'Direct 1', order: 1 } },
+    ] },
+    lesson: { count: async ({ where }) => {
+      counts.push(where);
+      return where.OR[0].courseId === 'module-course' ? 2 : 4;
+    } },
+  };
+  const service = new AdminService(db, {}, {});
+  const result = await service.getUserCourseProgress('student');
+  assert.deepEqual(counts, [
+    { OR: [{ courseId: 'module-course' }, { module: { courseId: 'module-course' } }] },
+    { OR: [{ courseId: 'mixed-course' }, { module: { courseId: 'mixed-course' } }] },
+  ]);
+  assert.deepEqual(result.courses.map(({ courseId, totalLessons, progress }) => ({ courseId, totalLessons, progress })), [
+    { courseId: 'module-course', totalLessons: 2, progress: 100 },
+    { courseId: 'mixed-course', totalLessons: 4, progress: 25 },
+  ]);
+});
+
+test('admin course progress returns zero when no current lessons are counted', async () => {
+  const db = {
+    user: { findUnique: async () => ({ id: 'student', name: 'Student', email: 'student@example.invalid' }) },
+    lessonProgress: { findMany: async () => [
+      { courseId: 'legacy-course', viewedAt: new Date(), course: { id: 'legacy-course', title: 'Legacy course' }, lesson: { id: 'deleted-lesson', title: 'Deleted', order: 1 } },
+    ] },
+    lesson: { count: async () => 0 },
+  };
+  const result = await new AdminService(db, {}, {}).getUserCourseProgress('student');
+  assert.equal(result.courses[0].totalLessons, 0);
+  assert.equal(result.courses[0].progress, 0);
+});

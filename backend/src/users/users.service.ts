@@ -1,12 +1,25 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Role } from '@prisma/client';
+import { Transform } from 'class-transformer';
+import { IsString, Matches, MaxLength, ValidateIf } from 'class-validator';
 import { serializable } from '../prisma/serializable';
 import { notifyUser, recordAudit } from '../operations/operation-events';
 
 export class UpdateProfileDto {
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsString()
+  @Matches(/\S/)
+  @MaxLength(100)
   name?: string;
-  phone?: string;
+
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() || null : value)
+  @ValidateIf((_object, value) => value !== undefined && value !== null)
+  @IsString()
+  @Matches(/^\+7\d{10}$/)
+  @MaxLength(12)
+  phone?: string | null;
 }
 
 @Injectable()
