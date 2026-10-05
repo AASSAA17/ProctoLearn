@@ -31,6 +31,8 @@ services:
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:?Set GF_SECURITY_ADMIN_PASSWORD in your private environment}
       - GF_USERS_ALLOW_SIGN_UP=false
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:?Set a rotated Telegram token in your private environment}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:?Set your private Telegram chat ID}
     ports:
       - "127.0.0.1:3100:3000"
     volumes:
@@ -82,13 +84,21 @@ services:
 
   alertmanager:
     profiles: ['monitoring']
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?Set a rotated Telegram token in your private environment}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:?Set your private Telegram chat ID}
     image: prom/alertmanager:v0.27.0
     container_name: alertmanager
-    command:
-      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        /bin/sh /etc/alertmanager/render-config.sh && exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --cluster.listen-address=
     ports:
       - "127.0.0.1:9093:9093"
     volumes:
+      - ./alertmanager/render-config.sh:/etc/alertmanager/render-config.sh:ro
       - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     restart: unless-stopped
     networks:

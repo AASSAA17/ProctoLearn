@@ -67,6 +67,22 @@ test('PostgreSQL transaction and authorization regressions', async (t) => {
       assert.equal((await db.attempt.findUnique({ where: { id: attempt.id } })).trustScore, 80);
       assert.equal(await db.proctorEvent.count({ where: { attemptId: attempt.id } }), 2);
     });
+    await t.test('event limits remain atomic across independent service instances', async () => {
+      const { MAX_PROCTOR_EVENTS, PROCTOR_EVENTS_PER_MINUTE } = require('../../src/proctor/proctor-event-policy');
+      const secondService = new ProctorService(db);
+      for (const [limit, timestamp] of [[PROCTOR_EVENTS_PER_MINUTE, new Date()], [MAX_PROCTOR_EVENTS, new Date(0)]]) {
+        await db.proctorEvent.deleteMany({ where: { attemptId: attempt.id } });
+        await db.proctorEvent.createMany({ data: Array.from({ length: limit - 1 }, () => ({ attemptId: attempt.id, type: 'tab_switch', timestamp })) });
+        const results = await Promise.allSettled([
+          proctor.recordEvent(attempt.id, studentId, 'tab_switch'),
+          secondService.recordEvent(attempt.id, studentId, 'tab_switch'),
+        ]);
+        assert.equal(results.filter((result) => result.status === 'fulfilled').length, 1);
+        const rejected = results.find((result) => result.status === 'rejected');
+        assert.equal(rejected.reason.getStatus(), 429);
+        assert.equal(await db.proctorEvent.count({ where: { attemptId: attempt.id } }), limit);
+      }
+    });
     await t.test('concurrent identical submissions return one persisted result awaiting review', async () => {
       const results = await Promise.allSettled([
         service.submitAnswers(attempt.id, answers, studentId),

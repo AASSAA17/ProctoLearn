@@ -84,7 +84,7 @@ async function fixture(withGateway = false) {
       update: async ({ where, data }) => hydrate(Object.assign(attempts.get(where.id), data)),
     },
     evidenceFile: { findMany: async ({ where }) => [{ id: `evidence-${where.attemptId}`, attemptId: where.attemptId, type: 'recording_camera', url: `private/${where.attemptId}.webm` }] },
-    proctorEvent: { create: async ({ data }) => { const event = { id: `event-${events.length}`, ...data }; events.push(event); return event; } },
+    proctorEvent: { count: async ({ where }) => events.filter((event) => event.attemptId === where.attemptId && (!where.timestamp || event.timestamp >= where.timestamp.gte)).length, create: async ({ data }) => { const event = { id: `event-${events.length}`, timestamp: new Date(), ...data }; events.push(event); return event; } },
     $transaction: async (work) => work(db),
   };
   const jwt = new JwtService();
@@ -113,7 +113,7 @@ async function fixture(withGateway = false) {
     const response = await fetch(`${origin}${path}`, { method, headers: id ? { Cookie: `pl-access=${token(id)}` } : {} });
     return { status: response.status, body: await response.json() };
   };
-  return { app, origin, request, token, users, attempts, assignments, signedObjects, close: () => app.close() };
+  return { app, origin, request, token, users, attempts, assignments, signedObjects, events, close: () => app.close() };
 }
 
 test('HTTP evidence and summaries require an assigned proctor, not merely its role', async () => {
@@ -288,5 +288,138 @@ test('WebSocket broadcasts stop immediately after assignment or token revocation
     assert.equal((await lastStudent).trustScore, 75);
     await new Promise((resolve) => setTimeout(resolve, 50));
     assert.equal(admin.received.filter((entry) => entry.event === 'proctor:event:recorded').length, 2);
+  } finally { await Promise.all(clients.map((client) => client.close())); await f.close(); }
+});
+
+const { ProctorEventLimiter, MAX_PROCTOR_EVENTS, PROCTOR_EVENTS_PER_MINUTE, validateEventMetadata } = require('../src/proctor/proctor-event-policy');
+
+test('event budget bounds bursts, refills, and bounds memory', () => {
+  const limiter = new ProctorEventLimiter();
+  for (let i = 0; i < 10; i++) limiter.consume('student', 0);
+  assert.throws(() => limiter.consume('student', 999), (e) => e.getStatus() === 429);
+  limiter.consume('student', 1000);
+  assert.throws(() => limiter.consume('student', 1000));
+  limiter.consume('other', 1000);
+  for (let i = 0; i < 9998; i++) limiter.consume(`user-${i}`, 1000);
+  assert.throws(() => limiter.consume('overflow', 1000));
+  limiter.consume('after-cleanup', 61_000);
+  assert.equal(limiter.buckets.size, 1);
+});
+
+test('metadata rejects oversized UTF-8, arrays, null and circular payloads', () => {
+  assert.doesNotThrow(() => validateEventMetadata({ action: 'copy' }));
+  assert.doesNotThrow(() => validateEventMetadata(undefined));
+  const cycle = {}; cycle.self = cycle;
+  for (const value of [{ text: 'a'.repeat(2048) }, { text: '界'.repeat(700) }, [], null, cycle]) {
+    assert.throws(() => validateEventMetadata(value), (e) => e.getStatus() === 400);
+  }
+});
+
+test('transactional event rate/total limits reject before insert or trust deduction', async () => {
+  let writes = 0, total = MAX_PROCTOR_EVENTS, recent = 0;
+  const queries = [];
+  const db = {
+    $transaction: async (work, options) => { assert.equal(options.isolationLevel, 'Serializable'); return work(db); },
+    attempt: {
+      findUnique: async () => ({ id: 'attempt', userId: 'student', status: 'IN_PROGRESS', startedAt: new Date(), exam: { duration: 30 }, trustScore: 100 }),
+      update: async () => { writes++; },
+    },
+    proctorEvent: {
+      count: async ({ where }) => { queries.push(where); return where.timestamp ? recent : total; },
+      create: async () => { writes++; },
+    },
+  };
+  const service = new ProctorService(db);
+  await assert.rejects(service.recordEvent('attempt', 'student', 'tab_switch'), (e) => e.getStatus() === 429);
+  total = 0; recent = PROCTOR_EVENTS_PER_MINUTE;
+  await assert.rejects(service.recordEvent('attempt', 'student', 'tab_switch'), (e) => e.getStatus() === 429);
+  assert.equal(writes, 0);
+  assert.equal(queries[1].attemptId, 'attempt');
+  assert.ok(queries[1].timestamp.gte instanceof Date);
+});
+
+test('gateway flood budget follows user across sockets and attempt IDs before database work', async () => {
+  const jwt = new JwtService();
+  const secret = randomBytes(32).toString('hex');
+  const config = new ConfigService({ JWT_ACCESS_SECRET: secret });
+  let reads = 0, writes = 0;
+  const gateway = new ProctorGateway({ recordEvent: async () => { writes++; return {}; } }, jwt, config,
+    { user: { findUnique: async ({ where }) => { reads++; return { id: where.id, role: 'STUDENT', tokenVersion: 0 }; } } });
+  gateway.server = { in: () => ({ fetchSockets: async () => [] }) };
+  const errors = [];
+  const socket = (id) => ({ data: {}, handshake: { headers: { origin: 'http://localhost:3000', cookie: `pl-access=${jwt.sign({ sub: id, ver: 0 }, { secret, expiresIn: '5m' })}` } }, emit(event, payload) { errors.push({ event, payload }); }, disconnect() {} });
+  const first = socket('student'), second = socket('student'), other = socket('other');
+  const now = Date.now(), limiter = gateway.eventLimiter;
+  gateway.eventLimiter = { consume: (id) => limiter.consume(id, now) };
+  try {
+    for (let i = 0; i < 10; i++) await gateway.handleEvent(i % 2 ? first : second, { attemptId: `attempt-${i}`, type: 'tab_switch' });
+    assert.equal(reads, 10); assert.equal(writes, 10);
+    for (let i = 0; i < 100; i++) await gateway.handleEvent(i % 2 ? first : second, { attemptId: 'another', type: 'tab_switch' });
+    assert.equal(reads, 10); assert.equal(writes, 10);
+    assert.equal(errors.length, 100);
+    assert.ok(errors.every(({ event, payload }) => event === 'proctor:error' && payload.code === 'PROCTOR_EVENT_LIMIT' && typeof payload.message === 'string'));
+    await gateway.handleEvent(other, { attemptId: 'other-attempt', type: 'tab_switch' });
+    assert.equal(writes, 11);
+    await gateway.handleEvent(other, { attemptId: 'other-attempt', type: 'tab_switch', metadata: { text: 'x'.repeat(3000) } });
+    assert.equal(errors.at(-1).event, 'proctor:error');
+    assert.equal(errors.at(-1).payload.code, 'PROCTOR_METADATA_INVALID');
+    assert.equal(typeof errors.at(-1).payload.message, 'string');
+    assert.equal(reads, 11); assert.equal(writes, 11);
+  } finally { for (const client of [first, second, other]) gateway.handleDisconnect(client); }
+});
+
+test('mandatory password change blocks connections, existing senders, and broadcast recipients', async () => {
+  const f = await fixture(true);
+  const clients = [];
+  try {
+    const assigned = await connectSocket(f, 'assigned'); clients.push(assigned);
+    const student = await connectSocket(f, 'student-a'); clients.push(student);
+    await assigned.start('attempt-a', 'proctor');
+    await student.start('attempt-a', 'student');
+    f.users.get('assigned').mustChangePassword = true;
+    const recorded = student.next('proctor:event:recorded');
+    student.send('proctor:event', { attemptId: 'attempt-a', type: 'tab_switch' });
+    await recorded;
+    assert.equal(assigned.received.some((entry) => entry.event === 'proctor:event:recorded'), false);
+    f.users.get('student-a').mustChangePassword = true;
+    const unauthorized = student.next('proctor:error');
+    student.send('proctor:event', { attemptId: 'attempt-a', type: 'tab_switch' });
+    assert.equal((await unauthorized).code, 'UNAUTHORIZED');
+    let disconnected = false;
+    const client = { data: {}, handshake: { headers: { origin: 'http://localhost:3000', cookie: `pl-access=${f.token('assigned')}` } }, emit() {}, disconnect() { disconnected = true; } };
+    await f.app.get(ProctorGateway).handleConnection(client);
+    assert.equal(disconnected, true);
+  } finally { await Promise.all(clients.map((client) => client.close())); await f.close(); }
+});
+
+
+test('real event socket receives policy and DTO rejections without persisted events or score changes', async () => {
+  const f = await fixture(true);
+  const clients = [];
+  try {
+    const student = await connectSocket(f, 'student-a'); clients.push(student);
+    await student.start('attempt-a', 'student');
+    const reject = async (metadata, code) => {
+      const response = student.next('proctor:error');
+      student.send('proctor:event', { attemptId: 'attempt-a', type: 'tab_switch', metadata });
+      const error = await response;
+      assert.equal(error.code, code);
+      assert.equal(typeof error.message, 'string');
+      assert.ok(error.message.length > 0);
+      assert.equal(f.events.length, 0);
+      assert.equal(f.attempts.get('attempt-a').trustScore, 100);
+    };
+    await reject({ text: 'x'.repeat(3000) }, 'PROCTOR_METADATA_INVALID');
+    await reject([], 'PROCTOR_EVENT_REJECTED');
+    const db = f.app.get(PrismaService);
+    db.proctorEvent.count = async () => MAX_PROCTOR_EVENTS;
+    await reject({}, 'PROCTOR_EVENT_LIMIT');
+    const gateway = f.app.get(ProctorGateway);
+    const now = Date.now();
+    const limiter = new ProctorEventLimiter();
+    for (let i = 0; i < 10; i++) limiter.consume('student-a', now);
+    gateway.eventLimiter = { consume: (id) => limiter.consume(id, now) };
+    await reject({}, 'PROCTOR_EVENT_LIMIT');
+    assert.equal(student.received.some(({ event }) => event === 'exception'), false);
   } finally { await Promise.all(clients.map((client) => client.close())); await f.close(); }
 });

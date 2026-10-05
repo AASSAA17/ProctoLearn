@@ -45,14 +45,15 @@ function fixture({ enrolled = false, active = 0, history = 0, questionExam = 'ex
   return { service: new ExamsService(db), writes };
 }
 
-test('exam questions are available only to enrolled readers and answer keys only to owner/admin', async () => {
+test('exam detail gives enrolled students metadata only; owner/admin retain authoring questions', async () => {
   for (const reader of [student, foreign, { id: 'teacher', role: 'STUDENT' }]) {
     const { service } = fixture();
     await assert.rejects(service.findById('course', 'exam', reader), ForbiddenException);
   }
   const safe = await fixture({ enrolled: true }).service.findById('course', 'exam', student);
-  assert.equal(safe.questions[0].answer, undefined);
-  assert.deepEqual(safe.questions[0].options, ['A', 'B']);
+  assert.deepEqual(safe.questions, []);
+  assert.equal(safe.title, 'Exam');
+  assert.equal(safe.duration, 30);
   for (const reader of [teacher, admin]) {
     const full = await fixture().service.findById('course', 'exam', reader);
     assert.equal(full.questions[0].answer, 'A');

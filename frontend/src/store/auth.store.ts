@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useChatStore } from './chat.store';
 import api, { authMutation, clearLegacyAuth, onAuthEvent } from '@/lib/api';
 import { isUnauthorized } from '@/lib/session-coordinator';
 
@@ -59,6 +60,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     return bootstrap;
   },
 }));
+
+// Synchronous subscription covers login, logout, bootstrap and cross-tab expiry/change.
+useAuthStore.subscribe((state) => useChatStore.getState().setOwner(state.user?.id ?? null));
 
 onAuthEvent((event) => {
   generation++;

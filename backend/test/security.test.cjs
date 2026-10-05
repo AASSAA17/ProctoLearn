@@ -62,7 +62,7 @@ function fixture(overrides = {}) {
       },
     },
     answer: { createMany: async ({ data }) => { writes.push(['answers', data]); attempt.answers.push(...data); return { count: data.length }; } },
-    proctorEvent: { create: async ({ data }) => { writes.push(['event', data]); return data; } },
+    proctorEvent: { count: async () => 0, create: async ({ data }) => { writes.push(['event', data]); return data; } },
   };
   const certificates = { issue: async (_u, _c, tx) => { assert.equal(tx, prisma); writes.push(['certificate']); } };
   const service = new AttemptsService(prisma, certificates, new ConfigService({}));

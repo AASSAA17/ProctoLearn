@@ -1,10 +1,10 @@
-import { Controller, Post, Body, UseGuards, Get, Req, Res, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Req, Res, SetMetadata, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiCookieAuth } from '@nestjs/swagger';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, RefreshTokenDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { ALLOW_PASSWORD_CHANGE_REQUIRED, JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AuthCookies } from './auth-cookies';
 import { CsrfService } from './csrf.service';
@@ -69,6 +69,7 @@ export class AuthController {
   }
 
   @Get('me')
+  @SetMetadata(ALLOW_PASSWORD_CHANGE_REQUIRED, true)
   @UseGuards(JwtAuthGuard)
   @ApiCookieAuth()
   @ApiOperation({ summary: 'Ағымдағы пайдаланушы' })
@@ -78,6 +79,7 @@ export class AuthController {
   }
 
   @Post('change-password')
+  @SetMetadata(ALLOW_PASSWORD_CHANGE_REQUIRED, true)
   @UseGuards(JwtAuthGuard)
   @ApiCookieAuth()
   @ApiOperation({ summary: 'Парольды өзгерту' })
@@ -96,6 +98,7 @@ export class AuthController {
     return this.authService.forgotPassword(dto);
   }
 
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('reset-password')
   @ApiOperation({ summary: 'Парольды токен арқылы қалпына келтіру' })
   async resetPassword(@Body() dto: ResetPasswordDto, @Res({ passthrough: true }) response: Response) {

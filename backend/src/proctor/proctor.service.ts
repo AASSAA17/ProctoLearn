@@ -8,6 +8,7 @@ import { CertificatesService } from '../certificates/certificates.service';
 import { safeAttempt, snapshotDuration } from '../attempts/attempt-state';
 import { notifyUser, recordAudit } from '../operations/operation-events';
 import { Prisma } from '@prisma/client';
+import { eventLimitError, MAX_PROCTOR_EVENTS, PROCTOR_EVENTS_PER_MINUTE, validateEventMetadata } from './proctor-event-policy';
 import { evidenceMetadata } from '../evidence/evidence-retention-policy';
 
 @Injectable()
@@ -23,6 +24,7 @@ export class ProctorService {
     type: keyof typeof TRUST_SCORE_DEDUCTIONS,
     metadata?: Record<string, any>,
   ) {
+    validateEventMetadata(metadata);
     if (!Object.hasOwn(TRUST_SCORE_DEDUCTIONS, type)) throw new BadRequestException('Оқиға түрі жарамсыз');
     return serializable(this.prisma, async (tx) => {
       const attempt = await tx.attempt.findUnique({ where: { id: attemptId }, include: { exam: true } });
@@ -30,6 +32,12 @@ export class ProctorService {
       if (attempt.userId !== userId) throw new ForbiddenException('Рұқсат жоқ');
       if (attempt.status !== 'IN_PROGRESS') throw new BadRequestException('Бұл талпыныс аяқталған');
       if (attemptExpired(attempt.startedAt, snapshotDuration(attempt))) throw expiredAttemptError();
+
+      // Serializable count + insert + attempt update makes the limits hold
+      // across concurrent sockets, replicas and process restarts.
+      const total = await tx.proctorEvent.count({ where: { attemptId } });
+      const recent = await tx.proctorEvent.count({ where: { attemptId, timestamp: { gte: new Date(Date.now() - 60_000) } } });
+      if (total >= MAX_PROCTOR_EVENTS || recent >= PROCTOR_EVENTS_PER_MINUTE) throw eventLimitError();
 
       const event = await tx.proctorEvent.create({
         data: { attemptId, type, metadata },

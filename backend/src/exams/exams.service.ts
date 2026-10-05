@@ -40,11 +40,12 @@ export class ExamsService {
     const exam = await this.prisma.exam.findUnique({ where: { id }, include: { course: true } });
     if (!exam || exam.courseId !== courseId) throw new NotFoundException('Емтихан табылмады');
     const manager = await assertCourseReader(this.prisma, exam.course, viewer);
-    const questions = await this.prisma.question.findMany({
+    // Students receive questions only from the admitted, timed attempt snapshot.
+    const questions = manager ? await this.prisma.question.findMany({
       where: { examId: id },
-      select: { id: true, text: true, type: true, options: true, answer: manager },
+      select: { id: true, text: true, type: true, options: true, answer: true },
       orderBy: { id: 'asc' },
-    });
+    }) : [];
     const { course, ...detail } = exam;
     return { ...detail, questions };
   }

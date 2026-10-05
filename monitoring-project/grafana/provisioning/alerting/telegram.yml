@@ -7,8 +7,8 @@ contactPoints:
       - uid: telegram-receiver
         type: telegram
         settings:
-          bottoken: "7613071728:AAH_iDQggErNIC--BSbqupkIVbe4HnLCSE4"
-          chatid: "6331359365"
+          bottoken: "$TELEGRAM_BOT_TOKEN"
+          chatid: "$TELEGRAM_CHAT_ID"
           parse_mode: "HTML"
           message: |
             {{ if eq .Status "firing" }}🔴 ALERT FIRING{{ else }}✅ RESOLVED{{ end }}

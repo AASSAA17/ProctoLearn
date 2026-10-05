@@ -22,6 +22,34 @@ node scripts/release-smoke.cjs http://127.0.0.1:4000/
 4. На **staging** применить release SHA с `prisma migrate deploy` и проверить `GET /ready`, авторизацию всех ролей, создание/сдачу экзамена, обе записи, просмотр проктором, аудит и письма. Физическую камеру/выбор экрана, Safari/Firefox и экранный диктор проверить вручную: автоматический сценарий их не покрывает. Затем запустить bounded smoke на loopback staging API и зафиксировать результат.
 5. Перед переключением production трафика убедиться, что staging и целевая конфигурация совпадают по версиям приложения/схемы и storage semantics. Сравнить `git rev-parse HEAD` с SHA зелёного CI. После переключения проверить `/ready`, сайт, вход и реальные ключевые сценарии, мониторинг ошибок, задержки и заполнение storage. Не публиковать секреты в отчёте.
 
+## Trusted reverse proxies and authentication quotas
+
+`TRUSTED_PROXIES` is opt-in: leaving it empty (the default) ignores forwarded
+client addresses. For direct API access keep it empty. Behind nginx, configure
+an exact comma-separated IP/CIDR allowlist of **trusted proxy peers as seen by the
+API**, otherwise all users share nginx's authentication rate-limit quota.
+
+- For nginx and a native API on the same host, `TRUSTED_PROXIES=127.0.0.1,::1`
+  is appropriate **only if** the API actually sees nginx on loopback.
+- For a containerized API, identify its actual peer address first. Do not copy
+  the loopback example or trust the entire Docker/private network blindly. Use
+  stable, isolated proxy addresses (or a narrowly scoped proxy-only subnet).
+- Native launches receive this variable in the backend environment. The root
+  `.env` is already loaded by the backend services in `docker-compose.yml`,
+  `docker-compose.server.yml`, and `docker-compose.dev.yml`; the disposable
+  local stack instead uses `.env.local`. Recreate/restart the API after changing
+  the private environment. Do not enable proxy trust for the direct local stack.
+- Never use blanket trust, hop-count trust, or universal CIDRs. Restrict direct
+  access to the API at the network boundary. Each trusted proxy must overwrite
+  or safely append the real peer address to forwarding headers; never trust an
+  arbitrary client-supplied leftmost `X-Forwarded-For` value.
+
+Before release, verify on the actual staging topology that two independent
+clients have separate login/reset quotas, a forged `X-Forwarded-For` cannot reset
+a client's quota, and direct requests from an untrusted peer cannot spoof their
+address. Record the proxy addresses and results privately. These deployment
+checks cannot be inferred from local unit tests.
+
 ## Возврат при неудаче
 
 Если ошибка обнаружена до переключения, оставить production нетронутым. Если после переключения и данные **не менялись**, вернуть прежний код и трафик на прежнюю согласованную пару БД/bucket. Если новая версия успела записать данные, не запускать старый код поверх новой схемы вслепую: остановить записи, сохранить текущий экземпляр для расследования и восстановить исходную проверенную копию в **другую пустую** пару. Переключить трафик только после проверки целостности и согласования допустимой потери изменений за окно выпуска. Автоматического `migrate down` и перезаписи рабочей БД нет.

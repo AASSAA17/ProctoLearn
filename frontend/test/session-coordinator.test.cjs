@@ -104,7 +104,8 @@ test('the shared password policy rejects bcrypt-truncated Unicode and accepts th
 function storeFixture(get, mutation = async () => ({ data: { user: { id: 'B', role: 'STUDENT' } } })) {
   let listener;
   const api = { default: { get }, authMutation: mutation, clearLegacyAuth() {}, onAuthEvent(value) { listener = value; } };
-  const { useAuthStore } = load('store/auth.store.ts', { '@/lib/api': api, '@/lib/session-coordinator': coordinator });
+  const chat = load('store/chat.store.ts', { '@/lib/api': api });
+  const { useAuthStore } = load('store/auth.store.ts', { './chat.store': chat, '@/lib/api': api, '@/lib/session-coordinator': coordinator });
   return { store: useAuthStore, event: (name) => listener(name) };
 }
 

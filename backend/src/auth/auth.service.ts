@@ -202,9 +202,16 @@ export class AuthService {
   }
 
   async resetPassword(dto: ResetPasswordDto) {
+    const token = tokenDigest(dto.token);
+    // Reject invalid links before spending CPU on bcrypt. The transaction below
+    // revalidates expiry and single-use state after hashing (and on retries).
+    const candidate = await this.prisma.passwordResetToken.findUnique({ where: { token } });
+    if (!candidate || candidate.expiresAt <= new Date()) {
+      throw new BadRequestException('Сілтеме жарамсыз немесе мерзімі өткен');
+    }
     const hashed = await bcrypt.hash(dto.newPassword, 12);
     await serializable(this.prisma, async (tx) => {
-      const record = await tx.passwordResetToken.findUnique({ where: { token: tokenDigest(dto.token) } });
+      const record = await tx.passwordResetToken.findUnique({ where: { token } });
       if (!record || record.expiresAt <= new Date()) {
         throw new BadRequestException('Сілтеме жарамсыз немесе мерзімі өткен');
       }
