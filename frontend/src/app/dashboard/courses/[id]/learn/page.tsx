@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import StepContent from '@/components/learning/StepContent';
 import Link from 'next/link';
@@ -86,53 +86,65 @@ export default function LearnPage() {
   const navigateToStep = setCurrentStepId;
   const [completedStepIds, setCompletedStepIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [courseError, setCourseError] = useState(false);
+  const [courseRetry, setCourseRetry] = useState(0);
+  const [progress, setProgress] = useState<Record<string, { loading: boolean; error: boolean; confirmed: boolean }>>({});
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const generation = useRef(0);
 
-  // Load course structure
+  const loadProgress = useCallback(async (key: string, version: number) => {
+    setProgress((prev) => ({ ...prev, [key]: { ...prev[key], loading: true, error: false } }));
+    try {
+      const { data } = await api.get(key === 'course'
+        ? `/submissions/course/${courseId}/progress`
+        : `/submissions/lesson/${key}/progress`);
+      if (generation.current !== version) return;
+      if (key !== 'course') {
+        const completed = data.filter((step: { completed: boolean }) => step.completed).map((step: { id: string }) => step.id);
+        setCompletedStepIds((prev) => new Set([...prev, ...completed]));
+      }
+      setProgress((prev) => ({ ...prev, [key]: { loading: false, error: false, confirmed: true } }));
+    } catch {
+      if (generation.current !== version) return;
+      setProgress((prev) => ({ ...prev, [key]: { ...prev[key], loading: false, error: true } }));
+    }
+  }, [courseId]);
+
+  // Ignore late responses after navigation or a replacement request.
   useEffect(() => {
+    const version = ++generation.current;
     const load = async () => {
+      setLoading(true);
+      setCourseError(false);
+      setCourse(null);
+      setCompletedStepIds(new Set());
+      setProgress({});
       try {
         const { data } = await api.get(`/courses/${courseId}/material`);
+        if (generation.current !== version) return;
         const courseData: Course = data;
         setCourse(courseData);
         const list = buildNavList(courseData.modules ?? []);
         setNavList(list);
-
-        // Load progress
-        const progressRes = await api.get(`/submissions/course/${courseId}/progress`).catch(() => ({ data: null }));
-        if (progressRes.data) {
-          // Load per-step completion in parallel (avoids sequential N+1 calls)
-          const allLessons = (courseData.modules ?? []).flatMap((m: CourseModule) => m.lessons);
-          const completedIds = new Set<string>();
-          const progressResults = await Promise.all(
-            allLessons.map((lesson: Lesson) =>
-              api.get(`/submissions/lesson/${lesson.id}/progress`).catch(() => ({ data: [] }))
-            )
-          );
-          progressResults.forEach((res: any) => {
-            (res.data ?? []).forEach((s: any) => {
-              if (s.completed) completedIds.add(s.id);
-            });
-          });
-          setCompletedStepIds(completedIds);
-        }
-
-        // Pick initial step
-        const firstStepId = initialStepId ?? list[0]?.stepId ?? null;
-        if (firstStepId) navigateToStep(firstStepId);
+        navigateToStep(initialStepId ?? list[0]?.stepId ?? null);
+        const keys = ['course', ...courseData.modules.flatMap((mod) => mod.lessons.map((lesson) => lesson.id))];
+        setProgress(Object.fromEntries(keys.map((key) => [key, { loading: true, error: false, confirmed: false }])));
+        keys.forEach((key) => { void loadProgress(key, version); });
       } catch {
-        toast.error('Курс жүктеу қатесі');
-        router.push(`/dashboard/courses/${courseId}`);
+        if (generation.current === version) setCourseError(true);
       } finally {
-        setLoading(false);
+        if (generation.current === version) setLoading(false);
       }
     };
-    load();
-  }, [courseId, initialStepId, navigateToStep, router]);
+    void load();
+    return () => { generation.current = version + 1; };
+  }, [courseId, initialStepId, navigateToStep, loadProgress, courseRetry]);
 
   const handleStepComplete = useCallback(async () => {
     if (!currentStep || !currentLesson) return;
+    const version = generation.current;
     const saved = await saveLearningProgress(api, courseId, currentLesson, currentStep);
+    if (generation.current !== version) return;
     setCompletedStepIds((prev) => new Set([...prev, ...saved.completedStepIds]));
     toast.success(saved.lessonCompleted ? 'Сабақ аяқталды! 🎉' : 'Прогресс сақталды');
   }, [courseId, currentStep, currentLesson]);
@@ -156,7 +168,16 @@ export default function LearnPage() {
       </div>
     );
   }
+  if (courseError) return (
+    <div role="alert" className="p-6 text-red-700">
+      <p>Курс жүктеу қатесі</p>
+      <button onClick={() => setCourseRetry((value) => value + 1)}>Қайта жүктеу</button>
+    </div>
+  );
   if (!course) return null;
+  const progressKnown = Object.values(progress).every((item) => item.confirmed);
+  const progressLoading = Object.values(progress).some((item) => item.loading);
+  const failedProgress = Object.entries(progress).filter(([, item]) => item.error);
 
   const currentIdx = navList.findIndex((n) => n.stepId === currentStepId);
   const hasNext = currentIdx < navList.length - 1;
@@ -239,6 +260,23 @@ export default function LearnPage() {
             )}
           </div>
 
+          <button
+            disabled={progressLoading}
+            onClick={() => Object.keys(progress).forEach((key) => { void loadProgress(key, generation.current); })}
+            className="mb-3 text-sm text-primary-700 disabled:opacity-50"
+          >
+            Прогресті жаңарту
+          </button>
+          {progressLoading && <p role="status">Прогресс жүктелуде...</p>}
+          {failedProgress.length > 0 && (
+            <div role="alert" className="mb-4 rounded-lg bg-amber-50 p-4 text-amber-900">
+              <p>Прогрестің бір бөлігі жүктелмеді. Расталған прогресс сақталды; қалғаны белгісіз.</p>
+              {failedProgress.some(([, item]) => item.confirmed) && <p>Соңғы расталған прогресс көрсетілген; деректер ескірген болуы мүмкін.</p>}
+              <button onClick={() => failedProgress.forEach(([key]) => { void loadProgress(key, generation.current); })}>
+                Прогресті қайта жүктеу
+              </button>
+            </div>
+          )}
           {/* Step content */}
           {currentStep ? (
             <div className="space-y-6">
@@ -263,12 +301,12 @@ export default function LearnPage() {
           ) : (
             <div className="text-center py-20 text-gray-400">
               <p className="text-4xl mb-3">📚</p>
-              <p>Сол жақтан қадамды таңдаңыз</p>
+              <p>{navList.length === 0 ? 'Курста қадамдар жоқ' : 'Сол жақтан қадамды таңдаңыз'}</p>
             </div>
           )}
 
           {/* Progress bar */}
-          {navList.length > 0 && (
+          {navList.length > 0 && progressKnown && (
             <div className="mt-8 bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
               <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
                 <span>Прогрес</span>

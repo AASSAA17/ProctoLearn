@@ -6,6 +6,7 @@ import { assertCourseReader, canManageCourse, LessonViewer } from '../lessons/le
 import { serializable } from '../prisma/serializable';
 import { attemptExpired } from '../attempts/attempt-policy';
 import { finalizeExpiredAttempt, snapshotDuration } from '../attempts/attempt-state';
+import { assertQuestionLimit } from './question-limit';
 import { validatedQuestion } from './question-policy';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class ExamsService {
     if (!course) throw new NotFoundException('Курс табылмады');
     if (!canManageCourse(course, viewer)) throw new ForbiddenException('Рұқсат жоқ');
     const { questions, ...examData } = dto;
+    assertQuestionLimit(questions.length);
     return this.prisma.exam.create({
       data: {
         ...examData, courseId,
@@ -93,7 +95,10 @@ export class ExamsService {
 
   async addQuestion(courseId: string, examId: string, dto: CreateQuestionDto, viewer: LessonViewer) {
     return serializable(this.prisma, async (db) => {
-      await this.editableExam(db, courseId, examId, viewer);
+      // The predicate read and insert share Serializable isolation, so concurrent
+      // additions conflict and retry against the committed question count.
+      const exam = await this.editableExam(db, courseId, examId, viewer);
+      assertQuestionLimit(exam.questions.length + 1);
       return db.question.create({ data: {
         examId, ...validatedQuestion(dto),
       } });

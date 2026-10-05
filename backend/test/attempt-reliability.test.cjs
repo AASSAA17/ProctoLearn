@@ -5,7 +5,7 @@ const { ConfigService } = require('@nestjs/config');
 const { ConflictException, ForbiddenException, BadRequestException, ValidationPipe } = require('@nestjs/common');
 const { AttemptsService } = require('../src/attempts/attempts.service');
 const { ExamsService } = require('../src/exams/exams.service');
-const { SaveDraftDto } = require('../src/attempts/dto/attempt.dto');
+const { SaveDraftDto, SubmitAnswersDto } = require('../src/attempts/dto/attempt.dto');
 const { examSnapshot, normalizedAnswer, safeAttempt } = require('../src/attempts/attempt-state');
 
 const valid = { answers: [{ questionId: 'q1', answer: 'A' }, { questionId: 'q2', answer: 'B,C' }] };
@@ -207,4 +207,32 @@ test('storage preflight cannot start a timer or expose keys and uses remaining s
   active.db.enrollment.findUnique = async () => null;
   await assert.rejects(active.service.preflight('exam', 'student'), ForbiddenException);
   assert.deepEqual(active.writes, []);
+});
+
+test('oversized legacy exams reject new starts without changing existing attempt snapshots', async () => {
+  const fresh = fixture({ empty: true });
+  fresh.exam.questions = Array.from({ length: 1001 }, (_, i) => ({ ...fresh.exam.questions[0], id: `q${i}` }));
+  await assert.rejects(fresh.service.startAttempt('exam', 'student'), hasCode('EXAM_QUESTION_LIMIT'));
+  assert.deepEqual(fresh.writes, []);
+  const active = fixture();
+  active.exam.questions = fresh.exam.questions;
+  assert.equal((await active.service.startAttempt('exam', 'student')).exam.questions.length, 2);
+});
+
+test('1000 questions can start, save a complete validated draft and submit; 1001 answers remain invalid', async () => {
+  const f = fixture({ empty: true });
+  f.exam.questions = Array.from({ length: 1000 }, (_, i) => ({ ...f.exam.questions[0], id: `q${i}` }));
+  const answers = f.exam.questions.map(({ id }) => ({ questionId: id, answer: 'A' }));
+  const pipe = new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true });
+  const parse = (body, metatype) => pipe.transform(body, { type: 'body', metatype });
+  const started = await f.service.startAttempt('exam', 'student');
+  assert.equal(started.exam.questions.length, 1000);
+  const draft = await parse({ revision: 0, answers }, SaveDraftDto);
+  assert.equal((await f.service.saveDraft('attempt', draft, 'student')).answers.length, 1000);
+  const submission = await parse({ answers }, SubmitAnswersDto);
+  assert.equal((await f.service.submitAnswers('attempt', submission, 'student')).score, 100);
+  assert.equal(f.answerRows.length, 1000);
+  for (const metatype of [SaveDraftDto, SubmitAnswersDto]) {
+    await assert.rejects(parse({ ...(metatype === SaveDraftDto ? { revision: 0 } : {}), answers: [...answers, { questionId: 'overflow', answer: 'A' }] }, metatype), BadRequestException);
+  }
 });

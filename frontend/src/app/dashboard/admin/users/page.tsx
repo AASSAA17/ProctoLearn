@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { downloadFile } from '@/lib/download';
 import toast from 'react-hot-toast';
+import Pagination from '@/components/Pagination';
 import LoadFailure from '@/components/LoadFailure';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -39,32 +40,53 @@ export default function AdminUsersPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [coursesError, setCoursesError] = useState(false);
 
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const requestId = useRef(0);
+  const courseRequestId = useRef(0);
+  const [coursePage, setCoursePage] = useState(1);
+  const [coursePages, setCoursePages] = useState(0);
+  const [coursesLoading, setCoursesLoading] = useState(true);
+
   // Grant access modal
   const [grantModal, setGrantModal] = useState<{ user: User } | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedActionType, setSelectedActionType] = useState<'certificate' | 'exam'>('exam');
   const [grantLoading, setGrantLoading] = useState(false);
 
-  const load = (q = '') => {
+  const load = (q = appliedSearch, nextPage = page) => {
+    const request = ++requestId.current;
+    setPage(nextPage);
+    setAppliedSearch(q);
     setLoading(true);
-    api.get('/admin/users', { params: q ? { search: q } : {} })
+    api.get('/admin/users', { params: { search: q || undefined, page: nextPage, limit: 50 } })
       .then((r) => {
+        if (request !== requestId.current) return;
+        setTotalPages(r.data.meta.totalPages);
         const raw = r.data;
         const list = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
         setUsers(list);
         setLoadError(false);
       })
-      .catch(() => setLoadError(true))
-      .finally(() => setLoading(false));
+      .catch(() => { if (request === requestId.current) setLoadError(true); })
+      .finally(() => { if (request === requestId.current) setLoading(false); });
   };
 
-  const loadCourses = () => {
-    api.get('/courses').then(r => {
+  const loadCourses = (nextPage = coursePage) => {
+    const request = ++courseRequestId.current;
+    setCoursePage(nextPage);
+    setCoursesLoading(true);
+    setSelectedCourseId('');
+    api.get('/courses', { params: { page: nextPage, limit: 20 } }).then(r => {
+      if (request !== courseRequestId.current) return;
+      setCoursePages(r.data.totalPages);
       const raw = r.data;
       const list = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
       setCourses(list);
       setCoursesError(false);
-    }).catch(() => setCoursesError(true));
+    }).catch(() => { if (request === courseRequestId.current) setCoursesError(true); })
+      .finally(() => { if (request === courseRequestId.current) setCoursesLoading(false); });
   };
 
   useEffect(() => {
@@ -72,13 +94,13 @@ export default function AdminUsersPage() {
     loadCourses();
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => { e.preventDefault(); load(search); };
+  const handleSearch = (e: React.FormEvent) => { e.preventDefault(); load(search, 1); };
 
   const updateRole = async (id: string, role: string) => {
     try {
       await api.patch(`/users/${id}/role`, { role });
       toast.success('Рөл өзгертілді');
-      load(search);
+      load();
     } catch { toast.error('Қате болды'); }
   };
 
@@ -88,7 +110,7 @@ export default function AdminUsersPage() {
       const { data } = await api.post(`/admin/users/${id}/reset-password`);
       setTempPassModal({ email: data.email, pass: data.tempPassword });
       toast.success('Уақытша пароль жіберілді');
-      load(search);
+      load();
     } catch { toast.error('Қате болды'); }
     finally { setResetting(null); }
   };
@@ -117,7 +139,7 @@ export default function AdminUsersPage() {
         toast.success('✅ Экзаменге кіру рұқсаты берілді');
       }
       setGrantModal(null);
-      load(search);
+      load();
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Қате болды');
     } finally {
@@ -142,13 +164,13 @@ export default function AdminUsersPage() {
         <input aria-label="Пайдаланушыны іздеу" className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={search} onChange={e => setSearch(e.target.value)} placeholder="Атауы немесе email бойынша іздеу..." />
         <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg">Іздеу</button>
-        {search && <button type="button" onClick={() => { setSearch(''); load(''); }} className="text-gray-500 px-3">✕</button>}
+        {search && <button type="button" onClick={() => { setSearch(''); load('', 1); }} className="text-gray-500 px-3">✕</button>}
       </form>
 
       {loading ? (
         <div className="text-center py-12 text-gray-600">Жүктелуде...</div>
       ) : loadError ? (
-        <LoadFailure onRetry={() => load(search)} />
+        <LoadFailure onRetry={() => load()} />
       ) : (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -212,6 +234,8 @@ export default function AdminUsersPage() {
         </div>
       )}
 
+      <Pagination page={page} totalPages={totalPages} onPageChange={nextPage => load(appliedSearch, nextPage)} disabled={loading} label="Пайдаланушы беттері" />
+
       {/* Grant Access Modal */}
       {grantModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -222,11 +246,13 @@ export default function AdminUsersPage() {
             </p>
 
             <div className="space-y-4">
-              {coursesError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">Курстарды жүктеу мүмкін болмады. <button type="button" onClick={loadCourses} className="font-semibold underline">Қайта жүктеу</button></div>}
+              {coursesError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">Курстарды жүктеу мүмкін болмады. <button type="button" onClick={() => loadCourses()} className="font-semibold underline">Қайта жүктеу</button></div>}
+              {coursesLoading && <p role="status">Жүктелуде...</p>}
               <div>
                 <label htmlFor="grant-course" className="block text-sm font-medium text-gray-700 mb-1">Курс</label>
                 <select
                   id="grant-course"
+                  disabled={coursesLoading || coursesError}
                   value={selectedCourseId}
                   onChange={e => setSelectedCourseId(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -238,6 +264,7 @@ export default function AdminUsersPage() {
                 </select>
               </div>
 
+              <Pagination page={coursePage} totalPages={coursePages} onPageChange={loadCourses} disabled={coursesLoading} label="Курс беттері" />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Рұқсат түрі</label>
                 <div className="flex gap-3">
@@ -280,7 +307,7 @@ export default function AdminUsersPage() {
               </button>
               <button
                 onClick={handleGrant}
-                disabled={grantLoading || coursesError || !selectedCourseId}
+                disabled={grantLoading || coursesLoading || coursesError || !selectedCourseId}
                 className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg py-2.5 font-semibold disabled:opacity-50"
               >
                 {grantLoading ? '...' : 'Растау'}

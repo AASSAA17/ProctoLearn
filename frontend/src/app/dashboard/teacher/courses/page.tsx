@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import api from '@/lib/api';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/auth.store';
+import Pagination from '@/components/Pagination';
 import LoadFailure from '@/components/LoadFailure';
 
 interface Course {
@@ -33,19 +34,25 @@ export default function TeacherCoursesPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const requestId = useRef(0);
+
   const loadCourses = useCallback(async () => {
+    const request = ++requestId.current;
     setLoading(true);
     try {
-      const params = isAdmin ? '?limit=100' : teacherId ? `?limit=100&teacherId=${teacherId}` : '?limit=100';
-      const { data } = await api.get(`/courses${params}`);
+      const { data } = await api.get('/courses', { params: { page, limit: 100, ...(!isAdmin && teacherId ? { teacherId } : {}) } });
+      if (request !== requestId.current) return;
+      setTotalPages(data.totalPages);
       setCourses(data.data ?? data);
       setLoadError(false);
     } catch {
-      setLoadError(true);
+      if (request === requestId.current) setLoadError(true);
     } finally {
-      setLoading(false);
+      if (request === requestId.current) setLoading(false);
     }
-  }, [teacherId, isAdmin]);
+  }, [teacherId, isAdmin, page]);
 
   useEffect(() => { loadCourses(); }, [loadCourses]);
 
@@ -54,7 +61,8 @@ export default function TeacherCoursesPage() {
     try {
       await api.delete(`/courses/${courseId}`);
       toast.success('Курс жойылды');
-      setCourses((prev) => prev.filter((c) => c.id !== courseId));
+      if (courses.length === 1 && page > 1) setPage(page - 1);
+      else void loadCourses();
     } catch {
       toast.error('Жою қатесі');
     }
@@ -85,7 +93,8 @@ export default function TeacherCoursesPage() {
         </Link>
       </div>
 
-      {/* Stats */}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} label="Курс беттері" />
+      {/* Stats (current page) */}
       <div className="grid grid-cols-3 gap-4">
         {['BEGINNER', 'INTERMEDIATE', 'ADVANCED'].map((level) => {
           const count = courses.filter((c) => c.level === level).length;

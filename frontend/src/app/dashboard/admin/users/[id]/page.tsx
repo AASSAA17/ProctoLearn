@@ -1,9 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
+import Pagination from '@/components/Pagination';
+import LoadFailure from '@/components/LoadFailure';
 import toast from 'react-hot-toast';
 
 interface Progress {
@@ -44,17 +46,32 @@ export default function UserProgressPage() {
       .then(r => setData(r.data));
   }, [id]);
 
+  const [coursePage, setCoursePage] = useState(1);
+  const [coursePages, setCoursePages] = useState(0);
+  const [coursesLoading, setCoursesLoading] = useState(true);
+  const [coursesError, setCoursesError] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const courseRequestId = useRef(0);
+
+  const loadCourses = useCallback((nextPage = 1) => {
+    const request = ++courseRequestId.current;
+    setCoursePage(nextPage);
+    setCoursesLoading(true);
+    setSelectedCourseId('');
+    api.get('/courses', { params: { page: nextPage, limit: 20 } }).then(r => {
+      if (request !== courseRequestId.current) return;
+      setCourses(r.data.data);
+      setCoursePages(r.data.totalPages);
+      setCoursesError(false);
+    }).catch(() => { if (request === courseRequestId.current) setCoursesError(true); })
+      .finally(() => { if (request === courseRequestId.current) setCoursesLoading(false); });
+  }, []);
+
   useEffect(() => {
     setLoading(true);
-    Promise.all([
-      loadProgress(),
-      api.get('/courses').then(r => {
-        const raw = r.data;
-        const list = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
-        setCourses(list);
-      }),
-    ]).finally(() => setLoading(false));
-  }, [loadProgress]);
+    loadProgress().catch(() => setLoadError(true)).finally(() => setLoading(false));
+    loadCourses();
+  }, [loadProgress, loadCourses]);
 
   const handleGrant = async (type: 'certificate' | 'exam', courseId: string) => {
     const key = `${type}-${courseId}`;
@@ -84,7 +101,7 @@ export default function UserProgressPage() {
   };
 
   if (loading) return <div className="text-center py-16 text-gray-400">Жүктелуде...</div>;
-  if (!data) return null;
+  if (loadError || !data) return <LoadFailure onRetry={() => { setLoading(true); loadProgress().then(() => setLoadError(false)).catch(() => setLoadError(true)).finally(() => setLoading(false)); }} />;
 
   const enrolledCourseIds = new Set(data.courses.map(c => c.courseId));
   const unenrolledCourses = courses.filter(c => !enrolledCourseIds.has(c.id));
@@ -214,7 +231,11 @@ export default function UserProgressPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Курс</label>
+                {coursesLoading && <p role="status">Жүктелуде...</p>}
+                {coursesError && <LoadFailure onRetry={() => loadCourses(coursePage)} />}
                 <select
+                  aria-label="Курс"
+                  disabled={coursesLoading || coursesError}
                   value={selectedCourseId}
                   onChange={e => setSelectedCourseId(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -237,6 +258,7 @@ export default function UserProgressPage() {
                 </select>
               </div>
 
+              <Pagination page={coursePage} totalPages={coursePages} onPageChange={loadCourses} disabled={coursesLoading} label="Курс беттері" />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Рұқсат түрі</label>
                 <div className="flex gap-3">
@@ -279,7 +301,7 @@ export default function UserProgressPage() {
               </button>
               <button
                 onClick={handleNewCourseGrant}
-                disabled={!!actionLoading || !selectedCourseId}
+                disabled={!!actionLoading || coursesLoading || coursesError || !selectedCourseId}
                 className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg py-2.5 font-semibold disabled:opacity-50"
               >
                 {actionLoading ? '...' : 'Растау'}

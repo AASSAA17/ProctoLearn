@@ -10,6 +10,7 @@ import { attemptDeadline, attemptExpired, expiredAttemptError, validateAnswerIds
 import { serializable } from '../prisma/serializable';
 import { Actor, assertProctorAccess, attemptScope } from '../proctor/proctor-access';
 import { draftForAttempt, examSnapshot, finalizeExpiredAttempt, gradeAnswerRecords, publicExam, safeAttempt, snapshotDuration, snapshotForAttempt, submissionDigest } from './attempt-state';
+import { assertQuestionLimit } from '../exams/question-limit';
 import { ATTEMPT_BYTE_LIMIT } from '../evidence/recording-upload-policy';
 
 @Injectable()
@@ -108,6 +109,7 @@ export class AttemptsService {
         }
         return active;
       }
+      assertQuestionLimit(exam.questions.length);
       const snapshot = examSnapshot(exam);
       if (!snapshot.questions.length) throw new BadRequestException('Емтиханда сұрақтар жоқ');
       await this.assertAdmission(tx, userId, exam.courseId, enrollment);

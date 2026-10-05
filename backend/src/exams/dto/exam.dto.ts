@@ -4,6 +4,7 @@ import {
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { QuestionType } from '@prisma/client';
+import { MAX_EXAM_QUESTIONS } from '../question-limit';
 
 export class CreateQuestionDto {
   @ApiProperty({ example: '2 + 2 неге тең?' })
@@ -87,7 +88,7 @@ export class CreateExamDto {
   @ApiProperty({ type: [CreateQuestionDto] })
   @IsArray()
   @ArrayMinSize(0)
-  @ArrayMaxSize(1000)
+  @ArrayMaxSize(MAX_EXAM_QUESTIONS)
   @ValidateNested({ each: true })
   @Type(() => CreateQuestionDto)
   questions: CreateQuestionDto[];

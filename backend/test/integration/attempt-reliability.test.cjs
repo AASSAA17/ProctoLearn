@@ -48,6 +48,55 @@ test('PostgreSQL immutable exams, draft races, retries and admission regressions
       assert.equal(attempt.status, 'IN_PROGRESS');
     });
 
+    await t.test('concurrent additions at 999 commit exactly 1000 questions, with full-size draft/submission and legacy rejection', async () => {
+      const viewer = { id: teacherId, role: 'TEACHER' };
+      const question = { text: 'Maximum fixture', type: 'SINGLE_CHOICE', options: ['A', 'B'], answer: 'A' };
+      const exam = await exams.create(courseId, { title: 'Maximum fixture', duration: 30, questions: Array(999).fill(question) }, viewer);
+      // Force both first transactions to read 999 before either can insert.
+      // Retries bypass the barrier and must observe the winner's committed row.
+      let arrivals = 0;
+      let release;
+      const bothRead = new Promise((resolve) => { release = resolve; });
+      const racingDb = {
+        $transaction: (work, options) => db.$transaction(async (tx) => {
+          const wrapped = new Proxy(tx, { get(target, property) {
+            if (property !== 'exam') return target[property];
+            return new Proxy(tx.exam, { get(model, method) {
+              if (method !== 'findUnique') return model[method];
+              return async (query) => {
+                const result = await model.findUnique(query);
+                if (arrivals < 2) {
+                  arrivals += 1;
+                  if (arrivals === 2) release();
+                  await bothRead;
+                }
+                return result;
+              };
+            } });
+          } });
+          return work(wrapped);
+        }, options),
+      };
+      const racingExams = new ExamsService(racingDb);
+      const results = await Promise.allSettled([
+        racingExams.addQuestion(courseId, exam.id, question, viewer),
+        racingExams.addQuestion(courseId, exam.id, question, viewer),
+      ]);
+      assert.equal(results.filter((result) => result.status === 'fulfilled').length, 1);
+      assert.equal(results.find((result) => result.status === 'rejected').reason.getResponse().code, 'EXAM_QUESTION_LIMIT');
+      assert.equal(await db.question.count({ where: { examId: exam.id } }), 1000);
+      const attempt = await service.startAttempt(exam.id, studentId);
+      const answers = attempt.exam.questions.map(({ id }) => ({ questionId: id, answer: 'A' }));
+      assert.equal((await service.saveDraft(attempt.id, { revision: 0, answers }, studentId)).answers.length, 1000);
+      // Simulate an oversized legacy exam without touching the active snapshot.
+      await db.question.create({ data: { examId: exam.id, ...question } });
+      assert.equal((await service.startAttempt(exam.id, studentId)).exam.questions.length, 1000);
+      const result = await service.submitAnswers(attempt.id, { answers }, studentId);
+      assert.equal(result.score, 100);
+      assert.equal(await db.answer.count({ where: { attemptId: attempt.id } }), 1000);
+      await assert.rejects(service.startAttempt(exam.id, studentId), code('EXAM_QUESTION_LIMIT'));
+    });
+
     await t.test('concurrent draft writes have one winner and cannot silently overwrite a newer revision', async () => {
       const { exam, attempt } = await start();
       const results = await Promise.allSettled([
