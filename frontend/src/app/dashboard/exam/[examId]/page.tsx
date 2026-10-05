@@ -358,10 +358,13 @@ function ExamSession({ examId }: { examId: string }) {
       if (mountedRef.current) { setUploading(true); setUploadError(false); }
       try {
         try {
-          const finished = await Promise.allSettled([
+          const stopping = Promise.allSettled([
             cameraStopRef.current?.() ?? stopRecorder(cameraRecorderRef.current),
             screenStopRef.current?.() ?? stopRecorder(screenRecorderRef.current),
           ]);
+          // Release devices now, but wait for the final dataavailable events before sealing writers.
+          stopAllMedia();
+          const finished = await stopping;
           if (finished.some(({ status }) => status === 'rejected')) throw new Error('Recording did not finish');
         }
         finally { stopAllMedia(); }
@@ -475,12 +478,17 @@ function ExamSession({ examId }: { examId: string }) {
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((deadlineRef.current - performance.now()) / 1000));
       setTimeLeft(remaining);
-      if (!remaining && !expirySubmittedRef.current) { expirySubmittedRef.current = true; void handleSubmitRef.current(); }
+      if (!remaining && !expirySubmittedRef.current) {
+        expirySubmittedRef.current = true;
+        // Capture expiry is independent of submission acknowledgement (or an in-flight manual submit).
+        void uploadRecordings(attempt.id);
+        void handleSubmitRef.current();
+      }
     };
     tick();
     const timer = setInterval(tick, 250);
     return () => clearInterval(timer);
-  }, [attempt, result, starting]);
+  }, [attempt, result, starting, uploadRecordings]);
 
   const updateAnswer = (questionId: string, answer: string) => {
     if (startingRef.current || submissionRef.current || endedRef.current || !timeLeft || draftRef.current?.state.status === 'conflict') return;

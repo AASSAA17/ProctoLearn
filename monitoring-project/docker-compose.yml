@@ -22,6 +22,7 @@ services:
     restart: unless-stopped
     networks:
       - monitoring
+      - application
 
   grafana:
     profiles: ['monitoring']
@@ -49,6 +50,15 @@ services:
     profiles: ['monitoring']
     image: prom/node-exporter:v1.8.2
     container_name: node_exporter
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.rootfs=/host/root"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro,rslave
     ports:
       - "127.0.0.1:9100:9100"
     restart: unless-stopped
@@ -132,6 +142,7 @@ services:
     restart: unless-stopped
     networks:
       - monitoring
+      - application
 
   portainer:
     profiles: ['monitoring']
@@ -294,6 +305,11 @@ services:
       - monitoring
 
 networks:
+  # Compose stacks have separate DNS by default. Select the existing network
+  # containing the application's api service; never publish /metrics publicly.
+  application:
+    external: true
+    name: ${PROCTOLEARN_API_NETWORK:?Set the existing application Docker network containing api}
   monitoring:
     driver: bridge
 
