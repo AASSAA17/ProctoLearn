@@ -195,3 +195,56 @@ test('logout through an expired access session still revokes a refresh rotated c
   assert.equal(user.refreshToken, null);
   assert.equal(user.isOnline, false);
 });
+
+test('mandatory password changes deny ordinary HTTP handlers for every role, not bootstrap or password change', () => {
+  const { JwtAuthGuard } = require('../src/common/guards/jwt-auth.guard');
+  const guard = new JwtAuthGuard();
+  const context = (handler, headers = {}) => ({ getHandler: () => handler, switchToHttp: () => ({ getRequest: () => ({ headers }) }) });
+  const ordinary = () => {};
+  for (const role of ['STUDENT', 'TEACHER', 'PROCTOR', 'ADMIN']) {
+    const user = { id: 'user', role, mustChangePassword: true };
+    assert.throws(() => guard.handleRequest(null, user, null, context(ordinary)), code('PASSWORD_CHANGE_REQUIRED'));
+    for (const handler of [AuthController.prototype.me, AuthController.prototype.changePassword]) {
+      assert.equal(guard.handleRequest(null, user, null, context(handler)), user);
+      assert.throws(() => guard.handleRequest(null, user, null, context(handler, { 'x-session-user': 'other' })), code('AUTH_CHANGED'));
+    }
+    const unrestricted = { ...user, mustChangePassword: false };
+    assert.equal(guard.handleRequest(null, unrestricted, null, context(ordinary)), unrestricted);
+  }
+  assert.throws(() => guard.handleRequest(null, null, null, context(AuthController.prototype.changePassword)), UnauthorizedException);
+});
+
+test('password reset rejects invalid links before hashing and revalidates links after hashing', async () => {
+  const bcrypt = require('bcryptjs');
+  const { BadRequestException } = require('@nestjs/common');
+  const originalHash = bcrypt.hash;
+  let hashes = 0;
+  bcrypt.hash = async () => { hashes++; return 'hashed-password'; };
+  try {
+    for (const candidate of [null, { userId: 'user', expiresAt: new Date(0) }]) {
+      const service = new AuthService({
+        passwordResetToken: { findUnique: async () => candidate },
+        $transaction: async () => assert.fail('invalid tokens must not enter a transaction'),
+      }, jwt, config(), {});
+      await assert.rejects(service.resetPassword({ token: 'invalid', newPassword: 'New!!123' }), BadRequestException);
+    }
+    assert.equal(hashes, 0);
+    for (const changedRecord of [null, { userId: 'user', expiresAt: new Date(0) }]) {
+      const service = new AuthService({
+        passwordResetToken: { findUnique: async () => ({ userId: 'user', expiresAt: new Date(Date.now() + 60_000) }) },
+        $transaction: async (callback) => callback({
+          passwordResetToken: { findUnique: async () => changedRecord },
+          user: { update: async () => assert.fail('consumed/expired token must not update password') },
+        }),
+      }, jwt, config(), {});
+      await assert.rejects(service.resetPassword({ token: 'consumed-during-hash', newPassword: 'New!!123' }), BadRequestException);
+    }
+    assert.equal(hashes, 2);
+  } finally { bcrypt.hash = originalHash; }
+});
+
+test('reset-password has a restrictive endpoint-specific throttle', () => {
+  const { THROTTLER_LIMIT, THROTTLER_TTL } = require('@nestjs/throttler/dist/throttler.constants');
+  assert.equal(Reflect.getMetadata(THROTTLER_LIMIT + 'default', AuthController.prototype.resetPassword), 5);
+  assert.equal(Reflect.getMetadata(THROTTLER_TTL + 'default', AuthController.prototype.resetPassword), 60_000);
+});

@@ -1,5 +1,7 @@
-import { ConflictException, ExecutionContext, Injectable } from '@nestjs/common';
+import { ConflictException, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+
+export const ALLOW_PASSWORD_CHANGE_REQUIRED = 'allowPasswordChangeRequired';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -10,6 +12,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     // to the verified principal so a retry cannot execute under the replacement cookies.
     if (expected !== undefined && (typeof expected !== 'string' || expected !== authenticated.id)) {
       throw new ConflictException({ code: 'AUTH_CHANGED', message: 'Аккаунт өзгерді. Бетті жаңартыңыз.' });
+    }
+    // Only explicitly marked bootstrap/password-change handlers may serve temporary credentials.
+    if (authenticated.mustChangePassword && !Reflect.getMetadata(ALLOW_PASSWORD_CHANGE_REQUIRED, context.getHandler())) {
+      throw new ForbiddenException({ code: 'PASSWORD_CHANGE_REQUIRED', message: 'Парольды өзгертіңіз.' });
     }
     return authenticated;
   }

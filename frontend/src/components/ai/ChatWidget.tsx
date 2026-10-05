@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import api from '@/lib/api';
 import { useChatStore } from '@/store/chat.store';
 
 const SUGGESTIONS = [
@@ -15,8 +14,13 @@ const SUGGESTIONS = [
 ];
 
 export default function ChatWidget() {
+  const sessionVersion = useChatStore((state) => state.sessionVersion);
+  return <ChatPanel key={sessionVersion} />;
+}
+
+function ChatPanel() {
   const pathname = usePathname();
-  const { isOpen, isLoading, messages, courseId, toggleChat, addMessage, setLoading } =
+  const { isOpen, isLoading, messages, sessionVersion, toggleChat, sendMessage } =
     useChatStore();
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -37,26 +41,7 @@ export default function ChatWidget() {
     if (!msg || isLoading) return;
 
     setInput('');
-    addMessage({ role: 'user', content: msg });
-    setLoading(true);
-
-    const history = messages.slice(-6).map((m) => ({ role: m.role, content: m.content }));
-
-    try {
-      const { data } = await api.post<{ reply: string }>('/ai/chat', {
-        message: msg,
-        courseId,
-        history,
-      });
-      addMessage({ role: 'assistant', content: data.reply });
-    } catch {
-      addMessage({
-        role: 'assistant',
-        content: 'Қате орын алды. Сәл кейін қайталаңыз.',
-      });
-    } finally {
-      setLoading(false);
-    }
+    await sendMessage(msg, sessionVersion);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

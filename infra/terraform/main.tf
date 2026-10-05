@@ -54,6 +54,7 @@ resource "docker_container" "redis" {
   image = docker_image.redis.image_id
 
   ports {
+    ip       = "127.0.0.1"
     internal = 6379
     external = var.redis_host_port
   }

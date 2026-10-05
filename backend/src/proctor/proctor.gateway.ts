@@ -3,14 +3,27 @@ import {
   OnGatewayConnection, OnGatewayDisconnect, WsException,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { UsePipes, ValidationPipe } from '@nestjs/common';
+import { ArgumentsHost, Catch, HttpException, WsExceptionFilter, UseFilters, UsePipes, ValidationPipe } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProctorService } from './proctor.service';
+import { ProctorEventLimiter, validateEventMetadata } from './proctor-event-policy';
 import { ProctorEventDto, SessionDto, StartSessionDto } from './proctor.dto';
 import { accessTokenFromRequest } from '../auth/auth-cookies';
 import { configuredOrigins, getFrontendOrigins, isAllowedOrigin } from '../common/config/origins';
+
+// DTO validation runs before the handler; event errors must use the UI channel.
+@Catch(WsException)
+class ProctorEventExceptionFilter implements WsExceptionFilter<WsException> {
+  catch(exception: WsException, host: ArgumentsHost) {
+    const error = exception.getError();
+    host.switchToWs().getClient<Socket>().emit('proctor:error', {
+      code: 'PROCTOR_EVENT_REJECTED',
+      message: typeof error === 'string' ? error : 'Сұрау жарамсыз',
+    });
+  }
+}
 
 // Engine.IO's allowRequest also covers WebSocket upgrades; CORS alone only
 // protects polling. Browser cookies must never authorize a foreign page.
@@ -38,6 +51,8 @@ export class ProctorGateway implements OnGatewayConnection, OnGatewayDisconnect 
   @WebSocketServer()
   server: Server;
 
+  private readonly eventLimiter = new ProctorEventLimiter();
+
   constructor(
     private readonly proctorService: ProctorService,
     private readonly jwtService: JwtService,
@@ -45,20 +60,23 @@ export class ProctorGateway implements OnGatewayConnection, OnGatewayDisconnect 
     private readonly prisma: PrismaService,
   ) {}
 
+  private readToken(client: Socket) {
+    if (!isAllowedOrigin(client.handshake.headers.origin, getFrontendOrigins(this.configService))) throw new Error('Invalid origin');
+    const token = accessTokenFromRequest(client.handshake, this.configService);
+    if (typeof token !== 'string') throw new Error('Missing token');
+    const payload = this.jwtService.verify(token, { secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET') });
+    if (typeof payload.sub !== 'string' || typeof payload.exp !== 'number') throw new Error('Invalid subject or expiry');
+    return payload;
+  }
+
   // Revalidate expiry and the current DB role on EVERY message, not just connection.
   private async authenticate(client: Socket) {
     try {
-      if (!isAllowedOrigin(client.handshake.headers.origin, getFrontendOrigins(this.configService))) throw new Error('Invalid origin');
-      const token = accessTokenFromRequest(client.handshake, this.configService);
-      if (typeof token !== 'string') throw new Error('Missing token');
-      const payload = this.jwtService.verify(token, {
-        secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
-      });
-      if (typeof payload.sub !== 'string' || typeof payload.exp !== 'number') throw new Error('Invalid subject or expiry');
+      const payload = this.readToken(client);
       const user = await this.prisma.user.findUnique({
-        where: { id: payload.sub }, select: { id: true, role: true, tokenVersion: true },
+        where: { id: payload.sub }, select: { id: true, role: true, tokenVersion: true, mustChangePassword: true },
       });
-      if (!user || !Number.isInteger(payload.ver) || user.tokenVersion !== payload.ver) throw new Error('Revoked session');
+      if (!user || user.mustChangePassword || !Number.isInteger(payload.ver) || user.tokenVersion !== payload.ver) throw new Error('Revoked session');
       if (client.data.role && client.data.role !== user.role) throw new Error('Role changed');
       client.data.role = user.role;
       client.data.userId = user.id;
@@ -104,8 +122,18 @@ export class ProctorGateway implements OnGatewayConnection, OnGatewayDisconnect 
     delete client.data.sessionTimer;
   }
 
-  private async safely<T>(work: () => Promise<T>): Promise<T> {
+  private async safely<T>(work: () => Promise<T>, eventClient?: Socket): Promise<T | undefined> {
     try { return await work(); } catch (error) {
+      // Preserve policy codes on the event channel consumed by the exam UI.
+      // Other handlers/errors retain their existing exception semantics.
+      if (eventClient && error instanceof HttpException) {
+        const response = error.getResponse();
+        if (typeof response === 'object' && 'code' in response && 'message' in response
+          && (response.code === 'PROCTOR_EVENT_LIMIT' || response.code === 'PROCTOR_METADATA_INVALID')) {
+          eventClient.emit('proctor:error', { code: response.code, message: response.message });
+          return;
+        }
+      }
       if (error instanceof WsException) throw error;
       const status = (error as { getStatus?: () => number }).getStatus?.();
       throw new WsException(status && status < 500 ? (error as Error).message : 'Сұрауды орындау мүмкін емес');
@@ -118,8 +146,8 @@ export class ProctorGateway implements OnGatewayConnection, OnGatewayDisconnect 
     const sockets = await this.server.in(`attempt:${attemptId}`).fetchSockets();
     await Promise.all(sockets.map(async (socket) => {
       try {
-        const user = await this.prisma.user.findUnique({ where: { id: socket.data.userId }, select: { id: true, role: true, tokenVersion: true } });
-        if (!user || user.tokenVersion !== socket.data.tokenVersion || user.role !== socket.data.role || Date.now() >= socket.data.expiresAt) throw new Error('Revoked session');
+        const user = await this.prisma.user.findUnique({ where: { id: socket.data.userId }, select: { id: true, role: true, tokenVersion: true, mustChangePassword: true } });
+        if (!user || user.mustChangePassword || user.tokenVersion !== socket.data.tokenVersion || user.role !== socket.data.role || Date.now() >= socket.data.expiresAt) throw new Error('Revoked session');
         await this.proctorService.assertSessionAccess(attemptId, user.id, user.role, socket.data.subscriptions?.[attemptId] === true);
         socket.emit(event, payload);
       } catch {
@@ -142,13 +170,23 @@ export class ProctorGateway implements OnGatewayConnection, OnGatewayDisconnect 
   }
 
   @SubscribeMessage('proctor:event')
+  @UseFilters(new ProctorEventExceptionFilter())
   async handleEvent(@ConnectedSocket() client: Socket, @MessageBody() data: ProctorEventDto) {
     return this.safely(async () => {
+      // Verify the signed subject before charging its shared budget. Rejected
+      // floods do not perform authentication/assignment queries or transactions.
+      let subject: string;
+      try { subject = this.readToken(client).sub; } catch {
+        client.disconnect();
+        throw new WsException('Рұқсат жоқ');
+      }
+      this.eventLimiter.consume(subject);
+      validateEventMetadata(data.metadata);
       const user = await this.authenticate(client);
       if (user.role !== 'STUDENT') throw new WsException('Рұқсат жоқ');
       const result = await this.proctorService.recordEvent(data.attemptId, user.id, data.type, data.metadata);
       await this.emitToSession(data.attemptId, 'proctor:event:recorded', result);
-    });
+    }, client);
   }
 
   @SubscribeMessage('proctor:end')

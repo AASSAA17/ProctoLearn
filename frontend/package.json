@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "typecheck": "next typegen && tsc --noEmit --incremental false",
-    "test": "node test/recording.test.cjs && node test/learning-progress.test.cjs && node test/exam-draft.test.cjs && node test/durable-recording.test.cjs && node test/session-coordinator.test.cjs && node test/stage8-ui.test.cjs && node test/role-navigation.test.cjs && node test/proctor-feed.test.cjs",
+    "test": "node test/recording.test.cjs && node test/learning-progress.test.cjs && node test/exam-draft.test.cjs && node test/durable-recording.test.cjs && node test/session-coordinator.test.cjs && node test/stage8-ui.test.cjs && node test/role-navigation.test.cjs && node test/proctor-feed.test.cjs && node test/chat-isolation.test.cjs",
     "test:e2e": "node e2e/stage9.cjs",
     "start": "next start",
     "lint": "eslint ."

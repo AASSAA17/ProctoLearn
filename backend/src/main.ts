@@ -7,12 +7,14 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { collectDefaultMetrics, register } from 'prom-client';
 import { ConfigService } from '@nestjs/config';
 import { getFrontendOrigins } from './common/config/origins';
+import { configuredTrustedProxies } from './common/config/trusted-proxies';
 
 let metricsInitialized = false;
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.enableShutdownHooks();
+  app.set('trust proxy', configuredTrustedProxies(app.get(ConfigService).get('TRUSTED_PROXIES')));
 
   if (!metricsInitialized) {
     collectDefaultMetrics();

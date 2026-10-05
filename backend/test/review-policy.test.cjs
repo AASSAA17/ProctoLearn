@@ -63,7 +63,10 @@ function fixture() {
       if (failures.enrollment) throw new Error('Enrollment storage failed');
       Object.assign(state.enrollment, data); return { count: 1 };
     } },
-    proctorEvent: { create: async ({ data }) => { const event = { id: 'event', ...data }; state.events.push(event); return event; } },
+    proctorEvent: {
+      count: async ({ where }) => state.events.filter((event) => event.attemptId === where.attemptId && (!where.timestamp || event.timestamp >= where.timestamp.gte)).length,
+      create: async ({ data }) => { const event = { id: 'event', timestamp: new Date(), ...data }; state.events.push(event); return event; },
+    },
     $transaction: async (work, options) => {
       assert.equal(options.isolationLevel, 'Serializable');
       const before = structuredClone(state);

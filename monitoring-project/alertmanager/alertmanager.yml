@@ -14,8 +14,8 @@ receivers:
   - name: "telegram-alerts"
     telegram_configs:
       - api_url: "https://api.telegram.org"
-        bot_token: "7613071728:AAH_iDQggErNIC--BSbqupkIVbe4HnLCSE4"
-        chat_id: 6331359365
+        bot_token: "__TELEGRAM_BOT_TOKEN__"
+        chat_id: __TELEGRAM_CHAT_ID__
         parse_mode: "HTML"
         message: |
           {{ if eq .Status "firing" }}🔴 <b>ALERT FIRING</b>{{ else }}✅ <b>RESOLVED</b>{{ end }}

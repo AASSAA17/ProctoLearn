@@ -42,3 +42,35 @@ test('stale summaries and out-of-order socket scores cannot undo a deduction or 
   assert.deepEqual(mergeProctorSignals(latest, { trustScore: 50 }), { trustScore: 50, flaggedAt });
   assert.deepEqual(mergeProctorSignals({ trustScore: 100 }, { trustScore: 0, flaggedAt }), { trustScore: 0, flaggedAt });
 });
+
+
+test('exam socket policy errors display their message without refreshing or reconnecting', async () => {
+  // Execute the actual page listener without camera setup or a copied handler.
+  const pagePath = path.resolve(__dirname, '../src/app/dashboard/exam/[examId]/page.tsx');
+  const source = ts.createSourceFile(pagePath, fs.readFileSync(pagePath, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let listener;
+  function visit(node) {
+    if (ts.isCallExpression(node) && node.expression.getText(source) === 'socket.on'
+      && node.arguments[0]?.text === 'proctor:error') listener = node.arguments[1];
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+  assert.ok(listener, 'exam must subscribe to proctor:error');
+  const js = ts.transpileModule(`const handler = ${listener.getText(source)};`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const notices = [];
+  const mountedRef = { current: true };
+  const handler = new Function('mountedRef', 'endedRef', 'setNotice', 'api', 'socket', `${js}; return handler;`)(
+    mountedRef, { current: false }, (message) => notices.push(message),
+    { get() { assert.fail('policy rejection is not an expired session'); } },
+    { disconnect() { assert.fail('policy rejection must not reconnect'); } },
+  );
+  for (const code of ['PROCTOR_EVENT_LIMIT', 'PROCTOR_METADATA_INVALID', 'PROCTOR_EVENT_REJECTED']) {
+    await handler({ code, message: `Visible ${code}` });
+    assert.equal(notices.at(-1), `Visible ${code}`);
+  }
+  mountedRef.current = false;
+  await handler({ code: 'PROCTOR_EVENT_LIMIT', message: 'late' });
+  assert.equal(notices.length, 3);
+});

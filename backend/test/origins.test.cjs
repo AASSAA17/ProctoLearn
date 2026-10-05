@@ -20,3 +20,33 @@ test('credentialed origins reject missing/null, suffix attacks and unrelated loc
     assert.equal(isAllowedOrigin(origin, allowed), false);
   }
 });
+
+test('trusted proxies require explicit IP/CIDR configuration and reject blanket/hop-count trust', () => {
+  const { configuredTrustedProxies } = require('../src/common/config/trusted-proxies');
+  assert.equal(configuredTrustedProxies(undefined), false);
+  assert.equal(configuredTrustedProxies(''), false);
+  assert.deepEqual(configuredTrustedProxies('127.0.0.1, ::1, 10.1.2.0/24'), ['127.0.0.1', '::1', '10.1.2.0/24']);
+  for (const input of [true, 1, 'true', '1', 'loopback', '*', '0.0.0.0/0', '::/0', '127.0.0.1,', '10.0.0.1/33', '::1/129', '10.0.0.1/24/2']) {
+    assert.throws(() => configuredTrustedProxies(input), /TRUSTED_PROXIES/);
+  }
+});
+
+test('Express client IP separates proxied clients and ignores forged forwarding chains from untrusted sources', () => {
+  const express = require('express');
+  const { configuredTrustedProxies } = require('../src/common/config/trusted-proxies');
+  const app = express();
+  const requestIp = (remoteAddress, forwarded) => {
+    const request = Object.create(app.request);
+    request.app = app;
+    request.connection = { remoteAddress };
+    request.headers = { 'x-forwarded-for': forwarded };
+    return request.ip;
+  };
+  app.set('trust proxy', configuredTrustedProxies(undefined));
+  assert.equal(requestIp('127.0.0.1', '203.0.113.1'), '127.0.0.1');
+  app.set('trust proxy', configuredTrustedProxies('127.0.0.1,::1'));
+  assert.equal(requestIp('127.0.0.1', '203.0.113.1'), '203.0.113.1');
+  assert.equal(requestIp('::1', '203.0.113.2'), '203.0.113.2');
+  assert.equal(requestIp('127.0.0.1', '192.0.2.99, 203.0.113.1'), '203.0.113.1');
+  assert.equal(requestIp('203.0.113.1', '192.0.2.99'), '203.0.113.1');
+});

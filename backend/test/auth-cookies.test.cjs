@@ -9,6 +9,8 @@ const bcrypt = require('bcryptjs');
 const { Test } = require('@nestjs/testing');
 const { APP_GUARD } = require('@nestjs/core');
 const { PassportModule } = require('@nestjs/passport');
+const { ThrottlerModule, ThrottlerGuard } = require('@nestjs/throttler');
+const { configuredTrustedProxies } = require('../src/common/config/trusted-proxies');
 const { ConfigService } = require('@nestjs/config');
 const { JwtService } = require('@nestjs/jwt');
 const { ValidationPipe } = require('@nestjs/common');
@@ -29,7 +31,7 @@ const { ProctorService } = require('../src/proctor/proctor.service');
 
 // Actual controllers, DTO validation, passport strategy, CSRF guard and socket
 // transport. Only external persistence, email and storage IO are fixtures.
-async function fixture(production = false) {
+async function fixture(production = false, throttle = false) {
   const frontend = production ? 'https://learn.example.invalid' : 'http://localhost:3000';
   const config = new ConfigService({ NODE_ENV: production ? 'production' : 'test', FRONTEND_URL: frontend, JWT_ACCESS_SECRET: randomBytes(48).toString('hex'), JWT_REFRESH_SECRET: randomBytes(48).toString('hex') });
   const users = new Map();
@@ -64,10 +66,11 @@ async function fixture(production = false) {
   };
   const jwt = new JwtService();
   const module = await Test.createTestingModule({
-    imports: [PassportModule.register({ defaultStrategy: 'jwt' })],
+    imports: [PassportModule.register({ defaultStrategy: 'jwt' }), ...(throttle ? [ThrottlerModule.forRoot([{ ttl: 60_000, limit: 1000 }])] : [])],
     controllers: [AuthController, EvidenceController],
     providers: [AuthService, AuthCookies, CsrfService, CsrfGuard, JwtStrategy, ProctorGateway,
       { provide: APP_GUARD, useExisting: CsrfGuard },
+      ...(throttle ? [{ provide: APP_GUARD, useClass: ThrottlerGuard }] : []),
       { provide: ConfigService, useValue: config }, { provide: JwtService, useValue: jwt },
       { provide: PrismaService, useValue: db }, { provide: MailService, useValue: mail },
       { provide: EvidenceService, useValue: {} }, { provide: RecordingUploadsService, useValue: uploads },
@@ -76,6 +79,7 @@ async function fixture(production = false) {
     ],
   }).compile();
   const app = module.createNestApplication({ logger: false });
+  if (throttle) app.getHttpAdapter().getInstance().set('trust proxy', configuredTrustedProxies('127.0.0.1,::1'));
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }));
   await app.listen(0, '127.0.0.1');
   const base = await app.getUrl();
@@ -378,4 +382,46 @@ test('connected WebSockets re-check DB tokenVersion, user existence and role bef
       assert.equal(f.calls.socketEvents, 0);
     } finally { if (client) await client.close(); await f.close(); }
   }
+});
+
+test('temporary-password HTTP sessions permit bootstrap, refresh, change and logout but no protected work', async () => {
+  const f = await fixture();
+  try {
+    f.user.mustChangePassword = true;
+    const b = f.browser(); await b.login();
+    assert.equal((await b.request('/auth/me')).body.mustChangePassword, true);
+    assert.equal((await b.request('/auth/refresh', { method: 'POST', body: {} })).status, 201);
+    const blocked = await b.request('/evidence/attempt/uploads', { method: 'POST', body: {} });
+    assert.equal(blocked.status, 403);
+    assert.equal(blocked.body.code, 'PASSWORD_CHANGE_REQUIRED');
+    assert.equal(f.calls.uploadAuthorize, 0);
+    assert.equal((await b.request('/auth/logout', { method: 'POST' })).status, 201);
+    await b.login();
+    const oldCookie = b.cookie();
+    assert.equal((await b.request('/auth/change-password', { method: 'POST', body: { currentPassword: 'Initial!!12', newPassword: 'Changed!!34' } })).status, 201);
+    assert.equal(f.user.mustChangePassword, false);
+    assert.equal((await b.request('/auth/me', { headers: { Cookie: oldCookie } })).status, 401);
+    await b.csrf();
+    assert.equal((await b.request('/auth/login', { method: 'POST', body: { email: f.user.email, password: 'Changed!!34' } })).status, 201);
+    await b.csrf();
+    const data = new FormData(); data.append('file', new Blob(['chunk'], { type: 'video/webm' }), 'chunk.webm');
+    assert.equal((await b.request('/evidence/uploads/upload/chunks/0', { method: 'PUT', body: data })).status, 200);
+    assert.equal(f.calls.uploadWrite, 1);
+  } finally { await f.close(); }
+});
+
+test('reset endpoint throttles invalid-token bursts per proxied client without trusting forged prefixes', async () => {
+  const f = await fixture(false, true);
+  try {
+    const b = f.browser(); await b.csrf();
+    const reset = (forwarded) => b.request('/auth/reset-password', {
+      method: 'POST', body: { token: 'invalid-token', newPassword: 'Strong!!12' },
+      headers: { 'X-Forwarded-For': forwarded },
+    });
+    for (let i = 0; i < 5; i++) assert.equal((await reset('203.0.113.1')).status, 400);
+    assert.equal((await reset('203.0.113.1')).status, 429);
+    assert.equal((await reset('192.0.2.9, 203.0.113.1')).status, 429);
+    assert.equal((await reset('203.0.113.2')).status, 400);
+    assert.equal((await b.request('/auth/csrf')).status, 200);
+  } finally { await f.close(); }
 });
