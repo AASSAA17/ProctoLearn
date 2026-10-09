@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import toast from 'react-hot-toast';
+import PremiumAuthFrame from '@/components/PremiumAuthFrame';
 
 function EyeIcon({ open }: { open: boolean }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       {open ? (
         <>
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -28,17 +29,20 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const login = useAuthStore((s) => s.login);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     try {
       await login(email, password);
       toast.success('Сәтті кірдіңіз!');
       router.push('/dashboard');
     } catch (err: any) {
+      setError(err.response?.data?.message || 'Кіру сәтсіз аяқталды');
       toast.error(err.response?.data?.message || 'Кіру сәтсіз аяқталды');
     } finally {
       setLoading(false);
@@ -46,24 +50,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="card w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-1 mb-4">
-            <span className="text-2xl font-extrabold text-primary-700">Procto</span>
-            <span className="text-2xl font-extrabold text-gray-800">Learn</span>
-          </Link>
-          <p className="text-gray-500 text-sm">Жүйеге кіру</p>
-        </div>
+    <PremiumAuthFrame title="Қайта оралуыңызбен" description="Жеке оқу кеңістігіңізге кіріп, бастаған жолыңызды жалғастырыңыз.">
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5" aria-busy={loading}>
           <div>
             <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
               id="login-email"
               autoComplete="username"
               type="email"
-              className="input"
+              className="input min-h-12"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@example.com"
@@ -78,7 +74,7 @@ export default function LoginPage() {
                 id="login-password"
                 autoComplete="current-password"
                 type={showPassword ? 'text' : 'password'}
-                className="input pr-10"
+                className="input min-h-12 pr-12"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -88,7 +84,7 @@ export default function LoginPage() {
                 type="button"
                 aria-label={showPassword ? 'Парольді жасыру' : 'Парольді көрсету'}
                 aria-pressed={showPassword}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                className="absolute inset-y-0 right-0 flex min-w-11 items-center justify-center rounded-r-xl"
                 onClick={() => setShowPassword((v) => !v)}
               >
                 <EyeIcon open={showPassword} />
@@ -96,7 +92,8 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <button type="submit" className="btn-primary w-full" disabled={loading}>
+          {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+          <button type="submit" className="btn-primary min-h-12 w-full" disabled={loading}>
             {loading ? 'Кіру...' : 'Жүйеге кіру'}
           </button>
         </form>
@@ -110,9 +107,8 @@ export default function LoginPage() {
           </Link>
         </p>
         <p className="text-center mt-4">
-          <Link href="/" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">← Басты бетке оралу</Link>
+          <Link href="/" className="inline-flex min-h-11 items-center rounded-lg text-xs text-gray-600 hover:text-violet-700 transition-colors">← Басты бетке оралу</Link>
         </p>
-      </div>
-    </div>
+    </PremiumAuthFrame>
   );
 }
