@@ -722,11 +722,12 @@ export default function EditCoursePage() {
       </div>
 
       {/* Course info header */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex items-start justify-between gap-4">
+      <div className="workspace-welcome flex flex-wrap items-start justify-between gap-4">
         <div>
+          <p className="workspace-eyebrow">Курс редакторы</p>
           <h1 className="text-xl font-bold text-gray-900">{course.title}</h1>
           {course.description && <p className="text-sm text-gray-500 mt-1">{course.description}</p>}
-          <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+          <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500">
             <span>📦 {course.modules.length} бөлім</span>
             <span>
               📖{' '}

@@ -45,8 +45,9 @@ export default function ChangePasswordPage() {
 
   return (
     <div className="max-w-md mx-auto">
-      <div className="bg-white rounded-2xl shadow-sm p-8">
-        <h1 className="text-xl font-bold text-gray-900 mb-2">🔐 Құпиясөзді өзгерту</h1>
+      <div className="bg-white rounded-2xl shadow-sm p-5 sm:p-8">
+        <p className="workspace-eyebrow">Аккаунт қауіпсіздігі</p>
+        <h1 className="text-xl font-bold text-gray-900 mb-6">Құпиясөзді өзгерту</h1>
         {user && (user as any).mustChangePassword && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-sm text-yellow-800">
             ⚠️ Администратор құпиясөзді жаңалады. Кіруден бұрын жаңа құпиясөз орнатуыңыз керек.
@@ -55,16 +56,16 @@ export default function ChangePasswordPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ағымдағы құпиясөз</label>
-            <input type="password"
+            <label htmlFor="current-password" className="block text-sm font-medium text-gray-700 mb-1">Ағымдағы құпиясөз</label>
+            <input id="current-password" type="password" autoComplete="current-password"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={form.currentPassword}
               onChange={e => setForm(p => ({ ...p, currentPassword: e.target.value }))}
               required />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Жаңа құпиясөз</label>
-            <input type="password"
+            <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">Жаңа құпиясөз</label>
+            <input id="new-password" type="password" autoComplete="new-password" aria-describedby="password-requirements"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={form.newPassword}
               onChange={e => setForm(p => ({ ...p, newPassword: e.target.value }))}
@@ -79,7 +80,7 @@ export default function ChangePasswordPage() {
                 <p className={`text-xs ${STRENGTH_TEXT[pwA.score]}`}>{STRENGTH_LABELS[pwA.score]}</p>
               </div>
             )}
-            <div className="mt-1 space-y-0.5">
+            <div id="password-requirements" className="mt-1 space-y-0.5">
               {[
                 { ok: pwA.checks.bytes, l: 'Ең көбі 72 UTF-8 байт' },
                 { ok: pwA.checks.length, l: 'Кемінде 6 символ' },
@@ -91,13 +92,13 @@ export default function ChangePasswordPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Құпиясөзді растау</label>
-            <input type="password"
+            <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-1">Құпиясөзді растау</label>
+            <input id="confirm-password" type="password" autoComplete="new-password" aria-invalid={mismatch} aria-describedby={mismatch ? 'password-mismatch' : undefined}
               className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${mismatch ? 'border-red-400' : 'border-gray-300'}`}
               value={form.confirmPassword}
               onChange={e => setForm(p => ({ ...p, confirmPassword: e.target.value }))}
               required />
-            {mismatch && <p className="text-xs text-red-500 mt-1">Құпиясөздер сәйкес келмейді</p>}
+            {mismatch && <p id="password-mismatch" role="alert" className="text-xs text-red-700 mt-1">Құпиясөздер сәйкес келмейді</p>}
           </div>
           <button type="submit" disabled={loading || !isValid || mismatch}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2.5 rounded-lg transition-colors">

@@ -41,7 +41,8 @@ export default function NewCoursePage() {
         <span className="text-gray-900 font-medium">Жаңа курс</span>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-8">
+        <p className="workspace-eyebrow">Біліммен бөлісіңіз</p>
         <h1 className="text-xl font-bold text-gray-900 mb-6">Жаңа курс жасау</h1>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -85,7 +86,7 @@ export default function NewCoursePage() {
             </select>
           </div>
 
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex flex-wrap items-center gap-3 pt-2">
             <button
               type="submit"
               disabled={submitting}

@@ -38,7 +38,7 @@ export default function AdminCoursesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="workspace-page-header">
         <div>
           <Link href="/dashboard/admin" className="text-sm text-blue-600 hover:underline">← Артқа</Link>
           <h1 className="text-2xl font-bold text-gray-900 mt-1">Курстар статистикасы</h1>
@@ -54,7 +54,7 @@ export default function AdminCoursesPage() {
       ) : loadError ? (
         <LoadFailure onRetry={retry} />
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm overflow-x-auto" role="region" aria-label="Курстар статистикасы кестесі" tabIndex={0}>
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>

@@ -72,8 +72,9 @@ export default function TeacherCoursesPage() {
   return (
     <div className="max-w-5xl space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="workspace-page-header">
         <div>
+          <p className="workspace-eyebrow">Оқыту кеңістігі</p>
           <h1 className="text-2xl font-bold text-gray-900">{isAdmin ? 'Барлық курстар' : 'Менің курстарым'}</h1>
           <p className="text-gray-500 text-sm mt-1">Курстарды басқару</p>
         </div>
@@ -86,13 +87,14 @@ export default function TeacherCoursesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {['BEGINNER', 'INTERMEDIATE', 'ADVANCED'].map((level) => {
           const count = courses.filter((c) => c.level === level).length;
           const info = LEVEL_LABELS[level];
           return (
-            <div key={level} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm text-center">
-              <p className="text-2xl font-bold text-gray-900">{count}</p>
+            <div key={level} className="workspace-stat">
+              <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${info.color}`}>{info.label}</span>
+              <p className="workspace-stat-value text-gray-900">{count}</p>
               <p className="text-xs text-gray-500 mt-1">{info.label}</p>
             </div>
           );
@@ -124,14 +126,14 @@ export default function TeacherCoursesPage() {
                 key={course.id}
                 className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition"
               >
-                <div className="flex items-start gap-4">
+                <div className="flex flex-col sm:flex-row items-start gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${level.color}`}>
                         {level.label}
                       </span>
                     </div>
-                    <h3 className="font-semibold text-gray-900 text-base truncate">{course.title}</h3>
+                    <h3 className="font-semibold text-gray-900 text-xl">{course.title}</h3>
                     {course.description && (
                       <p className="text-sm text-gray-500 mt-1 line-clamp-2">{course.description}</p>
                     )}

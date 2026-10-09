@@ -1,5 +1,7 @@
 'use client';
 
+import { WorkspaceDialog } from '../../WorkspaceDialog';
+
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
@@ -138,11 +140,11 @@ export default function AdminUsersPage() {
         </button>
       </div>
 
-      <form onSubmit={handleSearch} className="flex gap-2">
-        <input aria-label="Пайдаланушыны іздеу" className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      <form onSubmit={handleSearch} className="flex gap-2 rounded-2xl border border-slate-200 bg-white p-3">
+        <input aria-label="Пайдаланушыны іздеу" className="min-w-0 flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={search} onChange={e => setSearch(e.target.value)} placeholder="Атауы немесе email бойынша іздеу..." />
         <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg">Іздеу</button>
-        {search && <button type="button" onClick={() => { setSearch(''); load(''); }} className="text-gray-500 px-3">✕</button>}
+        {search && <button type="button" aria-label="Іздеуді тазалау" onClick={() => { setSearch(''); load(''); }} className="text-gray-500 px-3">✕</button>}
       </form>
 
       {loading ? (
@@ -151,7 +153,7 @@ export default function AdminUsersPage() {
         <LoadFailure onRetry={() => load(search)} />
       ) : (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" role="region" aria-label="Пайдаланушылар кестесі" tabIndex={0}>
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b">
                 <tr>
@@ -214,7 +216,7 @@ export default function AdminUsersPage() {
 
       {/* Grant Access Modal */}
       {grantModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <WorkspaceDialog title="Курсқа рұқсат беру" onDismiss={() => setGrantModal(null)} busy={grantLoading}>
           <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
             <h3 className="text-lg font-bold text-gray-900 mb-1">🎓 Курсқа рұқсат беру</h3>
             <p className="text-sm text-gray-500 mb-4">
@@ -287,13 +289,13 @@ export default function AdminUsersPage() {
               </button>
             </div>
           </div>
-        </div>
+        </WorkspaceDialog>
       )}
 
       {/* Уақытша пароль модалы */}
       {tempPassModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl">
+        <WorkspaceDialog title="Уақытша пароль жасалды" onDismiss={() => setTempPassModal(null)}>
+          <div className="bg-white rounded-2xl p-6 sm:p-8 w-full">
             <h3 className="text-lg font-bold text-gray-900 mb-4">✅ Уақытша пароль жасалды</h3>
             <p className="text-sm text-gray-600 mb-2"><strong>Email:</strong> {tempPassModal.email}</p>
             <p className="text-sm text-gray-700 my-4">Уақытша пароль пайдаланушының поштасына жіберілді. Кіргеннен кейін оны ауыстыру қажет.</p>
@@ -302,7 +304,7 @@ export default function AdminUsersPage() {
               Жабу
             </button>
           </div>
-        </div>
+        </WorkspaceDialog>
       )}
     </div>
   );

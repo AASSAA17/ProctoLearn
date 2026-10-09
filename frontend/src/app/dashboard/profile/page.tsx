@@ -43,12 +43,13 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-lg">
+      <p className="workspace-eyebrow">Жеке кабинет</p>
       <h1 className="text-2xl font-bold text-gray-900 mb-8">Менің профилім</h1>
 
       {/* Info card */}
-      <div className="card mb-6">
+      <div className="workspace-welcome mb-6">
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center text-2xl font-bold text-primary-700">
+          <div className="w-16 h-16 shrink-0 rounded-2xl bg-primary-100 flex items-center justify-center text-2xl font-bold text-primary-700">
             {info?.name?.[0]?.toUpperCase() ?? '?'}
           </div>
           <div>
