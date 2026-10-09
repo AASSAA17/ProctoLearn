@@ -23,7 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="kk" className={inter.variable}>
-      <body className="font-sans bg-gray-50 min-h-screen antialiased">
+      <body className="font-sans bg-[var(--dashboard-bg)] min-h-screen antialiased">
         {children}
         <Toaster position="top-right" />
       </body>

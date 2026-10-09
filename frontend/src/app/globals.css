@@ -2,39 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --foreground-rgb: 15, 23, 42;
+  --background-rgb: 246, 247, 251;
+  --marketing-bg: #080b14;
+  --marketing-surface: #101522;
+  --marketing-surface-strong: #151b2c;
+  --marketing-text: #f8fafc;
+  --marketing-muted: #a9b3c7;
+  --marketing-border: rgba(148, 163, 184, 0.18);
+  --marketing-bg-secondary: #101525;
+  --marketing-accent: #7965f2;
+  --marketing-accent-hover: #927fff;
+  --marketing-accent-secondary: #38bdf8;
+  --marketing-text-secondary: #a8b3ca;
+  --accent-violet: #8b5cf6;
+  --accent-cyan: #22d3ee;
+  --dashboard-bg: #f6f7fb;
+  --dashboard-surface: #ffffff;
+  --dashboard-text: #172033;
+  --dashboard-muted: #667085;
+  --dashboard-border: #e6eaf0;
+  --dashboard-surface-muted: #f0f2f8;
+  --dashboard-accent: #6754e8;
+  --dashboard-accent-hover: #5742d2;
+  --dashboard-text-secondary: #677086;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --shadow-card: 0 2px 4px rgb(23 32 51 / 2%), 0 12px 32px rgb(23 32 51 / 4%);
+  --motion-feedback: 150ms;
+  --motion-hover: 220ms;
+}
+
 @layer base {
-  :root {
-    --foreground-rgb: 0, 0, 0;
-    --background-rgb: 249, 250, 251;
-  }
+  * { @apply border-gray-200; }
+  html { scroll-behavior: smooth; }
+  body { @apply antialiased; color: var(--dashboard-text); background: var(--dashboard-bg); }
+  h1, h2, h3, h4 { @apply tracking-tight; overflow-wrap: anywhere; }
+  button, input, textarea, select { font: inherit; }
+  ::selection { background: rgba(139, 92, 246, 0.25); color: inherit; }
+  :focus-visible { @apply outline-none ring-2 ring-violet-500 ring-offset-2; }
 }
 
 @layer components {
-  .btn-primary {
-    @apply bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed;
-  }
+  .btn-primary { @apply bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed; }
+  .btn-secondary { @apply bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium; }
+  .input { @apply w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent; }
+  .card { @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6; }
+  .badge-success { @apply bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+  .badge-warning { @apply bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+  .badge-danger { @apply bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+  .marketing-shell { background: var(--marketing-bg); color: var(--marketing-text); }
+  .marketing-grid { background-image: linear-gradient(rgba(148,163,184,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.07) 1px, transparent 1px); background-size: 44px 44px; }
+  .premium-card { @apply rounded-3xl border bg-white/5 backdrop-blur-xl; border-color: var(--marketing-border); }
+  .premium-button { @apply inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition-all duration-200; }
+  .dashboard-surface { background: var(--dashboard-surface); border-color: var(--dashboard-border); }
+  .dashboard-card { @apply rounded-2xl border bg-white shadow-sm; border-color: var(--dashboard-border); }
+  .eyebrow { @apply text-xs font-semibold uppercase tracking-[0.18em]; }
+  .skip-link { @apply sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-white focus:p-4 focus:text-violet-800 focus:shadow-lg; }
+  .marketing-shell :focus-visible { outline: 2px solid #67e8f9; outline-offset: 4px; box-shadow: none; }
+}
 
-  .btn-secondary {
-    @apply bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium;
-  }
-
-  .input {
-    @apply w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
-  }
-
-  .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
-  }
-
-  .badge-success {
-    @apply bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full;
-  }
-
-  .badge-warning {
-    @apply bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full;
-  }
-
-  .badge-danger {
-    @apply bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full;
-  }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }
