@@ -435,7 +435,7 @@ async function main() {
   try {
     const publicPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
     await publicPage.goto(web);
-    await publicPage.locator('#courses').getByRole('heading', { name: 'Курстар', exact: true }).waitFor();
+    await publicPage.locator('#courses').getByRole('heading', { name: 'Қолжетімді курстар', exact: true }).waitFor();
     assert.ok(await publicPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     assert.equal(await publicPage.getByText('1 000+').count(), 0);
     let catalogUnavailable = true;
@@ -445,7 +445,7 @@ async function main() {
     };
     await publicPage.route('**/courses?*', interceptCatalog);
     await publicPage.goto(`${web}/courses`);
-    await publicPage.getByRole('heading', { name: 'Барлық курстар' }).waitFor();
+    await publicPage.getByRole('heading', { name: /Жаңа дағды.*Жаңа мүмкіндік/ }).waitFor();
     await publicPage.getByRole('alert').getByText('Курстарды жүктеу мүмкін болмады.').waitFor();
     catalogUnavailable = false;
     await publicPage.getByRole('alert').getByRole('button', { name: 'Қайта жүктеу' }).click();
@@ -700,8 +700,8 @@ async function main() {
     await mobile.page.getByRole('heading', { name: 'Курстар' }).waitFor();
     assert.ok(await mobile.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     await mobile.page.getByRole('button', { name: 'Мәзірді ашу' }).click();
-    assert.equal(await mobile.page.getByRole('button', { name: 'Мәзірді жабу' }).getAttribute('aria-expanded'), 'true');
-    await mobile.page.getByRole('link', { name: 'Хабарландырулар' }).last().click();
+    assert.equal(await mobile.page.getByRole('dialog', { name: 'Жұмыс кеңістігінің мәзірі' }).isVisible(), true);
+    await mobile.page.getByRole('dialog', { name: 'Жұмыс кеңістігінің мәзірі' }).getByRole('link', { name: 'Хабарландырулар' }).click();
     await mobile.page.waitForURL('**/dashboard/notifications');
     assert.ok(await mobile.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     await auditPage(mobile.page);
