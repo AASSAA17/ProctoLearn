@@ -1,17 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowRightIcon, Bars3Icon, XMarkIcon, CheckIcon, CodeBracketIcon } from '@heroicons/react/24/outline';
 import { API_URL } from '@/lib/api';
-import {
-  TechCategoriesSection,
-  FeaturesSection,
-  HowItWorksSection,
-  CTABanner,
-  Footer,
-} from '@/components/landing/sections';
-
-import GooeyNav from '@/components/landing/GooeyNav';
+import PremiumHeroScene from '@/components/landing/PremiumHeroScene';
+import { TechnologyCategories, PremiumFeatures, LearningProcess, PremiumCTA } from '@/components/landing/PremiumSections';
 
 interface Course {
   id: string;
@@ -22,222 +16,163 @@ interface Course {
   _count?: { lessons: number; enrollments: number };
 }
 
-const LEVEL_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  BEGINNER:     { label: 'Бастаушы',    color: 'text-green-700',  bg: 'bg-green-100' },
-  INTERMEDIATE: { label: 'Орта',        color: 'text-yellow-700', bg: 'bg-yellow-100' },
-  ADVANCED:     { label: 'Жоғары',      color: 'text-red-700',    bg: 'bg-red-100' },
+const LEVELS = [
+  { id: 'ALL', label: 'Барлығы' },
+  { id: 'BEGINNER', label: 'Бастаушы' },
+  { id: 'INTERMEDIATE', label: 'Орта деңгей' },
+  { id: 'ADVANCED', label: 'Жоғары деңгей' },
+];
+const LEVEL_STYLES: Record<string, string> = {
+  BEGINNER: 'text-emerald-200 bg-emerald-400/10 border-emerald-300/20',
+  INTERMEDIATE: 'text-amber-200 bg-amber-400/10 border-amber-300/20',
+  ADVANCED: 'text-rose-200 bg-rose-400/10 border-rose-300/20',
 };
 
-const FEATURES = [
-  {
-    icon: '🏆',
-    title: 'Сертификат аласыз',
-    desc: 'Курсты аяқтап, емтихан нәтижесін тексеруден өткізген соң PDF сертификатын жүктей аласыз.',
-  },
-  {
-    icon: '👁️',
-    title: 'Прокторинг жүйесі',
-    desc: 'Браузер оқиғаларын тіркеу, видео жазба және Trust Score арқылы емтихан барысын бақылау.',
-  },
-  {
-    icon: '📚',
-    title: 'Қадамдай оқыту',
-    desc: 'Тақырыпты түсін — тапсырма орында — емтихан тапсыр. Нәтижелі оқу жолы.',
-  },
-  {
-    icon: '🔒',
-    title: 'Кезекпен өту',
-    desc: 'Алдыңғы сабақты аяқтамай келесіге өте алмайсыз. Білімді тереңдетіп,сапалы оқитын жүйе.',
-  },
-  {
-    icon: '🌐',
-    title: 'Қазақ тілінде',
-    desc: 'Платформа интерфейсі қазақ тілінде. Оқу материалдарының тілі курсқа байланысты.',
-  },
-  {
-    icon: '💻',
-    title: 'Тегін бастау',
-    desc: 'Тіркелу тегін. Алғашқы курсты тегін бастаңыз. Сапалы білім — барлығына қолжетімді.',
-  },
-];
+function MarketingNavigation() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const toggle = useRef<HTMLButtonElement>(null);
+  const links = [['#courses', 'Курстар'], ['#features', 'Мүмкіндіктер'], ['#how', 'Оқу жолы']];
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { setMenuOpen(false); toggle.current?.focus(); }
+    };
+    document.addEventListener('keydown', close);
+    return () => document.removeEventListener('keydown', close);
+  }, [menuOpen]);
+
+  return (
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#080b14]/90 backdrop-blur-xl">
+      <nav aria-label="Негізгі навигация" className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+        <Link href="/" className="text-xl font-black tracking-tight text-white">Procto<span className="text-cyan-300">Learn</span></Link>
+        <div className="hidden items-center gap-7 text-sm text-slate-300 md:flex">
+          {links.map(([href, label]) => <a key={href} href={href} className="py-3 hover:text-white">{label}</a>)}
+        </div>
+        <div className="hidden items-center gap-3 md:flex">
+          <Link href="/auth/login" className="px-3 py-3 text-sm text-slate-300 hover:text-white">Кіру</Link>
+          <Link href="/auth/register" className="premium-button bg-white text-slate-950 hover:bg-cyan-100">Бастау</Link>
+        </div>
+        <button ref={toggle} type="button" aria-expanded={menuOpen} aria-controls="marketing-menu" aria-label={menuOpen ? 'Мәзірді жабу' : 'Мәзірді ашу'} onClick={() => setMenuOpen((open) => !open)} className="rounded-xl border border-white/20 p-3 text-slate-200 md:hidden">
+          {menuOpen ? <XMarkIcon aria-hidden="true" className="h-5 w-5" /> : <Bars3Icon aria-hidden="true" className="h-5 w-5" />}
+        </button>
+      </nav>
+      {menuOpen && (
+        <nav id="marketing-menu" aria-label="Мобильді навигация" className="flex flex-col gap-1 border-t border-white/10 px-4 py-4 text-sm text-slate-200 md:hidden">
+          {links.map(([href, label]) => <a key={href} href={href} onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 hover:bg-white/5">{label}</a>)}
+          <Link href="/auth/login" className="px-3 py-3">Кіру</Link>
+          <Link href="/auth/register" className="premium-button mt-2 bg-white text-slate-950">Тіркелу</Link>
+        </nav>
+      )}
+    </header>
+  );
+}
 
 export default function HomePage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [coursesError, setCoursesError] = useState(false);
   const [reloadCourses, setReloadCourses] = useState(0);
-
-  const retryCourses = () => {
-    setLoadingCourses(true);
-    setCoursesError(false);
-    setReloadCourses((value) => value + 1);
-  };
-  const [activeLevel, setActiveLevel] = useState<string>('ALL');
+  const [activeLevel, setActiveLevel] = useState('ALL');
 
   useEffect(() => {
     fetch(`${API_URL}/courses?limit=100`)
       .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-      .then((data) => {
-        const list = Array.isArray(data) ? data : data?.data ?? [];
-        setCourses(list);
-      })
+      .then((data) => setCourses(Array.isArray(data) ? data : data?.data ?? []))
       .catch(() => { setCourses([]); setCoursesError(true); })
       .finally(() => setLoadingCourses(false));
   }, [reloadCourses]);
 
-  const filtered = activeLevel === 'ALL' ? courses : courses.filter((c) => c.level === activeLevel);
+  const filtered = activeLevel === 'ALL' ? courses : courses.filter((course) => course.level === activeLevel);
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* ─── Gooey Navigation ─── */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-2xl font-extrabold text-primary-700">Procto</span>
-            <span className="text-2xl font-extrabold text-gray-800">Learn</span>
-          </Link>
-          
-          <div className="hidden lg:block flex-1 max-w-sm">
-            <GooeyNav
-              items={[
-                { label: 'Курстар', href: '#courses' },
-                { label: 'Мүмкіндіктер', href: '#features' },
-              ]}
-              initialActiveIndex={0}
-              animationTime={600}
-              particleCount={15}
-              colors={[1, 2, 3, 1, 2]}
-            />
+    <div className="marketing-shell min-h-screen">
+      <a href="#main-content" className="skip-link">Негізгі мазмұнға өту</a>
+      <MarketingNavigation />
+      <main id="main-content" tabIndex={-1}>
+        <section className="marketing-grid overflow-hidden border-b border-white/10">
+          <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:py-24">
+            <div className="min-w-0">
+              <p className="eyebrow mb-5 text-cyan-300">Білімге жаңа көзқарас</p>
+              <h1 className="max-w-3xl text-[clamp(2.5rem,5vw,4.5rem)] font-bold leading-[1.08] text-white">
+                Болашағыңды <span className="bg-gradient-to-r from-violet-300 to-cyan-300 bg-clip-text text-transparent">біліммен</span> қалыптастыр.
+              </h1>
+              <p className="mt-6 max-w-xl text-lg leading-8 text-slate-300">Технологиялық дағдыларды жүйелі меңгер. Практикалық тапсырмалар орындап, емтихан арқылы өз прогресіңді көр.</p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link href="/auth/register" className="premium-button gap-3 bg-violet-600 text-white shadow-lg shadow-violet-500/20 hover:bg-violet-700">Оқуды бастау <ArrowRightIcon aria-hidden="true" className="h-4 w-4" /></Link>
+                <a href="#courses" className="premium-button border border-white/20 bg-white/5 text-white hover:bg-white/10">Курстарды көру</a>
+              </div>
+              <ul className="mt-8 flex flex-wrap gap-x-5 gap-y-3 text-xs text-slate-300">
+                {['Қазақ тіліндегі интерфейс', 'Жеке оқу прогресі', 'QR тексеру'].map((benefit) => <li key={benefit} className="flex items-center gap-2"><CheckIcon aria-hidden="true" className="h-4 w-4 text-cyan-300" />{benefit}</li>)}
+              </ul>
+            </div>
+            <PremiumHeroScene />
           </div>
+        </section>
+        <TechnologyCategories />
+        <PremiumFeatures />
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/auth/login"
-              className="text-sm text-gray-700 font-medium hover:text-primary-700 transition-colors"
-            >
-              Кіру
-            </Link>
-            <Link
-              href="/auth/register"
-              className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors"
-            >
-              Тегін бастау
-            </Link>
-          </div>
-        </div>
-
-      </nav>
-
-      <section className="bg-gradient-to-br from-primary-800 via-primary-700 to-primary-600 text-white py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
-          <h1 className="text-4xl sm:text-5xl font-extrabold mb-4">Технологияны өзінше үйрен</h1>
-          <p className="text-lg sm:text-xl text-primary-100 mb-8">Интерактивті платформада сертификат аласыз</p>
-          <Link
-            href="/auth/register"
-            className="inline-flex items-center bg-white text-primary-700 font-semibold px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            Бұл сәтті бастаңыз →
-          </Link>
-        </div>
-      </section>
-
-      <TechCategoriesSection />
-
-      {/* ─── Featured Courses ─── */}
-      <section id="courses" className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Курстар</h2>
-          <p className="text-gray-500 mb-8">Қазір қолжетімді оқу бағыттары</p>
-
-          {/* Level filter tabs */}
-          <div className="flex gap-2 mb-8 flex-wrap">
-            {['ALL', 'BEGINNER', 'INTERMEDIATE', 'ADVANCED'].map((lvl) => (
-              <button
-                key={lvl}
-                onClick={() => setActiveLevel(lvl)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeLevel === lvl
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {lvl === 'ALL' ? '📋 Барлығы' :
-                 lvl === 'BEGINNER' ? '🟢 Бастаушы' :
-                 lvl === 'INTERMEDIATE' ? '🟡 Орта' : '🔴 Жоғары'}
-              </button>
-            ))}
-          </div>
-
-          {loadingCourses ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1,2,3,4,5,6].map((i) => (
-                <div key={i} className="bg-gray-100 rounded-2xl h-56 animate-pulse"></div>
+        <section id="courses" aria-labelledby="courses-heading" className="scroll-mt-20 border-y border-white/10 bg-[#0c111e] py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+              <div>
+                <p className="eyebrow text-cyan-300">Кітапхана</p>
+                <h2 id="courses-heading" className="mt-3 text-3xl font-bold text-white sm:text-4xl">Қолжетімді курстар</h2>
+                <p className="mt-3 text-slate-300">Өзіңе сәйкес бағытты таңда.</p>
+              </div>
+              <Link href="/courses" className="py-3 text-sm font-semibold text-cyan-300 hover:text-cyan-200">Барлық курстар →</Link>
+            </div>
+            <div role="group" aria-label="Курс деңгейі" className="mt-8 flex flex-wrap gap-2">
+              {LEVELS.map((level) => (
+                <button key={level.id} type="button" aria-pressed={activeLevel === level.id} onClick={() => setActiveLevel(level.id)} className={`min-h-11 rounded-full border px-4 py-2 text-sm transition-colors ${activeLevel === level.id ? 'border-violet-300/40 bg-violet-400/20 text-white' : 'border-white/20 bg-white/5 text-slate-300 hover:text-white'}`}>
+                  {level.label}
+                </button>
               ))}
             </div>
-          ) : coursesError ? (
-            <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-8 text-center text-red-800">
-              <p>Курстарды жүктеу мүмкін болмады.</p>
-              <button type="button" className="mt-3 underline" onClick={retryCourses}>Қайта жүктеу</button>
-            </div>
-          ) : filtered.length === 0 ? (
-            <p className="rounded-xl border border-gray-200 bg-gray-50 p-8 text-center text-gray-600">Бұл деңгейде әзірге курс жоқ.</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filtered.slice(0, 9).map((course) => {
-                const lvl = LEVEL_LABELS[course.level] || LEVEL_LABELS.BEGINNER;
-                return (
-                  <Link
-                    key={course.id}
-                    href={`/courses/${encodeURIComponent(course.id)}`}
-                    className="bg-white rounded-2xl border border-gray-200 hover:border-primary-300 hover:shadow-lg transition-all group overflow-hidden"
-                  >
-                    <div className={`h-3 w-full ${
-                      course.level === 'BEGINNER' ? 'bg-green-400' :
-                      course.level === 'INTERMEDIATE' ? 'bg-yellow-400' : 'bg-red-400'
-                    }`}></div>
+            <div aria-live="polite" className="mt-5 text-sm text-slate-400">{loadingCourses ? 'Курстар жүктелуде…' : !coursesError ? `${filtered.length} курс табылды` : ''}</div>
+            {loadingCourses ? (
+              <div aria-hidden="true" className="mt-6 grid gap-4 md:grid-cols-3">{[1, 2, 3].map((item) => <div key={item} className="h-72 animate-pulse rounded-3xl bg-white/5" />)}</div>
+            ) : coursesError ? (
+              <div role="alert" className="mt-6 rounded-2xl border border-rose-300/20 bg-rose-400/10 p-8 text-center text-rose-100">
+                <p>Курстарды жүктеу мүмкін болмады.</p>
+                <button type="button" className="mt-3 min-h-11 rounded-lg border border-rose-200/40 px-4 py-2 underline" onClick={() => { setLoadingCourses(true); setCoursesError(false); setReloadCourses((v) => v + 1); }}>Қайта жүктеу</button>
+              </div>
+            ) : filtered.length === 0 ? (
+              <p className="mt-6 rounded-2xl border border-white/10 p-8 text-center text-slate-300">Бұл деңгейде әзірге курс жоқ.</p>
+            ) : (
+              <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {filtered.slice(0, 9).map((course) => (
+                  <Link key={course.id} href={`/courses/${encodeURIComponent(course.id)}`} className="premium-card group overflow-hidden transition duration-200 hover:-translate-y-1 hover:border-violet-300/40">
+                    <div aria-hidden="true" className="marketing-grid flex h-32 items-center justify-between border-b border-white/10 bg-gradient-to-br from-violet-500/15 to-cyan-400/5 px-7">
+                      <CodeBracketIcon className="h-12 w-12 text-violet-300/80" /><span className="text-xs tracking-[0.2em] text-slate-300">PROCTOLEARN</span>
+                    </div>
                     <div className="p-6">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${lvl.bg} ${lvl.color}`}>
-                          {lvl.label}
-                        </span>
-                        {course._count?.lessons && (
-                          <span className="text-xs text-gray-400">{course._count.lessons} сабақ</span>
-                        )}
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${LEVEL_STYLES[course.level] ?? LEVEL_STYLES.BEGINNER}`}>{LEVELS.find((level) => level.id === course.level)?.label ?? course.level}</span>
+                        {course._count?.lessons !== undefined && <span className="text-xs text-slate-400">{course._count.lessons} сабақ</span>}
                       </div>
-                      <h3 className="font-bold text-gray-900 text-base mb-2 group-hover:text-primary-700 transition-colors line-clamp-2">
-                        {course.title}
-                      </h3>
-                      <p className="text-sm text-gray-500 line-clamp-2 mb-4">{course.description}</p>
-                      {course.teacher && (
-                        <p className="text-xs text-gray-400 flex items-center gap-1">
-                          <span className="w-5 h-5 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center text-xs font-bold">
-                            {course.teacher.name[0]}
-                          </span>
-                          {course.teacher.name}
-                        </p>
-                      )}
+                      <h3 className="mt-5 line-clamp-2 text-[1.375rem] font-semibold text-white group-hover:text-cyan-200">{course.title}</h3>
+                      <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-300">{course.description}</p>
+                      {course.teacher && <p className="mt-6 text-xs text-slate-400">Автор: {course.teacher.name}</p>}
                     </div>
                   </Link>
-                );
-              })}
-            </div>
-          )}
-
-          <div className="text-center mt-10">
-            <Link
-              href="/courses"
-              className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold px-8 py-3 rounded-xl transition-colors"
-            >
-              Барлық курстарды көру →
-            </Link>
+                ))}
+              </div>
+            )}
           </div>
+        </section>
+        <LearningProcess />
+        <PremiumCTA />
+      </main>
+      <footer className="border-t border-white/10">
+        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-8 px-4 py-12 sm:flex-row sm:px-6">
+          <div><p className="text-lg font-bold text-white">ProctoLearn</p><p className="mt-3 max-w-sm text-sm leading-6 text-slate-400">Үйренуге, тәжірибе жинауға және нәтижені бағалауға арналған орта.</p></div>
+          <nav aria-label="Қосымша навигация" className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-300">
+            <Link href="/courses" className="py-3 hover:text-white">Курстар</Link><Link href="/auth/login" className="py-3 hover:text-white">Кіру</Link><Link href="/auth/register" className="py-3 hover:text-white">Тіркелу</Link>
+          </nav>
         </div>
-      </section>
-
-      <FeaturesSection features={FEATURES} />
-      <HowItWorksSection />
-      <CTABanner />
-      <Footer />
+        <div className="mx-auto max-w-7xl border-t border-white/10 px-4 py-6 text-xs text-slate-400 sm:px-6">© {new Date().getFullYear()} ProctoLearn</div>
+      </footer>
     </div>
   );
 }
