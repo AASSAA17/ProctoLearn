@@ -6,6 +6,7 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import LoadFailure from '@/components/LoadFailure';
 import { staffHome } from '@/lib/role-navigation';
+import { NavIcon } from '@/components/nav-icon';
 
 interface Enrollment {
   id: string;
@@ -37,13 +38,15 @@ export default function DashboardPage() {
 function StaffDashboard({ user }: { user: User }) {
   if (user.role === 'STUDENT') return null;
   return <div className="space-y-6">
-    <div className="rounded-2xl bg-white p-6 shadow-sm">
-      <p className="text-sm text-gray-500">Қош келдіңіз!</p>
+    <div className="workspace-welcome">
+      <p className="workspace-eyebrow">Сіздің жұмыс кеңістігіңіз</p>
       <h1 className="mt-1 text-2xl font-bold text-gray-900">{user.name}</h1>
       <p className="mt-2 text-sm text-gray-600">Жұмысты өз рөліңіздің бөлімінен бастаңыз.</p>
     </div>
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {staffHome[user.role].map((item) => <Link key={item.href} href={item.href} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:border-primary-300 hover:shadow-md">
+      {staffHome[user.role].map((item, index) => <Link key={item.href} href={item.href} className="group rounded-2xl border border-gray-200 bg-white p-7 shadow-sm transition hover:border-violet-300 hover:shadow-md">
+        <span aria-hidden="true" className="mb-6 grid h-11 w-11 place-items-center rounded-xl bg-violet-50 text-violet-700"><NavIcon icon={item.href.includes('proctor') ? '🔍' : item.href.includes('teacher') ? '🎓' : '⚙️'} /></span>
+        <p className="workspace-eyebrow">0{index + 1}</p>
         <h2 className="font-semibold text-gray-900">{item.title}</h2>
         <p className="mt-2 text-sm text-gray-600">{item.description}</p>
         <span className="mt-4 inline-block text-sm font-medium text-primary-700">Ашу →</span>
@@ -96,23 +99,20 @@ function StudentDashboard({ user }: { user: User }) {
   return (
     <div className="space-y-8">
       {/* ─── Hero / Welcome banner ─── */}
-      <div className="relative bg-gradient-to-r from-primary-700 to-primary-500 rounded-2xl p-8 text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white blur-3xl transform translate-x-16 -translate-y-16" />
-        </div>
+      <div className="workspace-welcome">
         <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-6">
-          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl font-extrabold flex-shrink-0">
+          <div className="w-16 h-16 rounded-2xl bg-violet-100 text-violet-700 flex items-center justify-center text-2xl font-extrabold flex-shrink-0">
             {initials}
           </div>
           <div className="flex-1">
-            <p className="text-white/70 text-sm mb-1">Қош келдіңіз!</p>
+            <p className="workspace-eyebrow">Қош келдіңіз!</p>
             <h1 className="text-2xl font-extrabold">{user.name}</h1>
-            <p className="text-white/80 text-sm mt-1">{user.email}</p>
+            <p className="text-slate-500 text-sm mt-2">Оқу жолыңыз осы жерден жалғасады.</p>
           </div>
           <div className="flex-shrink-0">
             <Link
               href="/dashboard/profile"
-              className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              className="btn-secondary"
             >
               Профиль →
             </Link>
@@ -121,19 +121,16 @@ function StudentDashboard({ user }: { user: User }) {
       </div>
 
       {/* ─── Stats row ─── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {[
           { label: 'Белсенді курс', value: String(activeEnrollments.length), icon: '📚', color: 'text-primary-600' },
-          { label: 'Емтихан', value: String(attempts), icon: '📝', color: 'text-blue-600' },
+          { label: 'Емтихан', value: String(attempts), icon: '📊', color: 'text-blue-600' },
           { label: 'Сертификат', value: String(certs), icon: '🏆', color: 'text-yellow-600' },
-          { label: 'Деңгей', value: { STUDENT: 'Студент', TEACHER: 'Мұғалім', PROCTOR: 'Проктор', ADMIN: 'Админ' }[user.role] ?? user.role, icon: '⭐', color: 'text-purple-600' },
+          { label: 'Рөл', value: { STUDENT: 'Студент', TEACHER: 'Мұғалім', PROCTOR: 'Проктор', ADMIN: 'Админ' }[user.role] ?? user.role, icon: '👤', color: 'text-purple-600' },
         ].map((s) => (
-          <div key={s.label} className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4 shadow-sm">
-            <span className="text-3xl">{s.icon}</span>
-            <div>
-              <p className={`text-2xl font-extrabold ${s.color}`}>{s.value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
-            </div>
+          <div key={s.label} className="workspace-stat">
+            <div className="flex items-center justify-between gap-3"><p className="text-sm text-slate-500">{s.label}</p><span className={s.color}><NavIcon icon={s.icon} className="h-5 w-5" /></span></div>
+            <p className="workspace-stat-value text-slate-900">{s.value}</p>
           </div>
         ))}
       </div>
@@ -152,10 +149,10 @@ function StudentDashboard({ user }: { user: User }) {
                     </span>
                     <h3 className="text-base font-bold text-gray-900 mb-1">{enrollment.course.title}</h3>
                     <p className="text-sm text-gray-500 mb-3">{enrollment.completedLessons ?? 0} / {enrollment.totalLessons ?? '?'} сабақ аяқталды</p>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-1">
+                    <div role="progressbar" aria-label={`${enrollment.course.title}: оқу барысы`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.max(0, Math.min(enrollment.progress ?? 0, 100))} className="h-2 bg-gray-100 rounded-full overflow-hidden mb-1">
                       <div
                         className="h-full bg-primary-500 rounded-full transition-all"
-                        style={{ width: `${Math.min(enrollment.progress ?? 0, 100)}%` }}
+                        style={{ width: `${Math.max(0, Math.min(enrollment.progress ?? 0, 100))}%` }}
                       />
                     </div>
                     <p className="text-xs text-gray-400">{enrollment.progress ?? 0}% аяқталды</p>
@@ -198,7 +195,7 @@ function StudentDashboard({ user }: { user: User }) {
               className="bg-white rounded-2xl border border-gray-200 hover:border-primary-300 hover:shadow-md transition-all p-5 flex items-center gap-4 group"
             >
               <div className="w-12 h-12 rounded-xl bg-primary-50 group-hover:bg-primary-100 flex items-center justify-center text-2xl transition-colors flex-shrink-0">
-                {link.icon}
+                <NavIcon icon={link.icon} className="h-6 w-6 text-violet-700" />
               </div>
               <div>
                 <p className="font-semibold text-gray-900 text-sm group-hover:text-primary-700 transition-colors">{link.label}</p>

@@ -41,7 +41,7 @@ export default function AdminOnlinePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="workspace-page-header">
         <div>
           <Link href="/dashboard/admin" className="text-sm text-blue-600 hover:underline">← Артқа</Link>
           <h1 className="text-2xl font-bold text-gray-900 mt-1">🟢 Онлайн пайдаланушылар</h1>

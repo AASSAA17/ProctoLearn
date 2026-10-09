@@ -315,7 +315,8 @@ export default function EvidencePage() {
         </Link>
       </div>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">
+      <p className="workspace-eyebrow">Тексеру кеңістігі</p>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">
         Дәлелдемелер — {String(attemptId).slice(0, 8)}...
       </h1>
 

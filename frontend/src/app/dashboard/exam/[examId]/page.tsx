@@ -14,6 +14,7 @@ import { claimRecording, recordingTransport } from '@/lib/recording-upload';
 import { AUDIO_BITS, CAMERA_BITS, SCREEN_BITS, recordingBudget } from '@/lib/recording-budget';
 import { useAuthStore } from '@/store/auth.store';
 import toast from 'react-hot-toast';
+import styles from './exam.module.css';
 
 interface Question {
   id: string;
@@ -521,7 +522,7 @@ function ExamSession({ examId }: { examId: string }) {
   };
 
   const recoveryPanel = localSessions.length > 0 && (
-    <section className="rounded-lg border bg-white p-4 space-y-3" aria-label="Жазбаларды сақтау">
+    <section className={`${styles.recordings} space-y-3`} aria-label="Жазбаларды сақтау">
       <h2 className="font-semibold">Жазбаларды сақтау</h2>
       <p className="text-sm text-gray-600">Жазбалар алдымен осы браузерде сақталады. Сервер қабылдағаннан кейін жергілікті бейне бөліктері өшіріледі. Қалпына келтіру үшін осы аккаунтпен осы браузерді ашыңыз.</p>
       {localSessions.map((session) => {
@@ -537,9 +538,10 @@ function ExamSession({ examId }: { examId: string }) {
   );
 
   if (!attempt) return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="card max-w-xl w-full space-y-5">
-        <h1 className="text-2xl font-bold">Емтиханға дайындық</h1>
+    <main className={`${styles.exam} min-h-screen flex items-center justify-center px-4 py-10`}>
+      <div className="card max-w-2xl w-full space-y-5">
+        <p className="text-xs font-bold tracking-widest text-violet-700">PROCTOLEARN · ЕМТИХАН</p>
+        <h1 className="text-3xl font-bold tracking-tight">Емтиханға дайындық</h1>
         <p className="text-gray-600">Камера, микрофон және экран жазбасы қажет. Экранды таңдаңыз, содан кейін камераға рұқсат беріңіз. Жаңа емтихан осы тексерулерден кейін басталады.</p>
         <p className="text-sm text-gray-500">Бұрын басталған емтиханның таймері жалғасады. Қайта ашқанда серверде сақталған жауаптар қалпына келеді.</p>
         <p className="text-sm text-gray-500">Камера мен экранға ортақ шек: 512 MiB. Браузердегі бос орын мен емтихан ұзақтығы бастау алдында тексеріледі{preflight ? ` (${preflight.duration} мин)` : ''}.</p>
@@ -563,21 +565,22 @@ function ExamSession({ examId }: { examId: string }) {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-          <div><h1 className="font-bold">{attempt.exam.title}</h1><p className="text-sm text-gray-500">Сұрақ {currentQ + 1} / {questions.length}</p></div>
-          <div className="flex items-center gap-4">
+    <main className={`${styles.exam} min-h-screen`}>
+      <a href="#exam-question" className={styles.skipLink}>Сұраққа өту</a>
+      <header className={`${styles.header} bg-white border-b sticky top-0 z-10`}>
+        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 sm:px-6">
+          <div className="min-w-0 flex-1 basis-48"><p className="mb-1 text-[11px] font-bold tracking-widest text-violet-700">PROCTOLEARN · ЕМТИХАН</p><h1 className="break-words font-semibold">{attempt.exam.title}</h1><p className="text-sm text-slate-600">Сұрақ {currentQ + 1} / {questions.length}</p></div>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <div className="text-center"><p className="text-xs text-gray-500">Trust Score</p><p className="font-bold">{trustScore}</p></div>
-            <div className={timeLeft < 60 ? 'text-red-600' : 'text-gray-800'}><p className="text-xs">Қалған уақыт</p><p className="font-mono text-2xl font-bold">{minutes}:{seconds}</p></div>
+            <div className={`${styles.timer} ${timeLeft < 60 ? 'border-red-200 bg-red-50 text-red-700' : 'border-slate-200 bg-slate-50 text-slate-900'}`} role="timer" aria-label={`Қалған уақыт: ${minutes}:${seconds}`}><p className="text-xs">Қалған уақыт</p><p className="font-mono text-2xl font-bold tabular-nums">{minutes}:{seconds}</p></div>
             <button onClick={() => document.documentElement.requestFullscreen?.().catch(() => toast.error('Толық экран қолжетімсіз'))} className="btn-secondary text-sm">Толық экран</button>
-            <button disabled={submitting || ended || !!result || draftState.status === 'conflict'} onClick={() => { if (window.confirm('Жауаптарды жіберіп, емтиханды аяқтайсыз ба?')) void handleSubmit(); }} className="bg-red-600 text-white rounded-lg px-4 py-2 disabled:opacity-50">Аяқтау</button>
+            <button disabled={submitting || ended || !!result || draftState.status === 'conflict'} onClick={() => { if (window.confirm('Жауаптарды жіберіп, емтиханды аяқтайсыз ба?')) void handleSubmit(); }} className="min-h-11 bg-red-700 text-white rounded-xl px-4 py-2 text-sm font-semibold hover:bg-red-800 disabled:opacity-50">Аяқтау</button>
           </div>
         </div>
       </header>
-      <div className="max-w-5xl mx-auto p-4 space-y-4">
+      <div className="max-w-6xl mx-auto p-4 space-y-4 sm:p-6">
         {recoveryPanel}
-        <div role="status" aria-live="polite" className="rounded-lg border bg-white p-3 text-sm flex flex-wrap items-center gap-3">
+        <div role="status" aria-live="polite" className="rounded-xl border border-slate-200 bg-white p-4 text-sm flex flex-wrap items-center gap-3">
           <span>{submissionFrozen ? 'Жауаптар жіберуге бекітілді' : draftLabels[draftState.status]}</span>
           {!submissionFrozen && draftState.status === 'saved' && draftState.updatedAt && <time dateTime={draftState.updatedAt}>{new Date(draftState.updatedAt).toLocaleTimeString()}</time>}
           {!submissionFrozen && ['offline', 'error'].includes(draftState.status) && <button className="text-primary-700 underline" onClick={() => void draftRef.current?.flush()}>Қайта сақтау</button>}
@@ -589,27 +592,28 @@ function ExamSession({ examId }: { examId: string }) {
         {uploading && <p role="status" className="bg-blue-50 p-3 rounded-lg">Жауаптар сақталды. Камера мен экран жазбалары жүктелуде. Бетті жаппаңыз.</p>}
         {uploadError && <div role="alert" className="bg-amber-50 p-4 rounded-lg space-y-2"><p>Жазбаларды жүктеу аяқталмады. Қайта көріңіз немесе осы браузерде осы емтиханды ашып, сақталған бөліктерді қалпына келтіріңіз. Браузерге сақтау қатесі болса, бетті жаппаңыз. Сертификат тексеруден кейін беріледі.</p><button disabled={uploading} onClick={() => void uploadRecordings(attempt.id)} className="btn-secondary">Жазбаларды қайта жүктеу</button></div>}
         {result ? (
-          <section className="card max-w-2xl mx-auto space-y-4 text-center">
+          <section className="card max-w-2xl mx-auto space-y-4 text-center" aria-label="Емтихан нәтижесі">
             <h2 className="text-2xl font-bold">Жауаптар қабылданды</h2>
-            <p className="text-3xl font-semibold">{result.score}%</p>
+            <p className="text-5xl font-semibold tracking-tight text-violet-700">{result.score}%</p>
             <p>{result.passed ? 'Өту балы жиналды. Нәтиже мен жазбалар тексерушінің растауын күтеді.' : 'Өту балы жиналмады. Нәтижені жеке кабинеттен көре аласыз.'}</p>
             {result.passed && <p className="text-sm text-gray-600">Сертификат тек тексеру мақұлданып, қажетті жазбалар қабылданғаннан кейін беріледі.</p>}
             <button disabled={uploading || uploadError} onClick={() => router.push('/dashboard/my-attempts')} className="btn-primary disabled:opacity-50">Нәтижелерге өту</button>
           </section>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <aside className="card"><h2 className="font-semibold mb-3">Сұрақтар</h2><div className="grid grid-cols-5 lg:grid-cols-4 gap-2">{questions.map((item, index) => <button key={item.id} aria-label={`${index + 1}-сұрақ`} aria-current={index === currentQ ? 'step' : undefined} onClick={() => setCurrentQ(index)} className={`h-9 rounded text-sm ${index === currentQ ? 'bg-primary-600 text-white' : answers[item.id] ? 'bg-green-100 text-green-800' : 'bg-gray-100'}`}>{index + 1}</button>)}</div><video ref={videoRef} autoPlay muted playsInline className="mt-4 rounded-lg w-full" /><p className="text-xs text-gray-500 mt-2">Камера және экран жазылады.</p></aside>
-            <section className="card lg:col-span-3">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+            <aside className="card"><h2 className="font-semibold mb-2">Сұрақтар</h2><p className="mb-3 text-sm text-slate-600">Жауап берілді: {questions.filter((item) => !!answers[item.id]).length} / {questions.length}</p><progress className={styles.progress} aria-label="Жауап берілген сұрақтар" value={questions.filter((item) => !!answers[item.id]).length} max={questions.length || 1} /><div className="mt-4 grid grid-cols-5 lg:grid-cols-4 gap-2">{questions.map((item, index) => <button key={item.id} aria-label={`${index + 1}-сұрақ${answers[item.id] ? ', жауап берілді' : ', жауап берілмеді'}`} aria-current={index === currentQ ? 'step' : undefined} onClick={() => setCurrentQ(index)} className={`relative min-h-11 rounded-xl border text-sm font-semibold ${index === currentQ ? 'border-violet-700 bg-violet-700 text-white' : answers[item.id] ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-slate-200 bg-white text-slate-700'}`}>{index + 1}{answers[item.id] && <span aria-hidden="true" className="absolute right-1 top-0 text-[10px]">✓</span>}</button>)}</div><video ref={videoRef} autoPlay muted playsInline aria-label="Камераның алдын ала көрінісі" className="mt-5 rounded-xl w-full bg-slate-950" /><p className="text-xs leading-5 text-slate-600 mt-2">Камера және экран жазылады. Жазбалардың күйі жоғарыда көрсетілген.</p></aside>
+            <section id="exam-question" tabIndex={-1} className={`${styles.question} card lg:col-span-3`}>
               {question ? <>
-                <h2 className="text-xl font-semibold whitespace-pre-wrap mb-6">{question.text}</h2>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-600">{currentQ + 1}-сұрақ · {question.type === 'MULTIPLE_CHOICE' ? 'Бірнеше жауап таңдаңыз' : question.type === 'SINGLE_CHOICE' ? 'Бір жауап таңдаңыз' : 'Мәтіндік жауап'}</p>
+                <h2 className="text-xl sm:text-2xl leading-relaxed font-semibold whitespace-pre-wrap break-words mb-6">{question.text}</h2>
                 <fieldset disabled={disabled} className="space-y-3 min-w-0">
                   <legend className="sr-only">{question.text}</legend>
-                  {question.type === 'SINGLE_CHOICE' && question.options?.map((option, index) => <label key={index} className={`flex items-start gap-3 p-4 rounded-lg border-2 ${answers[question.id] === option ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}><input type="radio" name={`q-${question.id}`} checked={answers[question.id] === option} onChange={() => updateAnswer(question.id, option)} className="mt-1" /><span className="whitespace-pre-wrap break-words">{option}</span></label>)}
+                  {question.type === 'SINGLE_CHOICE' && question.options?.map((option, index) => <label key={index} className={`${styles.option} flex items-start gap-3 p-4 rounded-xl border-2 ${answers[question.id] === option ? 'border-violet-600 bg-violet-50' : 'border-slate-200 bg-white'}`}><input type="radio" name={`q-${question.id}`} checked={answers[question.id] === option} onChange={() => updateAnswer(question.id, option)} className="mt-1 h-5 w-5 shrink-0 accent-violet-700" /><span className="min-w-0 whitespace-pre-wrap break-words leading-7">{option}</span></label>)}
                   {question.type === 'MULTIPLE_CHOICE' && question.options?.map((option, index) => {
                     const selected = selectedOptions(answers[question.id]);
-                    return <label key={index} className={`flex items-start gap-3 p-4 rounded-lg border-2 ${selected.includes(option) ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}><input type="checkbox" checked={selected.includes(option)} onChange={(event) => { const next = event.target.checked ? [...selected, option] : selected.filter((item) => item !== option); updateAnswer(question.id, next.length ? JSON.stringify(next) : ''); }} className="mt-1" /><span className="whitespace-pre-wrap break-words">{option}</span></label>;
+                    return <label key={index} className={`${styles.option} flex items-start gap-3 p-4 rounded-xl border-2 ${selected.includes(option) ? 'border-violet-600 bg-violet-50' : 'border-slate-200 bg-white'}`}><input type="checkbox" checked={selected.includes(option)} onChange={(event) => { const next = event.target.checked ? [...selected, option] : selected.filter((item) => item !== option); updateAnswer(question.id, next.length ? JSON.stringify(next) : ''); }} className="mt-1 h-5 w-5 shrink-0 accent-violet-700" /><span className="min-w-0 whitespace-pre-wrap break-words leading-7">{option}</span></label>;
                   })}
-                  {question.type === 'TEXT' && <textarea aria-label="Жауап" maxLength={10000} className="input min-h-[140px]" value={answers[question.id] ?? ''} onChange={(event) => updateAnswer(question.id, event.target.value)} placeholder="Жауабыңызды теріңіз..." />}
+                  {question.type === 'TEXT' && <textarea aria-label="Жауап" maxLength={10000} className="input min-h-[200px] resize-y text-base leading-7" value={answers[question.id] ?? ''} onChange={(event) => updateAnswer(question.id, event.target.value)} placeholder="Жауабыңызды теріңіз..." />}
                 </fieldset>
                 <div className="flex flex-wrap justify-between gap-3 mt-8"><button className="btn-secondary" disabled={!currentQ} onClick={() => setCurrentQ((index) => Math.max(0, index - 1))}>← Алдыңғы</button>{currentQ < questions.length - 1 ? <button className="btn-primary" onClick={() => setCurrentQ((index) => index + 1)}>Келесі →</button> : <button disabled={submitting || draftState.status === 'conflict' || ended} className="btn-primary disabled:opacity-50" onClick={() => void handleSubmit()}>{submitting ? 'Жіберілуде...' : submissionFrozen ? 'Қайта жіберу' : 'Жауаптарды жіберу'}</button>}</div>
               </> : <p>Емтихан сұрақтары табылмады.</p>}

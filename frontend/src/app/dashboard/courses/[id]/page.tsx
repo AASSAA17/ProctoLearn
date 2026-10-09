@@ -138,7 +138,7 @@ export default function CourseDetailPage() {
 
       {/* Certificate / Completion Banner */}
       {hasCertificate && (
-        <div className="mb-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-2xl flex items-center justify-between gap-4 shadow-sm">
+        <div className="mb-6 p-5 bg-green-50 border border-green-200 rounded-2xl flex flex-wrap items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-4">
             <span className="text-5xl">🏆</span>
             <div>
@@ -155,10 +155,11 @@ export default function CourseDetailPage() {
         </div>
       )}
 
-      <div className="card mb-6">
+      <div className="workspace-welcome mb-6">
+        <p className="workspace-eyebrow">Сіздің курсыңыз</p>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">{course.title}</h1>
         {course.description && <p className="text-gray-600 mb-4">{course.description}</p>}
-        <p className="text-sm text-gray-400">Мұғалім: {course.teacher.name}</p>
+        <p className="text-sm text-gray-500">Мұғалім: {course.teacher.name}</p>
 
         {/* Progress bar — works for both module and flat courses */}
         {(hasModules ? totalModuleLessons : course.lessons.length) > 0 && (
@@ -188,7 +189,7 @@ export default function CourseDetailPage() {
       {/* Module-based course content — lessons with direct links */}
       {hasModules && (
         <div className="card mb-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <h2 className="text-xl font-semibold">
               Курс бағдарламасы
               <span className="ml-2 text-sm font-normal text-gray-500">

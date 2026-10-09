@@ -150,14 +150,14 @@ export default function ProctorDashboardPage() {
 
   const trustColor = (score: number) => {
     if (score >= 80) return 'text-green-700';
-    if (score >= 50) return 'text-yellow-700';
+    if (score >= 50) return 'text-amber-800';
     return 'text-red-600';
   };
 
   const statusBadge = (s: string) => {
     const base = 'text-xs font-semibold px-2 py-0.5 rounded-full';
     if (s === 'FINISHED') return <span className={`${base} bg-green-100 text-green-700`}>Аяқталды</span>;
-    if (s === 'IN_PROGRESS') return <span className={`${base} bg-yellow-100 text-yellow-700`}>Жүргізілуде</span>;
+    if (s === 'IN_PROGRESS') return <span className={`${base} bg-yellow-100 text-amber-800`}>Жүргізілуде</span>;
     if (s === 'FAILED') return <span className={`${base} bg-red-100 text-red-700`}>Сәтсіз ✗</span>;
     if (s === 'FLAGGED') return <span className={`${base} bg-red-100 text-red-700`}>Белгіленді 🚩</span>;
     return <span className={`${base} bg-gray-100 text-gray-700`}>{s}</span>;
@@ -176,11 +176,11 @@ export default function ProctorDashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">Проктор панелі</h1>
+      <div className="workspace-page-header"><div><p className="workspace-eyebrow">Емтихандарды бақылау</p><h1 className="font-bold text-gray-900">Проктор панелі</h1><p className="mt-3 text-sm text-slate-500">Талпынулар, оқиғалар және тексеруге арналған дәлелдемелер.</p></div></div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 2xl:grid-cols-3 gap-6">
         {/* Attempts list */}
-        <div className="lg:col-span-2">
+        <div className="2xl:col-span-2 min-w-0">
           <div className="card">
             <h2 className="text-lg font-semibold mb-4">Қолжетімді талпынулар</h2>
             <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
@@ -207,13 +207,13 @@ export default function ProctorDashboardPage() {
                     }`}
                     onClick={() => selectAttempt(attempt.id)}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
                         <p className="font-medium text-gray-900">{attempt.user?.name ?? '—'}</p>
                         <p className="text-sm text-gray-600">{attempt.user?.email ?? '—'}</p>
                         <p className="text-sm text-gray-600">{attempt.exam?.title ?? '—'}</p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-left sm:text-right">
                         <button type="button" aria-label={`${attempt.user?.name ?? 'Талпыныс'}: оқиғаларды көру`} aria-pressed={selected === attempt.id} onClick={(event) => { event.stopPropagation(); selectAttempt(attempt.id); }} className="text-primary-700 underline text-sm mb-1">Оқиғаларды көру</button>
                         {statusBadge(attempt.status)}
                         {attempt.appealState === 'OPEN' && <p className="mt-2 rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">Апелляция · тәуелсіз тексеру қажет</p>}
@@ -227,11 +227,11 @@ export default function ProctorDashboardPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between mt-2 text-xs text-gray-600">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mt-4 text-xs text-gray-600">
                       <span>
                         {attempt._count?.events ?? 0} оқиға · {attempt._count?.evidences ?? 0} жазба
                       </span>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-3">
                         <Link
                           href={`/dashboard/proctor/evidence/${attempt.id}`}
                           onClick={(e) => e.stopPropagation()}

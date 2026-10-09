@@ -189,7 +189,7 @@ export default function LessonViewerPage() {
   return (
     <div className="max-w-5xl mx-auto">
       {/* Breadcrumb */}
-      <div className="mb-6 flex items-center gap-2 text-sm text-gray-500">
+      <div className="mb-6 flex flex-wrap items-center gap-2 text-sm text-gray-500">
         <Link href="/dashboard/courses" className="hover:text-primary-600">Курстар</Link>
         <span>/</span>
         <Link href={`/dashboard/courses/${courseId}`} className="hover:text-primary-600">Курсқа оралу</Link>
@@ -197,9 +197,9 @@ export default function LessonViewerPage() {
         <span className="text-gray-900 font-medium">{lesson.title}</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* Sidebar: lessons list */}
-        <div className="card lg:col-span-1 h-fit">
+        <div className="card xl:col-span-1 h-fit">
           <h3 className="font-semibold text-gray-800 mb-3 text-sm">Сабақтар тізімі</h3>
           {/* Progress bar */}
           <div className="mb-4">
@@ -232,6 +232,7 @@ export default function LessonViewerPage() {
                 <li key={l.id}>
                   <Link
                     href={`/dashboard/courses/${courseId}/lessons/${l.id}`}
+                    aria-current={isCurrent ? 'page' : undefined}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                       isCurrent
                         ? 'bg-primary-600 text-white font-medium'
@@ -258,7 +259,7 @@ export default function LessonViewerPage() {
         </div>
 
         {/* Main content */}
-        <div className="lg:col-span-3">
+        <div className="min-w-0 xl:col-span-3">
           <div className="card mb-6">
             <div className="flex items-center gap-3 mb-6">
               <span className="bg-primary-100 text-primary-700 text-sm font-bold px-3 py-1 rounded-full">

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import MagicBento from '@/components/landing/MagicBento';
+import { NavIcon } from '@/components/nav-icon';
 
 type CourseLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 
@@ -30,70 +30,13 @@ const LEVEL_TABS: { key: CourseLevel; label: string; emoji: string; color: strin
   { key: 'ADVANCED',     label: 'Жоғары деңгей',    emoji: '🔴', color: 'text-red-700',    bg: 'bg-red-50 border-red-400' },
 ];
 
-const COURSE_COVERS = [
-  { img: 'https://images.unsplash.com/photo-1579468118864-1b9ea3c0db4a?w=400&q=80', overlay: 'from-yellow-900/70 to-orange-900/50', emoji: '⚡' },
-  { img: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&q=80', overlay: 'from-blue-900/70 to-blue-700/50',    emoji: '🐍' },
-  { img: 'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=400&q=80',    overlay: 'from-teal-900/70 to-cyan-800/50',   emoji: '🗄️' },
-  { img: 'https://images.unsplash.com/photo-1621839673705-6617adf9e890?w=400&q=80', overlay: 'from-pink-900/70 to-rose-800/50',   emoji: '🎨' },
-  { img: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&q=80', overlay: 'from-cyan-900/70 to-blue-800/50',   emoji: '⚛️' },
-  { img: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400&q=80',    overlay: 'from-green-900/70 to-emerald-800/50', emoji: '🟢' },
-  { img: 'https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?w=400&q=80',    overlay: 'from-purple-900/70 to-violet-800/50', emoji: '📊' },
-  { img: 'https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=400&q=80',    overlay: 'from-orange-900/70 to-red-800/50',  emoji: '🔀' },
-  { img: 'https://images.unsplash.com/photo-1605745341112-85968b19335b?w=400&q=80', overlay: 'from-sky-900/70 to-indigo-800/50',  emoji: '🐳' },
-  { img: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=400&q=80',    overlay: 'from-red-900/70 to-rose-800/50',    emoji: '🔒' },
-];
-
-const COURSES_MENU_ITEMS = [
-  {
-    key: 'BEGINNER',
-    color: '#120F17',
-    title: 'Жаңадан бастаушы',
-    description: 'Іргетас және негізгі ұғымдар',
-    label: '🟢 Бастау'
-  },
-  {
-    key: 'INTERMEDIATE',
-    color: '#120F17',
-    title: 'Орта деңгей',
-    description: 'Практика, жобалар, сенімділік',
-    label: '🟡 Даму'
-  },
-  {
-    key: 'ADVANCED',
-    color: '#120F17',
-    title: 'Жоғары деңгей',
-    description: 'Күрделі кейстер және архитектура',
-    label: '🔴 Про'
-  },
-  {
-    key: 'BEGINNER_INFO',
-    color: '#120F17',
-    title: 'Негіз',
-    description: 'HTML, CSS, JS және алгоритмдер',
-    label: 'Бағыт'
-  },
-  {
-    key: 'INTERMEDIATE_INFO',
-    color: '#120F17',
-    title: 'Қолдану',
-    description: 'React, API, дерекқор интеграциясы',
-    label: 'Практика'
-  },
-  {
-    key: 'ADVANCED_INFO',
-    color: '#120F17',
-    title: 'Шеберлік',
-    description: 'Сапа, қауіпсіздік, production ойлау',
-    label: 'Кәсіби'
-  }
-];
-
 export default function CoursesPage() {
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [certCourseIds, setCertCourseIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [activeLevel, setActiveLevel] = useState<CourseLevel>('BEGINNER');
   const [enrollModal, setEnrollModal] = useState<{ course: Course } | null>(null);
   const [enrolling, setEnrolling] = useState(false);
@@ -123,6 +66,7 @@ export default function CoursesPage() {
         api.get('/enrollments/my'),
         api.get('/certificates/my'),
       ]);
+      setLoadError([coursesRes, enrollmentsRes, certsRes].some(result => result.status === 'rejected'));
 
       if (coursesRes.status === 'fulfilled') {
         const list: Course[] = coursesRes.value.data.data ?? coursesRes.value.data;
@@ -136,6 +80,7 @@ export default function CoursesPage() {
         setCertCourseIds(ids);
       }
     } catch {
+      setLoadError(true);
       toast.error('Деректерді жүктеу қатесі');
     } finally {
       setLoading(false);
@@ -178,7 +123,7 @@ export default function CoursesPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-12">
+      <div role="status" aria-label="Курстар жүктелуде" className="flex justify-center py-12">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
       </div>
     );
@@ -186,10 +131,15 @@ export default function CoursesPage() {
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="workspace-page-header">
+        <div>
+        <p className="workspace-eyebrow">Оқу кітапханасы</p>
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Курстар</h1>
+        <p className="mt-3 text-sm text-slate-500">Деңгейіңізді таңдаңыз. Келесі қадамыңызды бастаңыз.</p>
+        </div>
+        <span role="status" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">{filteredCourses.length} курс</span>
       </div>
-
+      {loadError && <div role="alert" className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Деректер толық жүктелмеді. <button type="button" onClick={() => void loadData()} className="font-semibold underline">Қайта жүктеу</button></div>}
 
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
         {LEVEL_TABS.map(tab => (
@@ -208,14 +158,14 @@ export default function CoursesPage() {
       </div>
 
       {filteredCourses.length === 0 ? (
-        <div className="text-center py-16 text-gray-500"><p className="text-lg">Курс табылмады</p></div>
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white text-center py-16 text-gray-500"><NavIcon icon="📚" className="mx-auto mb-4 h-10 w-10 text-violet-400" /><p className="text-lg font-semibold text-slate-800">Курс табылмады</p><p className="mt-2 text-sm">Басқа деңгейді таңдап көріңіз.</p></div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
           {filteredCourses.map((course, idx) => {
             const enrollment = getEnrollment(course.id);
             const hasCert = certCourseIds.has(course.id);
             const isActive = !!(enrollment && !enrollment.completedAt);
-            const cover = COURSE_COVERS[idx % COURSE_COVERS.length];
+            const coverHue = Array.from(course.id).reduce((sum, char) => sum + char.charCodeAt(0), 0) % 70 + 225;
             let borderClass = 'border border-gray-200 hover:border-primary-300';
             let badgeEl: React.ReactNode = null;
             if (hasCert) { borderClass = 'border-2 border-green-400'; badgeEl = <span className="absolute top-3 right-3 bg-green-700 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">✅ Сертификат</span>; }
@@ -226,21 +176,21 @@ export default function CoursesPage() {
                 aria-label={`${course.title}: ${isActive ? 'Жалғастыру' : hasCert ? 'Курсты ашу' : 'Курсқа тіркелу'}`}
                 className={`text-left rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white h-full flex flex-col cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 ${borderClass}`}
               >
-                <div className="relative h-36 flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-800">
-                  <img src={cover.img} alt={course.title} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-                  <div className={`absolute inset-0 bg-gradient-to-br ${cover.overlay}`} />
-                  <span className="relative text-5xl drop-shadow-lg">{cover.emoji}</span>
+                <div className="relative h-40 w-full flex items-center justify-center flex-shrink-0 overflow-hidden" style={{ background: `linear-gradient(130deg, hsl(${coverHue} 55% 94%), hsl(${coverHue + 30} 65% 86%))` }}>
+                  <span aria-hidden="true" className="absolute h-40 w-40 rotate-45 rounded-[32px] border border-white/70" />
+                  <span aria-hidden="true" className="absolute h-28 w-28 -rotate-12 rounded-3xl border border-white/80 bg-white/20" />
+                  <span aria-hidden="true" className="relative grid h-16 w-16 place-items-center rounded-2xl border border-white bg-white/70 text-violet-700 shadow-sm"><NavIcon icon="📚" className="h-8 w-8" /></span>
                   {badgeEl}
                   <span className="absolute top-3 left-3 bg-black/40 text-white text-xs font-bold px-2 py-0.5 rounded-full">{idx + 1}-курс</span>
                 </div>
-                <div className="p-4 flex flex-col flex-1">
-                  <h3 className={`text-base font-semibold mb-2 leading-tight ${hasCert ? 'text-green-800' : 'text-gray-900'}`}>
+                <div className="p-6 flex flex-col flex-1 w-full">
+                  <h3 className={`text-xl font-semibold mb-3 leading-snug ${hasCert ? 'text-green-800' : 'text-gray-900'}`}>
                     {course.title}
                   </h3>
                   {course.description && (
                     <p className="text-sm mb-3 line-clamp-3 flex-1 text-gray-500">{course.description}</p>
                   )}
-                  <div className="flex items-center justify-between mt-auto pt-2 border-t text-xs text-gray-600 border-gray-100">
+                  <div className="flex flex-wrap gap-3 items-center justify-between mt-auto pt-4 border-t text-xs text-gray-600 border-gray-100">
                     <span>👤 {course.teacher.name}</span>
                     <div className="flex gap-3"><span>📖 {course._count.lessons}</span><span>📝 {course._count.exams}</span></div>
                   </div>
@@ -265,7 +215,7 @@ export default function CoursesPage() {
             <h2 id="enroll-dialog-title" className="text-xl font-bold text-gray-900 mb-2">Курсқа тіркелу</h2>
             <p className="text-gray-600 mb-4"><strong>{enrollModal.course.title}</strong> курсын таңдадыңыз.</p>
 
-            <div className="flex gap-2 mb-2 text-sm text-gray-700">
+            <div className="flex flex-wrap gap-2 mb-2 text-sm text-gray-700">
               <span className="bg-gray-100 rounded-lg px-3 py-1">Деңгей: <strong>{levelLabel(enrollModal.course.level)}</strong></span>
               <span className="bg-gray-100 rounded-lg px-3 py-1">📖 {enrollModal.course._count.lessons} сабақ</span>
               <span className="bg-gray-100 rounded-lg px-3 py-1">📝 {enrollModal.course._count.exams} тест</span>

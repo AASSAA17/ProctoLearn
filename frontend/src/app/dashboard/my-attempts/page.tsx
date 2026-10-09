@@ -83,7 +83,7 @@ export default function MyAttemptsPage() {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Менің нәтижелерім</h1>
+      <div className="workspace-page-header"><div><p className="workspace-eyebrow">Оқу нәтижелері</p><h1 className="font-bold text-gray-900">Менің нәтижелерім</h1><p className="mt-3 text-sm text-slate-500">Емтихандарыңыздың нәтижелері мен тексеру күйі.</p></div></div>
 
       {attempts.length === 0 ? (
         <div className="text-center py-16 text-gray-500">

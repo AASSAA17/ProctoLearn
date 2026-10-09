@@ -7,6 +7,7 @@ import { certificateVerificationUrl } from '@/lib/public-links';
 import toast from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
 import LoadFailure from '@/components/LoadFailure';
+import { NavIcon } from '@/components/nav-icon';
 
 interface Certificate {
   id: string;
@@ -42,7 +43,7 @@ export default function CertificatesPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-12">
+      <div role="status" aria-label="Сертификаттар жүктелуде" className="flex justify-center py-12">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
       </div>
     );
@@ -67,30 +68,34 @@ export default function CertificatesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">Менің сертификаттарым</h1>
+      <div className="workspace-page-header"><div><p className="workspace-eyebrow">Жетістіктеріңіз</p><h1 className="font-bold text-gray-900">Менің сертификаттарым</h1><p className="mt-3 text-sm text-slate-500">Оқу нәтижесін сақтаңыз және QR арқылы тексеріңіз.</p></div><span className="rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700">{certs.length} сертификат</span></div>
 
       {certs.length === 0 ? (
-        <div className="text-center py-16 text-gray-500">
-          <p className="text-4xl mb-4">🏆</p>
-          <p className="text-lg">Сертификат жоқ. Емтиханнан өту арқылы алыңыз!</p>
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center text-gray-500">
+          <span className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-violet-50 text-violet-600"><NavIcon icon="🏆" className="h-8 w-8" /></span>
+          <h2 className="text-xl font-semibold text-slate-900">Алғашқы жетістігіңіз алда</h2>
+          <p className="mx-auto mt-3 max-w-md text-sm">Курс талаптарын орындағаннан кейін берілген сертификаттарыңыз осында көрсетіледі.</p>
+          <Link href="/dashboard/courses" className="btn-primary mt-6 inline-flex">Курстарды қарау</Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
           {certs.map((cert) => (
-            <div key={cert.id} className="card text-center border-2 border-yellow-200 bg-yellow-50">
-              <div className="text-4xl mb-3">🏆</div>
+            <div key={cert.id} className="workspace-certificate">
+              <span className="mb-4 grid h-12 w-12 place-items-center rounded-full bg-violet-100 text-violet-700"><NavIcon icon="🏆" className="h-6 w-6" /></span>
+              <p className="workspace-eyebrow">ProctoLearn · Сертификат</p>
               <h3 className="text-lg font-semibold text-gray-900 mb-1">{cert.course.title}</h3>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="mb-2 text-sm font-medium text-slate-700">{cert.user.name}</p>
+              <p className="text-sm text-gray-500 mb-5">
                 {new Date(cert.issuedAt).toLocaleDateString('kk-KZ')}
               </p>
-              <div className="flex justify-center mb-4">
-                {origin && <QRCodeSVG value={certificateVerificationUrl(origin, cert.qrCode)} size={120} />}
+              <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-3 mb-4">
+                {origin && <QRCodeSVG value={certificateVerificationUrl(origin, cert.qrCode)} size={120} title="Сертификатты тексеру QR коды" />}
               </div>
-              <p className="text-xs text-gray-400 mb-4">Тексеру үшін QR кодын сканерлеңіз</p>
+              <p className="text-xs text-gray-500 mb-4">Тексеру үшін QR кодын сканерлеңіз</p>
               <Link href={`/verify/${encodeURIComponent(cert.qrCode)}`} className="block text-sm text-primary-700 underline mb-4">Сертификатты тексеру</Link>
               <button
                 onClick={() => downloadPdf(cert.id, cert.course.title)}
-                className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+                className="btn-primary mt-auto w-full flex items-center justify-center gap-2"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />

@@ -166,14 +166,16 @@ export default function LearnPage() {
   const sidebarModules = course.modules;
 
   return (
-    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-gray-50">
+    <div className="flex min-h-[65vh] flex-col xl:flex-row overflow-hidden rounded-2xl border border-slate-200 bg-white">
       {/* ── Sidebar ─────────────────────────────────────────────────── */}
       <aside
-        className={`${sidebarOpen ? 'w-72' : 'w-0'} transition-all duration-300 overflow-hidden flex-shrink-0 bg-white border-r border-gray-200 flex flex-col`}
+        hidden={!sidebarOpen}
+        aria-label="Курс мазмұны"
+        className={sidebarOpen ? 'flex w-full xl:w-64 max-h-80 xl:max-h-[75vh] overflow-hidden flex-shrink-0 bg-slate-50 border-b xl:border-b-0 xl:border-r border-gray-200 flex-col' : 'hidden'}
       >
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <span className="font-semibold text-gray-800 text-sm truncate">{course.title}</span>
-          <button onClick={() => setSidebarOpen(false)} className="text-gray-400 hover:text-gray-600 ml-2">✕</button>
+          <button onClick={() => setSidebarOpen(false)} aria-label="Курс мазмұнын жабу" className="workspace-icon-button ml-2">✕</button>
         </div>
 
         <div className="overflow-y-auto flex-1 py-2">
@@ -194,6 +196,7 @@ export default function LearnPage() {
                       <button
                         key={step.id}
                         onClick={() => navigateToStep(step.id)}
+                        aria-current={active ? 'step' : undefined}
                         className={`w-full flex items-center gap-2 px-6 py-2 text-sm transition text-left ${
                           active
                             ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-600'
@@ -216,20 +219,21 @@ export default function LearnPage() {
       </aside>
 
       {/* ── Main Content ─────────────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto p-6">
+      <section aria-label="Сабақ" className="min-w-0 flex-1">
+        <div className="max-w-3xl mx-auto p-4 sm:p-8">
           {/* Breadcrumb + sidebar toggle */}
           <div className="flex items-center gap-3 mb-6">
             {!sidebarOpen && (
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+                aria-label="Курс мазмұнын ашу"
+                className="workspace-icon-button"
               >
                 ☰
               </button>
             )}
             {currentLesson && (
-              <div className="text-sm text-gray-500 flex items-center gap-1">
+              <div className="text-sm text-gray-500 flex flex-wrap items-center gap-1">
                 <span>{currentLesson.title}</span>
                 <span className="text-gray-300">›</span>
                 <span className="text-gray-700 font-medium">
@@ -274,7 +278,7 @@ export default function LearnPage() {
                 <span>Прогрес</span>
                 <span>{completedStepIds.size} / {navList.length} қадам</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div role="progressbar" aria-label="Курстың оқу барысы" aria-valuemin={0} aria-valuemax={navList.length} aria-valuenow={completedStepIds.size} className="w-full bg-gray-200 rounded-full h-2">
                 <div
                   className="bg-primary-600 h-2 rounded-full transition-all duration-500"
                   style={{ width: `${(completedStepIds.size / navList.length) * 100}%` }}
@@ -283,7 +287,7 @@ export default function LearnPage() {
             </div>
           )}
         </div>
-      </main>
+      </section>
     </div>
   );
 }

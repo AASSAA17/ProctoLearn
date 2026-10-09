@@ -18,9 +18,9 @@ interface Stats {
 
 function StatCard({ title, value, sub, color }: { title: string; value: number; sub?: string; color: string }) {
   return (
-    <div className={`bg-white rounded-xl shadow-sm border-l-4 ${color} p-6`}>
+    <div className={`workspace-stat border-t-4 ${color}`}>
       <p className="text-sm text-gray-500">{title}</p>
-      <p className="text-3xl font-bold text-gray-800 mt-1">{value.toLocaleString()}</p>
+      <p className="workspace-stat-value text-gray-800">{value.toLocaleString()}</p>
       {sub && <p className="text-xs text-gray-600 mt-1">{sub}</p>}
     </div>
   );
@@ -58,12 +58,13 @@ export default function AdminPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="workspace-page-header">
         <div>
+          <p className="workspace-eyebrow">Жүйені басқару</p>
           <h1 className="text-2xl font-bold text-gray-900">Админ панелі</h1>
           <p className="text-gray-500 text-sm mt-1">Жалпы статистика және басқару</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={() => downloadExcel('users')}
             className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2">
             📥 Excel: Пайдаланушылар
@@ -84,7 +85,7 @@ export default function AdminPage() {
           <StatCard title="Осы аптада жаңа" value={stats.users.newThisWeek} color="border-yellow-500" />
           <StatCard title="Студенттер" value={stats.users.byRole.STUDENT || 0} color="border-purple-500" />
         </div>
-        <div className="grid grid-cols-3 gap-4 mt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
           <StatCard title="Мұғалімдер" value={stats.users.byRole.TEACHER || 0} color="border-orange-400" />
           <StatCard title="Прокторлар" value={stats.users.byRole.PROCTOR || 0} color="border-red-400" />
           <StatCard title="Adminістраторлар" value={stats.users.byRole.ADMIN || 0} color="border-gray-400" />
