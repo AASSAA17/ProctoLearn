@@ -35,7 +35,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [resetting, setResetting] = useState<string | null>(null);
-  const [tempPassModal, setTempPassModal] = useState<{ email: string; pass: string } | null>(null);
+  const [tempPassModal, setTempPassModal] = useState<{ email: string } | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [coursesError, setCoursesError] = useState(false);
 
@@ -86,7 +86,7 @@ export default function AdminUsersPage() {
     setResetting(id);
     try {
       const { data } = await api.post(`/admin/users/${id}/reset-password`);
-      setTempPassModal({ email: data.email, pass: data.tempPassword });
+      setTempPassModal({ email: data.email });
       toast.success('Уақытша пароль жіберілді');
       load(search);
     } catch { toast.error('Қате болды'); }
@@ -296,13 +296,7 @@ export default function AdminUsersPage() {
           <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl">
             <h3 className="text-lg font-bold text-gray-900 mb-4">✅ Уақытша пароль жасалды</h3>
             <p className="text-sm text-gray-600 mb-2"><strong>Email:</strong> {tempPassModal.email}</p>
-            <div className="bg-gray-100 rounded-lg p-4 my-4 text-center">
-              <code className="text-2xl font-mono font-bold text-blue-700 tracking-wider">{tempPassModal.pass}</code>
-            </div>
-            <p className="text-xs text-gray-500 mb-4">
-              Email жіберу сәтсіз болса, бұл паролды пайдаланушыға өзіңіз беріңіз.
-              Пайдаланушы жүйеге кіргеннен кейін паролды өзгертуі тиіс.
-            </p>
+            <p className="text-sm text-gray-700 my-4">Уақытша пароль пайдаланушының поштасына жіберілді. Кіргеннен кейін оны ауыстыру қажет.</p>
             <button onClick={() => setTempPassModal(null)}
               className="w-full bg-blue-600 text-white rounded-lg py-2.5 font-semibold hover:bg-blue-700">
               Жабу

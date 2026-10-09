@@ -5,6 +5,7 @@ const metadataKeys: Record<string, readonly string[]> = {
   ADMIN_PASSWORD_RESET: [],
   ADMIN_EXAM_ACCESS_GRANTED: ['courseId'],
   ADMIN_CERTIFICATE_GRANTED: ['courseId', 'certificateId'],
+  ADMIN_CERTIFICATE_REVOKED: ['certificateId', 'reason'],
   PROCTOR_ASSIGNED: ['proctorId'],
   PROCTOR_REVOKED: ['proctorId'],
   EVIDENCE_RETENTION_REQUESTED: ['attemptId', 'retentionDays'],

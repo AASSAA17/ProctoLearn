@@ -143,16 +143,20 @@ export class LessonsService {
   }
 
   private async checkPreviousLessons(lesson: any, viewer: LessonViewer, manager: boolean) {
-    if (manager || !lesson.courseId || lesson.order <= 1) return;
-    const enrollment = await this.prisma.enrollment.findUnique({ where: { userId_courseId: { userId: viewer.id, courseId: lesson.courseId } } });
+    const courseId = lesson.courseId ?? lesson.module?.courseId ?? lesson.module?.course?.id;
+    if (manager || !courseId) return;
+    const enrollment = await this.prisma.enrollment.findUnique({ where: { userId_courseId: { userId: viewer.id, courseId } } });
     if (enrollment?.examAccessGrantedAt) return;
     const previous = await this.prisma.lesson.findMany({
-      where: { courseId: lesson.courseId, order: { lt: lesson.order } }, select: { id: true },
+      where: { OR: [{ courseId }, { module: { courseId } }] },
+      include: { module: { select: { order: true } } },
     });
+    const currentKey = `${lesson.module?.order ?? 0}:${lesson.order}`;
+    const orderedPrevious = previous.filter((candidate) => `${candidate.module?.order ?? 0}:${candidate.order}` < currentKey);
     const count = await this.prisma.lessonProgress.count({
-      where: { userId: viewer.id, lessonId: { in: previous.map(({ id }) => id) } },
+      where: { userId: viewer.id, lessonId: { in: orderedPrevious.map(({ id }) => id) } },
     });
-    if (count < previous.length) throw new ForbiddenException('Алдыңғы сабақтарды аяқтаңыз');
+    if (count < orderedPrevious.length) throw new ForbiddenException('Алдыңғы сабақтарды аяқтаңыз');
   }
 
   private complete(lessonId: string, courseId: string, userId: string, completionSource = 'MATERIAL') {

@@ -48,9 +48,13 @@ export class SubmissionsService {
       },
     });
 
-    const allStepIds = modules.flatMap((m) =>
+    const moduleStepIds = modules.flatMap((m) =>
       m.lessons.flatMap((l) => l.steps.map((s) => s.id)),
     );
+    const directLessons = await this.prisma.lesson.findMany({
+      where: { courseId }, include: { steps: { select: { id: true } } },
+    });
+    const allStepIds = [...moduleStepIds, ...directLessons.flatMap((l) => l.steps.map((s) => s.id))];
 
     if (allStepIds.length === 0) return { total: 0, completed: 0, percent: 0 };
 

@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Param, Query, Res, UseGuards,
+  Body, Controller, Get, Post, Param, Query, Res, UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiCookieAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -71,6 +71,16 @@ export class AdminController {
     @CurrentUser('id') adminId: string,
   ) {
     return this.adminService.grantFullCertificate(userId, courseId, adminId);
+  }
+
+  @Post('certificates/:certificateId/revoke')
+  @ApiOperation({ summary: 'Сертификатты қайтарып алу' })
+  revokeCertificate(
+    @Param('certificateId') certificateId: string,
+    @CurrentUser('id') adminId: string,
+    @Body('reason') reason: string,
+  ) {
+    return this.adminService.revokeCertificate(certificateId, adminId, reason ?? '');
   }
 
   @Post('users/:userId/grant-exam-access/:courseId')

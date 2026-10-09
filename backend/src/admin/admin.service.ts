@@ -282,11 +282,21 @@ export class AdminService {
     // Try to send email (non-blocking)
     await this.mailService.sendTempPassword(user.email, user.name, shuffled);
 
-    return {
-      message: 'Пароль сәтті жаңартылды',
-      tempPassword: shuffled,
-      email: user.email,
-    };
+    return { message: 'Пароль сәтті жаңартылды', email: user.email };
+  }
+
+  async revokeCertificate(certificateId: string, adminId: string, reason: string) {
+    return serializable(this.prisma, async (tx) => {
+      const certificate = await this.certificatesService.revoke(certificateId, adminId, reason, tx);
+      await recordAudit(tx, {
+        actorId: adminId,
+        action: 'ADMIN_CERTIFICATE_REVOKED',
+        targetType: 'CERTIFICATE',
+        targetId: certificateId,
+        metadata: { certificateId, reason: reason.trim().slice(0, 128) },
+      });
+      return { message: 'Сертификат отозван', certificate };
+    });
   }
 
   // ─── Арнайы рұқсат беру ───────────────────────────────────────────────────

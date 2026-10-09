@@ -126,6 +126,7 @@ export class CertificatesService {
     const cert = await this.prisma.certificate.findUnique({
       where: { qrCode },
       select: {
+        status: true,
         issuedAt: true,
         issuedVia: true,
         user: { select: { name: true } },
@@ -133,6 +134,7 @@ export class CertificatesService {
       },
     });
     if (!cert) return { valid: false };
+    if (cert.status !== 'VALID') return { valid: false, status: cert.status };
     return {
       valid: true,
       certificate: {
@@ -142,6 +144,20 @@ export class CertificatesService {
         issuedVia: cert.issuedVia,
       },
     };
+  }
+
+  async revoke(id: string, adminId: string, reason: string, db: Prisma.TransactionClient = this.prisma) {
+    const normalizedReason = reason.trim();
+    if (!normalizedReason || normalizedReason.length > 500) {
+      throw new ConflictException('Причина отзыва обязательна и должна быть не длиннее 500 символов');
+    }
+    const certificate = await db.certificate.findUnique({ where: { id } });
+    if (!certificate) throw new NotFoundException('Сертификат не найден');
+    if (certificate.status === 'REVOKED') return certificate;
+    return db.certificate.update({
+      where: { id },
+      data: { status: 'REVOKED', revokedAt: new Date(), revokedBy: adminId, revocationReason: normalizedReason },
+    });
   }
 
   async generatePdf(certId: string, userId: string): Promise<Buffer> {

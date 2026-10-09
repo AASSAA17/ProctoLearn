@@ -321,6 +321,10 @@ model Certificate {
   issuedAt DateTime @default(now())
   qrCode   String   @unique
   issuedVia String @default("LEGACY")
+  status   String   @default("VALID")
+  revokedAt DateTime?
+  revokedBy String?
+  revocationReason String?
   user     User     @relation(fields: [userId], references: [id])
   course   Course   @relation(fields: [courseId], references: [id])
 

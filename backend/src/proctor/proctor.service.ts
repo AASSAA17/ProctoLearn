@@ -110,6 +110,12 @@ export class ProctorService {
       this.prisma.attemptAppeal.findUnique({ where: { attemptId } }),
       this.prisma.attemptReview.findMany({ where: { attemptId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] }),
     ]);
+    if (actor.role === 'STUDENT') {
+      return {
+        appeal,
+        history: history.map(({ decision, reason, createdAt }) => ({ decision, reason, createdAt })),
+      };
+    }
     return { appeal, history };
   }
 
