@@ -560,7 +560,11 @@ async function main() {
       if (coursesUnavailable) await request.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"unavailable"}' });
       else await request.continue();
     };
-    await adminPage.route('**/courses', interceptCourses);
+    const isCoursesRequest = value => {
+      const url = new URL(value);
+      return url.origin === api && url.pathname === '/courses';
+    };
+    await adminPage.route(isCoursesRequest, interceptCourses);
     await adminPage.goto(`${web}/dashboard/admin/users`);
     await adminPage.getByRole('row').filter({ hasText: 'student@proctolearn.kz' }).getByRole('button', { name: '🎓 Рұқсат' }).click();
     await adminPage.getByRole('alert').getByText('Курстарды жүктеу мүмкін болмады.').waitFor();
@@ -569,7 +573,7 @@ async function main() {
     await adminPage.getByRole('alert').filter({ hasText: 'Курстарды жүктеу мүмкін болмады.' }).waitFor({ state: 'hidden' });
     assert.ok(await adminPage.getByLabel('Курс', { exact: true }).selectOption({ index: 1 }));
     await adminPage.getByRole('button', { name: 'Болдырмау' }).click();
-    await adminPage.unroute('**/courses', interceptCourses);
+    await adminPage.unroute(isCoursesRequest, interceptCourses);
     console.log('PASS admin grant course picker recovers from API outage');
 
     for (const role of ['TEACHER', 'ADMIN']) {
@@ -708,7 +712,15 @@ async function main() {
     await mobile.page.setViewportSize({ width: 390, height: 844 });
     console.log('PASS mobile navigation, width and WCAG A/AA automated checks');
 
-    const course = mobile.page.getByRole('button', { name: /Курсқа тіркелу/ }).first();
+    const keyboardCourse = await prisma.course.create({ data: {
+      title: `E2E keyboard enrollment ${randomUUID()}`,
+      description: 'Isolated keyboard enrollment check',
+      level: 'BEGINNER',
+      teacherId: (await prisma.user.findUniqueOrThrow({ where: { email: 'teacher@proctolearn.kz' } })).id,
+    } });
+    await mobile.page.reload();
+    await mobile.page.getByRole('heading', { name: 'Курстар' }).waitFor();
+    const course = mobile.page.getByRole('button', { name: `${keyboardCourse.title}: Курсқа тіркелу`, exact: true });
     await course.focus();
     await mobile.page.keyboard.press('Enter');
     const dialog = mobile.page.getByRole('dialog', { name: 'Курсқа тіркелу' });
