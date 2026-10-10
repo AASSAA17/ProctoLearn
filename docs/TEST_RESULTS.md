@@ -2,6 +2,8 @@
 
 ## Controlled pilot / curriculum: отдельная область проверки
 
+Финальный локальный artifact `338f8ecaac2e105a`, source `bca47b8734704257d28d39be9400277b10e432db`: backend238PASS/frontend75PASS/integration90PASS/migrations3PASS. Workload1/3/5 повторён на этом artifact:352HTTP,0failures,p95≈36.99/41.31/28.12ms. Все15 DRAFT импортированы и replay проверен; C01 actual editor PATCH200. Полный scope и незакрытые gates — WORK_LOG/PILOT_RUNBOOK, а не выведенный из этих чисел production readiness.
+
 Новый профиль не использует данные демонстрации. Проверки с синтетическими участниками выполняются в обозначенной disposable БД `proctolearn_security_test:55432`, а не в pilot.
 
 - Backend unit chain и disposable integration chain: выполнены успешно; приватные логи `.local/pilot-backend-unit.log`, `.local/pilot-integration.log`. Importer проверен на транзакционный rollback, concurrent replay и конфликт редакторских изменений.

@@ -1,5 +1,13 @@
 # ProctoLearn: implemented architecture
 
+## Controlled pilot addition — 2026-10-10
+
+Отдельный профиль `.local/pilot` запускает production Next build, Nest API, PostgreSQL и приватный S3 на loopback; `scripts/pilot-proxy.cjs` предоставляет один origin для browser HTTP/API/Socket.IO. Публичный HTTPS режим требует сформированные доверенной ngrok policy gateway-secret/client-IP headers; visitor forwarding headers не являются идентичностью. Маршруты staff/authoring разрешены только в локальном HTTP режиме, backend роли и CSRF сохраняются. Реальное ngrok termination и физический телефон ещё требуют проверки владельцем.
+
+Аддитивная схема: `PilotInvitation` хранит digest, expiry/revocation/redemption и акторов; `PilotMembership` хранит ACTIVE/SUSPENDED и историю приостановки; `PILOT_DEFAULT_COURSE_SEATS` задаёт проверяемую отдельно для каждого курса вместимость, `Enrollment.accessStatus/withdrawnAt` сохраняют прежнюю историю после снятия доступа. Ограничения группы и последнего места проверяются server-side сериализуемыми транзакциями с ограниченными retry. Неистёкший незавершённый экзамен препятствует снятию записи. Optional actor relations используют явный RESTRICT; миграции не удаляют исторические данные.
+
+`ContentImportReceipt` связывает стабильный authoring ID с владельцем, одним course ID и hashes. Узкий authenticated importer создаёт целый DRAFT граф в транзакции; идентичный retry безопасен, изменённый граф вызывает конфликт. Это не механизм parallel draft/live revisions. Итоговые банки остаются в private author profile и базе, не в public manifest/frontend assets. Учебный пакет и реальные проверки описаны в COURSE_QA_REPORT.md; lifecycle и recovery — в PILOT_RUNBOOK.md.
+
 Release work: 2026-10-10, `release/final-demo-20261010`. Exact tested revision and remaining checks are in TEST_RESULTS.md and DEMO_READINESS.md.
 
 ## Components and deployment

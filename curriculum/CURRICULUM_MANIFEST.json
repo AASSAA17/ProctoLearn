@@ -5419,5 +5419,24 @@
         }
       ]
     }
-  ]
+  ],
+  "importEvidence": {
+    "state": "IMPORTED_DRAFT",
+    "profile": "isolated pilot",
+    "release": "338f8ecaac2e105a",
+    "verifiedAt": "2026-10-10T14:55:02.112Z",
+    "counts": {
+      "courses": 15,
+      "modules": 50,
+      "lessons": 150,
+      "exams": 15,
+      "finalQuestions": 195,
+      "formative": 450,
+      "drafts": 15,
+      "memberships": 0,
+      "invitations": 0
+    },
+    "humanReview": "PENDING",
+    "privateMap": ".local/pilot-author/import-map.json"
+  }
 }
