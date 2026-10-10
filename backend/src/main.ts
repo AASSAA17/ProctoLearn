@@ -18,7 +18,11 @@ async function bootstrap() {
   app.set('trust proxy', configuredTrustedProxies(app.get(ConfigService).get('TRUSTED_PROXIES')));
   // A complete authenticated course contains twelve text lessons plus tasks.
   // Keep the normal parser bound elsewhere; this route remains local staff only.
-  app.use('/content-import/draft', json({ limit: '2mb' }));
+  // Nest detects its built-in parser by middleware function name, so pass the
+  // scoped parser through a wrapper rather than registering `jsonParser`
+  // directly and accidentally suppressing JSON parsing for every other route.
+  const contentImportJson = json({ limit: '2mb' });
+  app.use('/content-import/draft', (request, response, next) => contentImportJson(request, response, next));
 
   if (!metricsInitialized) {
     collectDefaultMetrics();
