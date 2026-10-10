@@ -121,3 +121,17 @@ The new real-model diagnostic is opt-in and excluded from routine CI; it uses bo
 ### Follow-up freeze revision
 
 Implementation freeze: `1c68db3bef3865df08b9ccfbc1c0b6d5530358c0`. After committing this exact revision, launcher6tests, frontend69tests and the real browser AIoff smoke were repeated successfully (240ms explicit disabled reply, readiness/catalog200). The production build, stage9 and role UI were already run on the same application/dependency files. The last diagnostic-only repair bounds metadata requests; model acceptance was deliberately not rerun after that telemetry change. Independent focused review found no remaining actionable issue. New final HEAD includes this documentation record; consult its PR checks for the independent exact-head CI result, which is not inferred from the preceding release's green run.
+
+## Temporary phone QR verification — 2026-10-10
+
+User explicitly authorized a narrow Cloudflare Quick Tunnel with fictional records. Fresh executions on the focused QR change:
+
+- Frontend production build/typecheck PASS; frontend tests73PASS; lint0errors/19existing warnings.
+- Gateway/workflow/release/local-launch targeted regressions25PASS, including deny policy, fixed upstream, credential stripping, connection bounds, favicon local204 and conditional stop identity.
+- Official cloudflared2026.10.0 project-local binary: pinned SHA256 matches official release asset; Windows Authenticode Valid, Cloudflare signer. No global configuration changed.
+- Actual Quick Tunnel start/check/stop/restart PASS: first stop restored localhost certificate origin and healthy original application; second session has a different actual hostname. Both PDF downloads retain the same certificate IDs/codes/issuance snapshots. Current temporary URL remains only in ignored local evidence.
+- Actual public HTTPS Chrome390x844 PASS: hydrated JS/CSS/fonts, valid snapshot, dedicated local-authorized revocation visible after reload of same URL, unknown; no actual console errors, mixed content, CORS errors, private-address or third-party browser requests, or horizontal overflow. Unavailable/retry uses an explicitly labelled503 response fixture; unit tests additionally exercise upstream failure. No live-outage or physical-phone PASS is claimed.
+- Actual refreshed primary and revocation PDFs rasterized with Poppler and decoded with zxing-cpp2.3.0: both QR URLs exactly match the running HTTPS origin and preserved code. No QR overlay or sample replacement.
+- Default-deny local boundary and actual public private-route probes PASS. Only two fictional certificates are published. Primary remains VALID; only dedicated revocation certificate is REVOKED. Existing student-result/prepared progress and backups were not targeted.
+
+Private runtime artifacts: `.local/qr-phone-demo/evidence/public-browser.json`, `pdf-qr.json`, four screenshots, refreshed PDFs and owned session state. Physical Wi-Fi/mobile phone scan: **AWAITING_OPERATOR**. See DEMO_RUNBOOK B for implemented commands, public scope and phone steps. Temporary transport does not provide permanent hosting; previous no-authorized-origin notes above describe the earlier acceptance state.

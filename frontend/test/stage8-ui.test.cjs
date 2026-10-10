@@ -13,6 +13,11 @@ function load(name) {
   return compiled.exports;
 }
 const { certificateVerificationUrl, notificationTarget } = load('public-links');
+const {
+  fetchPublicCertificateVerification,
+  isCertificateVerificationCode,
+  publicCertificateVerification,
+} = load('public-certificate-verification');
 const { finishExpiredConflict, isClosedExamError } = load('exam-expiry');
 const deferred = () => { let resolve; const promise = new Promise((yes) => { resolve = yes; }); return { promise, resolve }; };
 const closed = (code) => ({ response: { data: { code } } });
@@ -28,6 +33,61 @@ test('notification links reject external origins, scripts and browser-normalized
     assert.equal(notificationTarget(value), null, String(value));
   }
   assert.equal(notificationTarget('/dashboard/my-attempts/id?from=inbox#review'), '/dashboard/my-attempts/id?from=inbox#review');
+});
+
+test('public certificate bridge accepts only UUID certificate codes', () => {
+  assert.equal(isCertificateVerificationCode('d9428888-122b-4d5f-9a8b-9f7419b8451c'), true);
+  for (const code of ['', 'not-a-uuid', '../auth/me', '00000000-0000-0000-0000-000000000000', 'd9428888-122b-0d5f-9a8b-9f7419b8451c']) {
+    assert.equal(isCertificateVerificationCode(code), false, code);
+  }
+});
+
+test('public certificate bridge uses the fixed loopback upstream without credentials or forwarded headers', async () => {
+  const code = 'd9428888-122b-4d5f-9a8b-9f7419b8451c';
+  let request;
+  const result = await fetchPublicCertificateVerification(code, async (input, init) => {
+    request = { input, init };
+    return { ok: true, json: async () => ({
+      valid: true,
+      certificate: {
+        recipientName: 'Demo Student', courseTitle: 'Demo Course', issuerName: 'ProctoLearn',
+        issuedAt: '2026-10-10T12:00:00.000Z', issuedVia: 'PROCTORED_EXAM', snapshotStatus: 'CAPTURED',
+        email: 'private@example.invalid', revocationReason: 'private',
+      },
+      internal: 'must not pass through',
+    }) };
+  });
+  assert.equal(request.input, `http://127.0.0.1:4000/certificates/verify/${code}`);
+  assert.equal(request.init.method, 'GET');
+  assert.equal(request.init.cache, 'no-store');
+  assert.equal(request.init.credentials, 'omit');
+  assert.equal(request.init.redirect, 'error');
+  assert.ok(request.init.signal instanceof AbortSignal);
+  assert.equal('headers' in request.init, false);
+  assert.deepEqual(result, {
+    valid: true,
+    certificate: {
+      recipientName: 'Demo Student', courseTitle: 'Demo Course', issuerName: 'ProctoLearn',
+      issuedAt: '2026-10-10T12:00:00.000Z', issuedVia: 'PROCTORED_EXAM',
+    },
+  });
+});
+
+test('public certificate response preserves revoked and unknown states without leaking upstream fields', () => {
+  assert.deepEqual(publicCertificateVerification({ valid: false, status: 'REVOKED', revocationReason: 'private' }), { valid: false, status: 'REVOKED' });
+  assert.deepEqual(publicCertificateVerification({ valid: false, status: 'INTERNAL_STATE', reason: 'private' }), { valid: false });
+  assert.equal(publicCertificateVerification({ valid: true, certificate: { recipientName: 'Student' } }), null);
+});
+
+test('public certificate bridge converts upstream and malformed-response failures to one unavailable error', async () => {
+  await assert.rejects(
+    fetchPublicCertificateVerification('d9428888-122b-4d5f-9a8b-9f7419b8451c', async () => { throw new Error('raw private failure'); }),
+    (error) => error.name === 'PublicCertificateVerificationUnavailable' && !error.message.includes('private'),
+  );
+  await assert.rejects(
+    fetchPublicCertificateVerification('d9428888-122b-4d5f-9a8b-9f7419b8451c', async () => ({ ok: true, json: async () => ({ valid: true, secret: 'private' }) })),
+    (error) => error.name === 'PublicCertificateVerificationUnavailable',
+  );
 });
 
 test('conflict at deadline stops recording immediately and submits only the fetched server snapshot', async () => {

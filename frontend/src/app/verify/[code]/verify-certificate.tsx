@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { API_URL } from '@/lib/api';
 import { PremiumPublicFrame } from '@/components/PremiumPublicFrame';
 import { ShieldCheckIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
 type Verification = { valid: false; status?: string } | { valid: true; certificate: {
-  recipientName: string | null; courseTitle: string | null; issuedAt: string; issuedVia: string; snapshotStatus?: string;
+  recipientName: string | null; courseTitle: string | null; issuerName: string | null; issuedAt: string; issuedVia: string; snapshotStatus?: string;
 } };
 
 const sources: Record<string, string> = {
@@ -24,7 +23,7 @@ export default function VerifyCertificate({ code }: { code: string }) {
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true); setError(''); setResult(null);
-    void fetch(`${API_URL}/certificates/verify/${encodeURIComponent(code)}`, {
+    void fetch(`/api/public/certificates/verify/${encodeURIComponent(code)}`, {
       signal: controller.signal, credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
     }).then(async (response) => {
       if (!response.ok) throw new Error('Verification unavailable');
@@ -36,7 +35,7 @@ export default function VerifyCertificate({ code }: { code: string }) {
     return () => controller.abort();
   }, [code, retry]);
 
-  return <PremiumPublicFrame>
+  return <PremiumPublicFrame verificationOnly>
     <section className="mx-auto max-w-2xl" aria-busy={loading}>
       <div className="mb-8 text-center"><p className="mb-4 text-xs font-semibold uppercase tracking-[.22em] text-violet-300">ProctoLearn / Сертификаттар тізілімі</p><h1 className="text-3xl font-semibold sm:text-4xl">Сертификатты тексеру</h1><p className="mt-4 text-sm leading-relaxed text-slate-400">Құжаттың берілгені туралы ресми жазба.</p></div>
       <div className="overflow-hidden rounded-[2rem] border border-white/15 bg-[#111625] p-6 shadow-[0_24px_80px_-32px_rgba(124,58,237,.25)] sm:p-10">
@@ -48,6 +47,7 @@ export default function VerifyCertificate({ code }: { code: string }) {
         <dl className="grid gap-7 break-words sm:grid-cols-2">
           <div className="sm:col-span-2"><dt className="mb-2 text-xs uppercase tracking-widest text-slate-400">Алушы</dt><dd className="text-2xl font-semibold">{result.certificate.recipientName ?? 'Тарихи аты-жөні сақталмаған'}</dd></div>
           <div className="sm:col-span-2"><dt className="mb-2 text-xs uppercase tracking-widest text-slate-400">Курс</dt><dd className="text-xl text-violet-200">{result.certificate.courseTitle ?? 'Тарихи курс атауы сақталмаған'}</dd></div>
+          <div><dt className="mb-2 text-xs uppercase tracking-widest text-slate-400">Беруші</dt><dd className="text-sm">{result.certificate.issuerName ?? 'ProctoLearn'}</dd></div>
           <div><dt className="mb-2 text-xs uppercase tracking-widest text-slate-400">Берілген күні</dt><dd className="text-sm"><time dateTime={result.certificate.issuedAt}>{new Date(result.certificate.issuedAt).toLocaleDateString('kk-KZ')}</time></dd></div>
           <div><dt className="mb-2 text-xs uppercase tracking-widest text-slate-400">Берілу негізі</dt><dd className="text-sm">{sources[result.certificate.issuedVia] ?? 'Сертификаттар тізіліміндегі жазба'}</dd></div>
         </dl>

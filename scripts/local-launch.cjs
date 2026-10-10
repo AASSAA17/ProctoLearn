@@ -153,7 +153,7 @@ async function native(env, options) {
   };
   process.once('SIGINT', cleanup); process.once('SIGTERM', cleanup);
   const stopFile = options.controlDir && path.join(options.controlDir, 'stop-request');
-  const controlTimer = stopFile && setInterval(() => { if (fs.existsSync(stopFile)) void cleanup(); }, 500);
+  const controlTimer = stopFile && setInterval(() => { if (stopRequested(stopFile, options.controlToken)) void cleanup(); }, 500);
   try {
     if (!fs.existsSync(path.join(pgData, 'PG_VERSION'))) {
       await fsp.mkdir(pgData, { recursive: true });
@@ -264,5 +264,9 @@ async function main() {
   console.log('ProctoLearn is ready: http://localhost:3000. Local data uses separate proctolearn-local volumes.');
 }
 
-module.exports = { ensureLocalEnvironment, connectionUrl, downloadVerified, native, postgresBin, run, npmCli };
+function stopRequested(file, token) {
+  try { return fs.existsSync(file) && (!token || fs.readFileSync(file, 'utf8').trim() === token); }
+  catch { return false; }
+}
+module.exports = { ensureLocalEnvironment, connectionUrl, downloadVerified, native, postgresBin, run, npmCli, stopRequested };
 if (require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });
