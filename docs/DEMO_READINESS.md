@@ -47,3 +47,9 @@ For unconditional demo acceptance, use an approved reachable application origin,
 - [Backup contract and fresh-target restoration](BACKUP_RESTORE.md)
 
 No real environment files were overwritten, historical migrations removed, owner database reset, privileged route exposed, or grade/certificate delegated to AI. No legal accreditation, electronic signature, production readiness or formal WCAG certification is claimed.
+
+## Freeze record
+
+Audited implementation commit: `3225a70a9499b667150d79243c1c704b04906b20`. Subsequent handoff-only commit adds the architecture inventory and this record without changing the built application. Local evidence in TEST_RESULTS applies to that implementation. Exact publication HEAD and its remote job outcomes are available in the branch PR checks; local results alone do not assert remote CI success. Final staged credential scan passed483indexed files before the implementation commit; two unrelated owner audit artifacts remain untracked and excluded.
+
+Current laptop source is running at `http://localhost:3000`. Backup/recovery acceptance completed:25tables/32objects, fresh target plus actual student/proctor browser checks; returned to the original profile and preserved prepared states. Test infrastructure stopped. Private credentials remain only in `.local/release-demo/DEMO_ACCESS.txt`.
