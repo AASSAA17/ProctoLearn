@@ -1,0 +1,19 @@
+ProctoLearn original demonstration media
+
+html-structure.webm is a 12-second silent HTML structure animation generated
+from scripts/demo-release-media.cjs for this project. It contains no third-party
+footage, images, voices, music, student data or copied course material.
+It is an illustrative demonstration clip, not a complete recorded lecture.
+Source and resulting media use the repository's MIT license.
+
+Transcript (Kazakh):
+HTML құжатының түбірі — html. head ішінде title және charset сияқты
+метадеректер сақталады. body ішінде пайдаланушы көретін мазмұн орналасады.
+h1 негізгі тақырыпты, p абзацты белгілейді. HTML құрылымы мазмұнның
+мағынасын түсіндіреді, ал CSS оның көрінісін басқарады.
+
+Transcript (English):
+The HTML document root is html. The head contains metadata such as title
+and charset. The body contains visible page content. h1 marks a main
+heading and p marks a paragraph. HTML conveys structure and meaning;
+CSS controls presentation.

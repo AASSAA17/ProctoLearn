@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '@/lib/api';
+let pendingChat: AbortController | null = null;
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -26,9 +27,12 @@ interface ChatStore {
 export const useChatStore = create<ChatStore>((set, get) => ({
   ownerId: null,
   sessionVersion: 0,
-  setOwner: (ownerId) => set((state) => state.ownerId === ownerId ? state : {
-    ownerId, sessionVersion: state.sessionVersion + 1, messages: [],
-    isOpen: false, isLoading: false, courseId: undefined,
+  setOwner: (ownerId) => set((state) => {
+    if (state.ownerId === ownerId) return state;
+    pendingChat?.abort();
+    pendingChat = null;
+    return { ownerId, sessionVersion: state.sessionVersion + 1, messages: [],
+      isOpen: false, isLoading: false, courseId: undefined };
   }),
   sendMessage: async (content, sessionVersion) => {
     const state = get();
@@ -37,14 +41,19 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     const history = state.messages.slice(-6).map(({ role, content }) => ({ role, content }));
     state.addMessage({ role: 'user', content: message });
     set({ isLoading: true });
+    const request = new AbortController();
+    pendingChat = request;
     try {
       const { data } = await api.post<{ reply: string }>('/ai/chat', { message, history, courseId: state.courseId }, {
         headers: { 'X-Session-User': state.ownerId },
+        timeout: 125000,
+        signal: request.signal,
       });
       if (get().sessionVersion === sessionVersion) get().addMessage({ role: 'assistant', content: data.reply });
     } catch {
       if (get().sessionVersion === sessionVersion) get().addMessage({ role: 'assistant', content: 'Қате орын алды. Сәл кейін қайталаңыз.' });
     } finally {
+      if (pendingChat === request) pendingChat = null;
       if (get().sessionVersion === sessionVersion) set({ isLoading: false });
     }
   },

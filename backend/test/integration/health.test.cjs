@@ -5,7 +5,8 @@ const net=require('node:net');
 require('reflect-metadata');
 const {Test}=require('@nestjs/testing');
 const {ConfigService}=require('@nestjs/config');
-const {S3Client,DeleteBucketCommand}=require('@aws-sdk/client-s3');
+const {S3Client}=require('@aws-sdk/client-s3');
+const {deleteEmptyFixtureBucket}=require('./storage-cleanup.cjs');
 const {DatabaseProbe}=require('../../src/health/database-probe');
 const {HealthController}=require('../../src/health/health.controller');
 const {HealthService}=require('../../src/health/health.service');
@@ -63,7 +64,7 @@ test('actual PostgreSQL and SeaweedFS readiness is authenticated, bounded and re
   await app.close();await database.onModuleDestroy();
   for(const instance of [storage,...extraStorage])await instance.onModuleDestroy?.();
   assert.match(bucket,/^proctolearn-test-[0-9a-f-]{36}$/);
-  await cleanup.send(new DeleteBucketCommand({Bucket:bucket}),{abortSignal:AbortSignal.timeout(3000)}).catch(error=>{if(error.name!=='NoSuchBucket')throw error;});
+  await deleteEmptyFixtureBucket(cleanup,bucket).catch(error=>{if(error.name!=='NoSuchBucket')throw error;});
   cleanup.destroy();
  }
 });

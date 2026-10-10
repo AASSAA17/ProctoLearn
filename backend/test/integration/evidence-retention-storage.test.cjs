@@ -2,7 +2,8 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
 require('reflect-metadata');
-const { S3Client, CreateBucketCommand, DeleteBucketCommand } = require('@aws-sdk/client-s3');
+const { S3Client, CreateBucketCommand } = require('@aws-sdk/client-s3');
+const { deleteEmptyFixtureBucket } = require('./storage-cleanup.cjs');
 const { ConfigService } = require('@nestjs/config');
 const { MinioService } = require('../../src/minio/minio.service');
 const { EvidenceRetentionService } = require('../../src/evidence/evidence-retention.service');
@@ -60,7 +61,7 @@ test('actual S3 retention deletes only a tombstoned key and recovers an ambiguou
       for (const attempt of attempts) for (const object of await storage.listObjects(`recordings/${attempt.id}/`)) await storage.removeObject(object.name);
       await f.close();
     }
-    await client.send(new DeleteBucketCommand({ Bucket: bucket }));
+    await deleteEmptyFixtureBucket(client, bucket);
     storage.onModuleDestroy(); client.destroy();
   }
 });

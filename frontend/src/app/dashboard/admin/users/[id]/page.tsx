@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import LoadFailure from '@/components/LoadFailure';
 
 interface Progress {
   user: { id: string; name: string; email: string };
@@ -28,6 +29,9 @@ export default function UserProgressPage() {
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState<Course[]>([]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [certificates, setCertificates] = useState<Array<{ id: string; course: { title: string }; status: string; issuedAt: string }>>([]);
+  const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [loadError, setLoadError] = useState(false);
 
   // Grant modal state
   const [grantModal, setGrantModal] = useState<{
@@ -40,20 +44,19 @@ export default function UserProgressPage() {
   const [selectedActionType, setSelectedActionType] = useState<'certificate' | 'exam'>('exam');
 
   const loadProgress = useCallback(() => {
-    return api.get(`/admin/users/${id}/progress`)
-      .then(r => setData(r.data));
+    return Promise.all([
+      api.get(`/admin/users/${id}/progress`).then(r => setData(r.data)),
+      api.get(`/admin/users/${id}/certificates`).then(r => setCertificates(r.data)),
+      api.get('/courses').then(r => {
+        const raw = r.data;
+        setCourses(Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : []);
+      }),
+    ]).then(() => setLoadError(false));
   }, [id]);
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([
-      loadProgress(),
-      api.get('/courses').then(r => {
-        const raw = r.data;
-        const list = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
-        setCourses(list);
-      }),
-    ]).finally(() => setLoading(false));
+    loadProgress().catch(() => setLoadError(true)).finally(() => setLoading(false));
   }, [loadProgress]);
 
   const handleGrant = async (type: 'certificate' | 'exam', courseId: string) => {
@@ -84,6 +87,7 @@ export default function UserProgressPage() {
   };
 
   if (loading) return <div className="text-center py-16 text-gray-400">Жүктелуде...</div>;
+  if (loadError) return <LoadFailure onRetry={() => { setLoading(true); void loadProgress().catch(() => setLoadError(true)).finally(() => setLoading(false)); }} />;
   if (!data) return null;
 
   const enrolledCourseIds = new Set(data.courses.map(c => c.courseId));
@@ -162,6 +166,29 @@ export default function UserProgressPage() {
           ))}
         </div>
       )}
+
+      <section aria-labelledby="user-certificates-title" className="rounded-2xl border border-slate-200 bg-white p-6">
+        <h2 id="user-certificates-title" className="mb-4 text-lg font-semibold">Сертификаттар</h2>
+        {certificates.length === 0 && <p className="text-sm text-slate-500">Берілген сертификаттар жоқ.</p>}
+        <div className="space-y-5">{certificates.map(cert => <article key={cert.id} className="rounded-xl border border-slate-200 p-4">
+          <h3 className="font-semibold break-words">{cert.course.title}</h3>
+          <p className="mt-2 text-sm">{cert.status === 'REVOKED' ? 'Күші жойылған' : 'Жарамды'} · {new Date(cert.issuedAt).toLocaleDateString('kk-KZ')}</p>
+          {cert.status === 'VALID' && <details className="mt-4"><summary className="cursor-pointer text-sm font-semibold text-red-700">Сертификатты кері қайтару</summary>
+            <form className="mt-4 space-y-3" onSubmit={async event => {
+              event.preventDefault(); if (actionLoading || !reasons[cert.id]?.trim()) return;
+              setActionLoading(`revoke-${cert.id}`);
+              try { await api.post(`/admin/certificates/${cert.id}/revoke`, { reason: reasons[cert.id].trim() }); await loadProgress(); toast.success('Сертификаттың күші жойылды'); }
+              catch { toast.error('Сертификатты кері қайтару расталмады. Қайта тексеріңіз.'); }
+              finally { setActionLoading(null); }
+            }}>
+              <p className="text-sm text-red-800">Бұл әрекет қайтарылмайды. Осы QR-код жарамсыз мәртебені көрсетеді.</p>
+              <label className="block text-sm font-medium" htmlFor={`revoke-${cert.id}`}>Кері қайтару себебі</label>
+              <textarea id={`revoke-${cert.id}`} className="input min-h-24 w-full" required maxLength={500} value={reasons[cert.id] ?? ''} onChange={event => setReasons(current => ({ ...current, [cert.id]: event.target.value }))} />
+              <button className="min-h-11 rounded-xl bg-red-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={!!actionLoading || !reasons[cert.id]?.trim()}>Кері қайтаруды растау</button>
+            </form>
+          </details>}
+        </article>)}</div>
+      </section>
 
       {/* Confirm Grant Modal */}
       {grantModal && (

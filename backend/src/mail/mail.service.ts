@@ -23,10 +23,12 @@ export class MailService {
       host: this.configService.get('SMTP_HOST', 'smtp.gmail.com'),
       port: parseInt(this.configService.get('SMTP_PORT', '587')),
       secure: false,
-      auth: {
+      auth: this.configService.get('SMTP_USER', '') ? {
         user: this.configService.get('SMTP_USER', ''),
         pass: this.configService.get('SMTP_PASS', ''),
-      },
+      } : undefined,
+      connectionTimeout: 5000,
+      socketTimeout: 10000,
     });
   }
 
@@ -48,7 +50,7 @@ export class MailService {
 
     try {
       await this.transporter.sendMail({
-        from: `"ProctoLearn" <${this.configService.get('SMTP_USER', 'noreply@proctolearn.kz')}>`,
+        from: `"ProctoLearn" <${this.configService.get('SMTP_FROM') || this.configService.get('SMTP_USER') || 'noreply@proctolearn.kz'}>`,
         to: email,
         subject,
         html,
@@ -80,7 +82,7 @@ export class MailService {
 
     try {
       await this.transporter.sendMail({
-        from: `"ProctoLearn" <${this.configService.get('SMTP_USER', 'noreply@proctolearn.kz')}>`,
+        from: `"ProctoLearn" <${this.configService.get('SMTP_FROM') || this.configService.get('SMTP_USER') || 'noreply@proctolearn.kz'}>`,
         to: email,
         subject,
         html,

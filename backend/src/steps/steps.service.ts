@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStepDto, UpdateStepDto, SubmitAnswerDto } from './dto/step.dto';
 import { StepType } from '@prisma/client';
+import { serializable } from '../prisma/serializable';
 import {
   LessonViewer, assertCourseManager, assertCourseReader, lessonCourse,
   lessonCourseInclude, sanitizeStep,
@@ -39,10 +40,14 @@ export class StepsService {
   }
 
   async remove(id: string, viewer: LessonViewer) {
-    const step = await this.getStep(id);
-    assertCourseManager(lessonCourse(step.lesson), viewer);
-    await this.prisma.step.delete({ where: { id } });
-    return { message: 'Қадам жойылды' };
+    return serializable(this.prisma, async (tx) => {
+      const step = await tx.step.findUnique({ where: { id }, include: { lesson: { include: lessonCourseInclude } } });
+      if (!step) throw new NotFoundException('Қадам табылмады');
+      assertCourseManager(lessonCourse(step.lesson), viewer);
+      if (await tx.submission.count({ where: { stepId: id } })) throw new ConflictException('Жауаптары бар қадамды жоюға болмайды');
+      await tx.step.delete({ where: { id } });
+      return { message: 'Қадам жойылды' };
+    });
   }
 
   async submitAnswer(stepId: string, viewer: LessonViewer, dto: SubmitAnswerDto) {

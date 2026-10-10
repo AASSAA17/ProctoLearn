@@ -2,13 +2,14 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomBytes } = require('node:crypto');
 require('reflect-metadata');
-const { ForbiddenException, NotFoundException, BadRequestException, ValidationPipe } = require('@nestjs/common');
+const { ForbiddenException, NotFoundException, BadRequestException, ConflictException, ValidationPipe } = require('@nestjs/common');
 const { Test } = require('@nestjs/testing');
 const { ConfigService } = require('@nestjs/config');
 const { JwtService } = require('@nestjs/jwt');
 const { StepsService } = require('../src/steps/steps.service');
 const { StepsController } = require('../src/steps/steps.controller');
 const { LessonsService } = require('../src/lessons/lessons.service');
+const { SubmissionsService } = require('../src/step-submissions/step-submissions.service');
 const { LessonsController, ModuleLessonsController, StandaloneLessonsController } = require('../src/lessons/lessons.controller');
 const { JwtStrategy } = require('../src/auth/strategies/jwt.strategy');
 const { PrismaService } = require('../src/prisma/prisma.service');
@@ -65,11 +66,13 @@ function fixture({ moduleLesson = false } = {}) {
       upsert: async ({ create }) => { writes.push(['progress', create]); return create; },
     },
     submission: {
+      count: async () => 0,
       findFirst: async () => null,
       create: async ({ data }) => { writes.push(['submission', data]); return data; },
       groupBy: async () => [],
     },
   };
+  prisma.$transaction = async (work) => work(prisma);
   return { prisma, lesson, task, course, writes, steps: new StepsService(prisma), lessons: new LessonsService(prisma) };
 }
 
@@ -200,6 +203,26 @@ test('malformed task answers are rejected instead of crashing or accepting coerc
   assert.deepEqual(f.writes, []);
 });
 
+test('all supported task types grade representative correct and incorrect answers without leaking keys', async () => {
+  for (const [taskType, correctAnswer, correct, incorrect] of [
+    ['single_choice', 'B', { selected: 'B' }, { selected: 'A' }],
+    ['multiple_choice', ['A', 'B'], { selected: ['B', 'A'] }, { selected: ['A'] }],
+    ['text_input', 'HTML', { text: ' html ' }, { text: 'CSS' }],
+    ['number_input', 12, { value: '12.0' }, { value: '13' }],
+  ]) {
+    const f = fixture();
+    Object.assign(f.task.content, { taskType, correctAnswer });
+    for (const [answer, expected] of [[correct, true], [incorrect, false]]) {
+      const result = await f.steps.submitAnswer('step', student, { answer });
+      assert.equal(result.isCorrect, expected, taskType);
+      assert.equal(result.score, expected ? 100 : 0, taskType);
+      assert.equal(result.correctAnswer, null);
+      assert.equal(result.explanation, null);
+      assert.equal(f.writes.at(-1)[1].userId, student.id);
+    }
+  }
+});
+
 test('invalid task authoring fails before saving an unusable grading key', async () => {
   const f = fixture();
   for (const content of [
@@ -257,7 +280,7 @@ test('reading/video completion persists once, requires enrollment, and cannot by
 test('prerequisite checks also apply to direct completion and assignment endpoints', async () => {
   const f = fixture();
   f.lesson.order = 2;
-  f.prisma.lesson.findMany = async () => [{ id: 'previous' }];
+  f.prisma.lesson.findMany = async () => [{ id: 'previous', order: 1 }];
   for (const request of [
     () => f.lessons.findById('lesson', student),
     () => f.lessons.checkAssignment('lesson', student, 'private answer'),
@@ -265,6 +288,53 @@ test('prerequisite checks also apply to direct completion and assignment endpoin
   ]) await assert.rejects(request, ForbiddenException);
   assert.deepEqual(f.writes, []);
   await f.lessons.findById('lesson', owner);
+});
+
+test('lesson prerequisites compare numeric module and lesson orders, including double digits', async () => {
+  const f = fixture({ moduleLesson: true });
+  f.lesson.order = 10;
+  f.lesson.module.order = 2;
+  f.prisma.lesson.findMany = async () => [
+    { id: 'first', order: 20, module: { order: 1 } },
+    { id: 'previous', order: 2, module: { order: 2 } },
+    { id: 'later', order: 1, module: { order: 10 } },
+  ];
+  f.prisma.lessonProgress.count = async ({ where }) => {
+    assert.deepEqual(where.lessonId.in, ['first', 'previous']);
+    return 1;
+  };
+  await assert.rejects(f.lessons.findById('lesson', student), ForbiddenException);
+  f.prisma.lessonProgress.count = async () => 2;
+  await f.lessons.findById('lesson', student);
+});
+
+test('progress reads require course enrollment or author ownership and never write completion', async () => {
+  const f = fixture();
+  await assert.rejects(f.lessons.getMyProgress('course', outsider.id, outsider.role), ForbiddenException);
+  await f.lessons.getMyProgress('course', student.id, student.role);
+  await f.lessons.getMyProgress('course', owner.id, owner.role);
+  assert.deepEqual(f.writes, []);
+});
+
+test('step progress APIs cannot reveal draft lesson outlines to unrelated users', async () => {
+  const f = fixture();
+  const service = new SubmissionsService(f.prisma);
+  await assert.rejects(service.getLessonProgress('lesson', outsider.id, outsider.role), ForbiddenException);
+  await assert.rejects(service.getCourseProgress('course', outsider.id, outsider.role), ForbiddenException);
+  await service.getLessonProgress('lesson', student.id, student.role);
+  await service.getLessonProgress('lesson', owner.id, owner.role);
+  assert.deepEqual(f.writes, []);
+});
+
+test('deleting lessons or steps with learner history fails before deleting records', async () => {
+  const f = fixture();
+  f.prisma.submission.count = async () => 1;
+  await assert.rejects(f.steps.remove('step', owner), ConflictException);
+  await assert.rejects(f.lessons.remove('lesson', owner), ConflictException);
+  f.prisma.submission.count = async () => 0;
+  f.prisma.lessonProgress.count = async () => 1;
+  await assert.rejects(f.lessons.remove('lesson', admin), ConflictException);
+  assert.deepEqual(f.writes, []);
 });
 
 test('public lesson summaries exclude body, video, assignment, and task content', () => {

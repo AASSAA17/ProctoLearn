@@ -154,7 +154,7 @@ export default function AdminUsersPage() {
       ) : (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto" role="region" aria-label="Пайдаланушылар кестесі" tabIndex={0}>
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[900px] text-sm">
               <thead className="bg-gray-50 border-b">
                 <tr>
                   {['Пайдаланушы', 'Рөл', 'Телефон', 'Белсенділік', 'Нәтижелер', 'Сертификат', 'Әрекет'].map(h => (
@@ -268,8 +268,8 @@ export default function AdminUsersPage() {
 
               <div className={`rounded-lg p-3 text-xs ${selectedActionType === 'certificate' ? 'bg-green-50 text-green-800' : 'bg-orange-50 text-orange-800'}`}>
                 {selectedActionType === 'certificate'
-                  ? 'Барлық сабақтар оқылған деп белгіленеді, enrollment аяқталады және сертификат беріледі.'
-                  : 'Барлық сабақтар оқылған деп белгіленеді. Пайдаланушы экзаменге кіре алады.'}
+                  ? 'Әкімші шешімімен сертификат беріледі. Сабақтар мен тапсырмалардың нақты орындалу тарихы өзгермейді.'
+                  : 'Әкімші шешімімен емтиханға тікелей рұқсат беріледі. Сабақтар мен тапсырмалардың нақты орындалу тарихы өзгермейді.'}
               </div>
             </div>
 

@@ -4,7 +4,7 @@ const { configuredOrigins, isAllowedOrigin } = require('../src/common/config/ori
 const { validateEnvironment } = require('../src/common/config/environment');
 
 test('production startup requires explicit HTTPS origins and independent keys', () => {
-  const env = { NODE_ENV: 'production', JWT_ACCESS_SECRET: 'a'.repeat(64), JWT_REFRESH_SECRET: 'b'.repeat(64) };
+  const env = { NODE_ENV: 'production', JWT_ACCESS_SECRET: 'a'.repeat(64), JWT_REFRESH_SECRET: 'b'.repeat(64), CERTIFICATE_PUBLIC_ORIGIN: 'https://verify.example.com' };
   for (const origin of [undefined, '', 'http://localhost:3000', 'https://user:pass@example.com', 'https://example.com/path', 'https://example.com?query=1', 'https://example.com#fragment', 'https://example.com,']) {
     assert.throws(() => validateEnvironment({ ...env, FRONTEND_URL: origin }), /FRONTEND_URL/);
   }

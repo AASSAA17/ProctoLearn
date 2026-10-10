@@ -57,18 +57,20 @@ function ChatPanel() {
       <button
         onClick={toggleChat}
         aria-label="AI Ассистент"
+        aria-expanded={isOpen}
+        aria-controls="learning-assistant"
         className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white text-xl transition-all duration-300 ${
           isOpen
             ? 'bg-gray-700 hover:bg-gray-800 rotate-90'
             : 'bg-primary-600 hover:bg-primary-700 hover:scale-110'
         }`}
       >
-        {isOpen ? '✕' : ''}
+        {isOpen ? '✕' : 'AI'}
       </button>
 
       {/* Chat panel */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-[360px] max-h-[560px] flex flex-col bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
+        <div id="learning-assistant" role="region" aria-label="ProctoLearn AI" className="fixed bottom-24 right-4 sm:right-6 z-50 w-[360px] max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-8rem)] flex flex-col bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
           {/* Header */}
           <div className="bg-primary-600 px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -77,17 +79,16 @@ function ChatPanel() {
               </div>
               <div>
                 <p className="text-white font-semibold text-sm">ProctoLearn AI</p>
-                <p className="text-primary-100 text-xs">Оқуға қатысты сұрақтарыңызға жауап беремін</p>
+                <p className="text-primary-100 text-xs">Жергілікті оқу көмекшісі · Ollama</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-primary-100 text-xs">Онлайн</span>
+              <span className="text-primary-100 text-xs">{isLoading ? 'Жауап күтудеміз' : 'AI'}</span>
             </div>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0 max-h-[360px]">
+          <div role="log" aria-live="polite" aria-relevant="additions text" className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0 max-h-[360px]">
             {messages.length === 0 ? (
               <div className="text-center py-4">
                 <p className="text-4xl mb-3"></p>
@@ -125,7 +126,11 @@ function ChatPanel() {
                   >
                     {msg.role === 'assistant' ? (
                       <div className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={{
+                          // Model output cannot load tracking pixels or turn text into clickable external actions.
+                          img: ({ alt }) => <span>{alt}</span>,
+                          a: ({ children }) => <span>{children}</span>,
+                        }}>
                           {msg.content}
                         </ReactMarkdown>
                       </div>
@@ -166,6 +171,7 @@ function ChatPanel() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Сұрағыңызды жазыңыз..."
+                aria-label="AI көмекшісіне сұрақ"
                 maxLength={2000}
                 rows={1}
                 disabled={isLoading}
@@ -184,7 +190,7 @@ function ChatPanel() {
               </button>
             </div>
             <p className="text-[10px] text-gray-400 text-center mt-2">
-              Enter — жіберу · Shift+Enter — жол ауыстыру. Сыртқы AI қосылса, сұрағыңыз бен оқу контексті провайдерге жіберіледі.
+              Enter — жіберу · Shift+Enter — жол ауыстыру. AI қателесуі мүмкін. Сұрақтар сервердегі жергілікті модельге жіберіледі. Құпия деректерді жазбаңыз.
             </p>
           </div>
         </div>

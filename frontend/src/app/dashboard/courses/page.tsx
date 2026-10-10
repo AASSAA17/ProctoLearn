@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { NavIcon } from '@/components/nav-icon';
+import Link from 'next/link';
 
 type CourseLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 
@@ -140,6 +141,15 @@ export default function CoursesPage() {
         <span role="status" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">{filteredCourses.length} курс</span>
       </div>
       {loadError && <div role="alert" className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Деректер толық жүктелмеді. <button type="button" onClick={() => void loadData()} className="font-semibold underline">Қайта жүктеу</button></div>}
+
+      {enrollments.length > 0 && <section className="mb-6 rounded-2xl border bg-white p-5" aria-label="Тіркелген курстар">
+        <h2 className="font-semibold mb-3">Менің оқуым</h2>
+        <p className="text-sm text-gray-600 mb-3">Тіркелген курстар, соның ішінде каталогтан мұрағатталған материалдар.</p>
+        <ul className="space-y-2">{enrollments.map((enrollment) => <li key={enrollment.id}>
+          <Link className="text-primary-700 underline" href={`/dashboard/courses/${enrollment.courseId}`}>{enrollment.course.title}</Link>
+          <span className="ml-2 text-sm text-gray-500">{enrollment.completedAt ? 'Аяқталған' : 'Оқуды жалғастыру'}</span>
+        </li>)}</ul>
+      </section>}
 
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
         {LEVEL_TABS.map(tab => (

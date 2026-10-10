@@ -6,18 +6,20 @@ const net = require('node:net');
 const { spawn, spawnSync } = require('node:child_process');
 const { randomBytes, createHash } = require('node:crypto');
 const { parseEnv } = require('node:util');
+const { createRequire } = require('node:module');
 const ROOT = path.resolve(__dirname, '..');
 const LOCAL = path.join(ROOT, '.local');
 const secret = () => randomBytes(32).toString('hex');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-function ensureLocalEnvironment(root = ROOT) {
+function ensureLocalEnvironment(root = ROOT, profile = 'local') {
+  if (!['local', 'release'].includes(profile)) throw new Error('Unsupported local profile');
   const file = path.join(root, '.env.local');
   if (!fs.existsSync(file)) {
     const values = {
-      POSTGRES_USER: 'proctolearn_local', POSTGRES_DB: 'proctolearn_local', POSTGRES_PASSWORD: secret(),
+      POSTGRES_USER: `proctolearn_${profile}`, POSTGRES_DB: `proctolearn_${profile}`, POSTGRES_PASSWORD: secret(),
       JWT_ACCESS_SECRET: secret(), JWT_REFRESH_SECRET: secret(), JWT_ACCESS_EXPIRES_IN: '15m', JWT_REFRESH_EXPIRES_IN: '7d',
-      MINIO_ROOT_USER: 'proctolearn-local', MINIO_ROOT_PASSWORD: secret(), MINIO_BUCKET: 'proctolearn-local',
+      MINIO_ROOT_USER: `proctolearn-${profile}`, MINIO_ROOT_PASSWORD: secret(), MINIO_BUCKET: `proctolearn-${profile}`,
       MINIO_ENDPOINT: '127.0.0.1', MINIO_PORT: '9000', MINIO_USE_SSL: 'false', MINIO_REGION: 'us-east-1', MINIO_PUBLIC_URL: 'http://localhost:9000',
       API_PORT: '4000', NODE_ENV: 'development', FRONTEND_URL: 'http://localhost:3000',
       NEXT_PUBLIC_API_URL: 'http://localhost:4000', NEXT_PUBLIC_WS_URL: 'ws://localhost:4000',
@@ -34,8 +36,8 @@ function ensureLocalEnvironment(root = ROOT) {
   return env;
 }
 
-function connectionUrl(env) {
-  return `postgresql://${encodeURIComponent(env.POSTGRES_USER)}:${encodeURIComponent(env.POSTGRES_PASSWORD)}@127.0.0.1:5433/${env.POSTGRES_DB}`;
+function connectionUrl(env, port = 5433) {
+  return `postgresql://${encodeURIComponent(env.POSTGRES_USER)}:${encodeURIComponent(env.POSTGRES_PASSWORD)}@127.0.0.1:${port}/${env.POSTGRES_DB}`;
 }
 
 async function downloadVerified(url, file, algorithm, expected, encoding = 'hex') {
@@ -114,16 +116,19 @@ function demoAccess(env) {
 
 async function native(env, options) {
   if (process.platform !== 'win32') throw new Error('Use Docker Compose on this platform; the native helper is for Windows.');
-  await assertPortsFree([3000, 4000, 5433, 9000, 18888, 19333, 19340, 23646, 28888, 29000, 29333, 29340, 33646]);
+  const local = options.localDir || LOCAL;
+  const pgPort = options.pgPort || 5433;
+  const storagePorts = options.storagePorts || { s3: 9000, s3grpc: 29000, master: 19333, volume: 19340, filer: 18888 };
+  await assertPortsFree([...(options.infrastructureOnly ? [] : [3000, 4000]), pgPort, ...Object.values(storagePorts), storagePorts.master + 10000, storagePorts.volume + 10000, storagePorts.filer + 10000, ...(options.extraPorts || [])]);
   const pgBin = postgresBin();
-  const pgData = path.join(LOCAL, 'postgres');
-  const storageData = path.join(LOCAL, 'storage');
-  const logs = path.join(LOCAL, 'logs');
+  const pgData = path.join(local, 'postgres');
+  const storageData = path.join(local, 'storage');
+  const logs = path.join(local, 'logs');
   await fsp.mkdir(logs, { recursive: true });
   await fsp.mkdir(storageData, { recursive: true });
   const cli = await npmCli();
   const weed = await storageBinary();
-  const runtime = { ...process.env, ...env, API_HOST: '127.0.0.1', GRAPHITE_ENABLED: 'false', N8N_EXAM_SUBMIT_WEBHOOK_URL: '', DATABASE_URL: connectionUrl(env), PGHOST: '127.0.0.1', PGPORT: '5433', PGUSER: env.POSTGRES_USER, PGPASSWORD: env.POSTGRES_PASSWORD, PGDATABASE: env.POSTGRES_DB, npm_config_cache: path.join(LOCAL, 'npm-cache') };
+  const runtime = { ...process.env, ...env, API_HOST: '127.0.0.1', GRAPHITE_ENABLED: 'false', N8N_EXAM_SUBMIT_WEBHOOK_URL: '', DATABASE_URL: connectionUrl(env, pgPort), PGHOST: '127.0.0.1', PGPORT: String(pgPort), PGUSER: env.POSTGRES_USER, PGPASSWORD: env.POSTGRES_PASSWORD, PGDATABASE: env.POSTGRES_DB, npm_config_cache: path.join(LOCAL, 'npm-cache') };
   const children = [];
   let postgresProcess = null, stopping = false, resolveStopped;
   const stopped = new Promise(resolve => { resolveStopped = resolve; });
@@ -147,10 +152,12 @@ async function native(env, options) {
     return child;
   };
   process.once('SIGINT', cleanup); process.once('SIGTERM', cleanup);
+  const stopFile = options.controlDir && path.join(options.controlDir, 'stop-request');
+  const controlTimer = stopFile && setInterval(() => { if (fs.existsSync(stopFile)) void cleanup(); }, 500);
   try {
     if (!fs.existsSync(path.join(pgData, 'PG_VERSION'))) {
       await fsp.mkdir(pgData, { recursive: true });
-      const passwordFile = path.join(LOCAL, 'pg-init-password');
+      const passwordFile = path.join(local, 'pg-init-password');
       await fsp.writeFile(passwordFile, env.POSTGRES_PASSWORD, { mode: 0o600 });
       try { await run(path.join(pgBin, 'initdb.exe'), ['-D', pgData, '-U', env.POSTGRES_USER, '--pwfile=' + passwordFile, '--encoding=UTF8', '--no-locale', '--auth-host=scram-sha-256', '--auth-local=trust']); }
       finally { await fsp.unlink(passwordFile); }
@@ -159,10 +166,10 @@ async function native(env, options) {
     if (fs.readFileSync(path.join(pgData, 'PG_VERSION'), 'utf8').trim() !== installedMajor) throw new Error('PostgreSQL major differs from the local cluster. Set POSTGRES_BIN to its matching version. No automatic upgrade is attempted.');
     if (stopping) throw new Error('Local launch was stopped');
     // Keep PostgreSQL as an owned foreground child, like storage and API; no detached server.
-    postgresProcess = launch('postgres', path.join(pgBin, 'postgres.exe'), ['-D', pgData, '-h', '127.0.0.1', '-p', '5433']);
+    postgresProcess = launch('postgres', path.join(pgBin, 'postgres.exe'), ['-D', pgData, '-h', '127.0.0.1', '-p', String(pgPort)]);
     const databaseDeadline = Date.now() + 30000;
     while (!stopping && postgresProcess.exitCode === null) {
-      const probe = spawnSync(path.join(pgBin, 'pg_isready.exe'), ['-h', '127.0.0.1', '-p', '5433'], { env: runtime, windowsHide: true, stdio: 'ignore', timeout: 2000 });
+      const probe = spawnSync(path.join(pgBin, 'pg_isready.exe'), ['-h', '127.0.0.1', '-p', String(pgPort)], { env: runtime, windowsHide: true, stdio: 'ignore', timeout: 2000 });
       if (probe.status === 0) break;
       if (Date.now() >= databaseDeadline) throw new Error('Local PostgreSQL startup timed out. See .local/logs.');
       await sleep(250);
@@ -170,17 +177,55 @@ async function native(env, options) {
     if (stopping) throw new Error('Local launch was stopped');
     const found = spawnSync(path.join(pgBin, 'psql.exe'), ['-d', 'postgres', '-tAc', `SELECT 1 FROM pg_database WHERE datname='${env.POSTGRES_DB}'`], { env: runtime, encoding: 'utf8', windowsHide: true });
     if (found.status !== 0) throw new Error('Cannot authenticate to the isolated PostgreSQL cluster. Existing passwords were not changed.');
+    if (found.stdout.trim() !== '1' && options.requireExistingResources) throw new Error('Verified restore database no longer exists; refusing to replace it.');
     if (found.stdout.trim() !== '1') await run(path.join(pgBin, 'createdb.exe'), [env.POSTGRES_DB], { env: runtime });
-    const storage = launch('storage', weed, ['mini', `-dir=${storageData}`, '-ip=127.0.0.1', '-ip.bind=127.0.0.1', '-s3.port=9000', '-s3.port.grpc=29000', '-master.port=19333', '-volume.port=19340', '-filer.port=18888', '-s3.port.iceberg=0', '-s3.port.lance=0', '-webdav=false', '-admin.ui=false', '-master.telemetry=false', '-s3.allowedOrigins=http://localhost:3000'], { ...runtime, AWS_ACCESS_KEY_ID: env.MINIO_ROOT_USER, AWS_SECRET_ACCESS_KEY: env.MINIO_ROOT_PASSWORD, S3_BUCKET: env.MINIO_BUCKET });
-    await waitReady('http://127.0.0.1:9000/readyz', storage);
+    let storageArgs = ['mini', `-dir=${storageData}`, '-ip=127.0.0.1', '-ip.bind=127.0.0.1', `-s3.port=${storagePorts.s3}`, `-s3.port.grpc=${storagePorts.s3grpc}`, `-master.port=${storagePorts.master}`, `-volume.port=${storagePorts.volume}`, `-filer.port=${storagePorts.filer}`, '-s3.port.iceberg=0', '-s3.port.lance=0', '-webdav=false', '-admin.ui=false', '-master.telemetry=false', '-s3.allowedOrigins=http://localhost:3000'];
+    if (options.noStorageAdmin) {
+      // mini always starts a wildcard-bound admin gRPC listener in 4.47, even with admin.ui=false.
+      // Explicit server components avoid that listener, with durable metadata and private S3 IAM.
+      const s3Config = path.join(storageData, 'release-s3.json');
+      const filerConfig = path.join(storageData, 'filer.toml');
+      if (!fs.existsSync(s3Config)) await fsp.writeFile(s3Config, JSON.stringify({ identities: [{ name: 'release-local', credentials: [{ accessKey: env.MINIO_ROOT_USER, secretKey: env.MINIO_ROOT_PASSWORD }], actions: ['Admin', 'Read', 'Write', 'List', 'Tagging'] }] }), { flag: 'wx', mode: 0o600 });
+      if (!fs.existsSync(filerConfig)) await fsp.writeFile(filerConfig, '[leveldb2]\nenabled = true\ndir = ' + JSON.stringify(path.join(storageData, 'filerldb2').replaceAll('\\', '/')) + '\n', { flag: 'wx', mode: 0o600 });
+      storageArgs = ['server', `-dir=${storageData}`, `-master.dir=${path.join(storageData, `m${storagePorts.master}`)}`, '-filer', '-s3', '-ip=127.0.0.1', '-ip.bind=127.0.0.1', '-s3.ip.bind=127.0.0.1',
+        `-s3.config=${s3Config}`, `-s3.port=${storagePorts.s3}`, `-s3.port.grpc=${storagePorts.s3grpc}`, `-master.port=${storagePorts.master}`, `-volume.port=${storagePorts.volume}`, `-filer.port=${storagePorts.filer}`,
+        '-s3.port.iceberg=0', '-s3.port.lance=0', '-master.telemetry=false', '-s3.allowedOrigins=http://localhost:3000', '-filer.allowedOrigins=http://localhost:3000', '-filer.exposeDirectoryData=false', '-s3.allowDeleteBucketNotEmpty=false', '-volume.max=0', '-master.volumeSizeLimitMB=128'];
+      await fsp.mkdir(path.join(storageData, `m${storagePorts.master}`), { recursive: true });
+    }
+    const storage = launch('storage', weed, storageArgs, { ...runtime, AWS_ACCESS_KEY_ID: env.MINIO_ROOT_USER, AWS_SECRET_ACCESS_KEY: env.MINIO_ROOT_PASSWORD, S3_BUCKET: env.MINIO_BUCKET }, options.noStorageAdmin ? storageData : ROOT);
+    await waitReady(`http://127.0.0.1:${storagePorts.s3}/readyz`, storage);
+    const ensureBucket = async () => { if (options.noStorageAdmin) {
+      const sdk = createRequire(path.join(ROOT, 'backend/package.json'))('@aws-sdk/client-s3');
+      const client = new sdk.S3Client({ endpoint: `http://127.0.0.1:${storagePorts.s3}`, region: 'us-east-1', forcePathStyle: true, credentials: { accessKeyId: env.MINIO_ROOT_USER, secretAccessKey: env.MINIO_ROOT_PASSWORD } });
+      try {
+        try { await client.send(new sdk.HeadBucketCommand({ Bucket: env.MINIO_BUCKET })); }
+        catch (error) { if (error.$metadata?.httpStatusCode !== 404 || options.requireExistingResources) throw new Error('Cannot verify the private release bucket.'); await client.send(new sdk.CreateBucketCommand({ Bucket: env.MINIO_BUCKET })); }
+      } finally { client.destroy(); }
+    } };
+    if (options.infrastructureOnly) {
+      await ensureBucket();
+      await options.onReady?.();
+      console.log('Isolated PostgreSQL and private storage are ready for maintenance. Application writers are stopped.');
+      await stopped;
+      return;
+    }
     if (!options.skipBuild) for (const project of ['backend', 'frontend']) {
+      if (stopping) throw new Error('Local launch was stopped');
       console.log(`Installing and building ${project}...`);
       const buildEnv = { ...runtime, ...(project === 'frontend' ? { NODE_ENV: 'production' } : {}) };
       await run(process.execPath, [cli, 'ci', '--include=dev'], { cwd: path.join(ROOT, project), env: buildEnv });
+      if (stopping) throw new Error('Local launch was stopped');
       if (project === 'backend') await run(process.execPath, [cli, 'run', 'prisma:generate'], { cwd: path.join(ROOT, project), env: buildEnv });
       await run(process.execPath, [cli, 'run', 'build'], { cwd: path.join(ROOT, project), env: buildEnv });
     }
+    if (stopping) throw new Error('Local launch was stopped');
+    await ensureBucket();
     await run(process.execPath, [path.join(ROOT, 'backend/node_modules/prisma/build/index.js'), 'migrate', 'deploy'], { cwd: path.join(ROOT, 'backend'), env: runtime });
+    if (options.seedScript) await run(process.execPath, [options.seedScript], { cwd: ROOT, env: { ...runtime, ALLOW_DEMO_SEED: 'true', DEMO_RELEASE_DIR: local } });
+    if (options.mailCatcher) {
+      const mail = launch('mail', process.execPath, [path.join(ROOT, 'scripts/demo-mail-catcher.cjs'), '--dir', path.join(local, 'mail')]);
+      await waitReady('http://127.0.0.1:8025/', mail);
+    }
     if (options.demo) {
       await fsp.copyFile(path.join(ROOT, 'backend/prisma/demo-seed.cjs'), path.join(ROOT, 'backend/dist/prisma/demo-seed.cjs'));
       await run(process.execPath, [path.join(ROOT, 'backend/dist/prisma/seed.js')], { cwd: path.join(ROOT, 'backend'), env: { ...runtime, ALLOW_DEMO_SEED: 'true', DEMO_SEED_MODE: options.minimalDemo ? 'minimal' : 'full' } });
@@ -190,10 +235,11 @@ async function native(env, options) {
     await waitReady('http://127.0.0.1:4000/ready', api);
     const web = launch('web', process.execPath, [path.join(ROOT, 'frontend/node_modules/next/dist/bin/next'), 'start', '--hostname', '127.0.0.1', '--port', '3000'], { ...runtime, NODE_ENV: 'production' }, path.join(ROOT, 'frontend'));
     await waitReady('http://127.0.0.1:3000', web);
+    await options.onReady?.();
     console.log('ProctoLearn is ready: http://localhost:3000 (API: http://localhost:4000/ready).');
-    console.log('This is the separate .local environment. Keep this window open; Ctrl+C stops its services.');
+    console.log(`This is the separate ${path.relative(ROOT, local)} environment. Keep this window open; Ctrl+C stops its services.`);
     await stopped;
-  } finally { await cleanup(); process.removeListener('SIGINT', cleanup); process.removeListener('SIGTERM', cleanup); }
+  } finally { if (controlTimer) clearInterval(controlTimer); await cleanup(); process.removeListener('SIGINT', cleanup); process.removeListener('SIGTERM', cleanup); }
 }
 
 async function main() {
@@ -218,5 +264,5 @@ async function main() {
   console.log('ProctoLearn is ready: http://localhost:3000. Local data uses separate proctolearn-local volumes.');
 }
 
-module.exports = { ensureLocalEnvironment, connectionUrl, downloadVerified };
+module.exports = { ensureLocalEnvironment, connectionUrl, downloadVerified, native, postgresBin, run, npmCli };
 if (require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });

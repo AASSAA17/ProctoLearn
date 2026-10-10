@@ -55,7 +55,7 @@ export default function CourseDetailPage() {
       try {
         setHasCertificate(false);
         const [courseRes, progressRes, stepProgressRes, certificatesRes, enrollmentRes] = await Promise.allSettled([
-          api.get(`/courses/${id}`),
+          api.get(`/courses/${id}/overview`),
           api.get(`/courses/${id}/lessons/progress/my`),
           api.get(`/submissions/course/${id}/progress`),
           api.get<{ courseId: string }[]>('/certificates/my'),
@@ -143,12 +143,12 @@ export default function CourseDetailPage() {
             <span className="text-5xl">🏆</span>
             <div>
               <p className="text-xl font-bold text-green-800">Курс аяқталды!</p>
-              <p className="text-sm text-green-600">Сіз осы курс бойынша сертификат алдыңыз. Барлық сабақтар қол жетімді.</p>
+              <p className="text-sm text-green-700">Сіз осы курс бойынша сертификат алдыңыз. Барлық сабақтар қол жетімді.</p>
             </div>
           </div>
           <Link
             href="/dashboard/certificates"
-            className="whitespace-nowrap bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
+            className="whitespace-nowrap bg-green-700 hover:bg-green-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
           >
             🎓 Сертификатты көру
           </Link>
@@ -253,7 +253,7 @@ export default function CourseDetailPage() {
                           </span>
                           <span className="truncate flex-1">{lesson.title}</span>
                           {isTest && !done && <span className="text-xs text-amber-600 flex-shrink-0">Мини-тест</span>}
-                          {done && <span className="text-xs text-green-600 flex-shrink-0">✓ Орындалды</span>}
+                          {done && <span className="text-xs text-green-700 flex-shrink-0">✓ Орындалды</span>}
                           {!done && !isTest && <span className="text-xs text-primary-500 flex-shrink-0">→</span>}
                         </Link>
                       );
@@ -268,12 +268,12 @@ export default function CourseDetailPage() {
 
       {/* All lessons done → take exam banner */}
       {((hasModules && allModuleLessonsDone) || (!hasModules && allLessonsCompleted)) && course.exams.length > 0 && (
-        <div className="mb-6 p-5 bg-green-50 border border-green-200 rounded-xl flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="mb-6 p-5 bg-green-50 border border-green-200 rounded-xl flex flex-col items-start sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
             <span className="text-3xl">🎉</span>
             <div>
               <p className="font-semibold text-green-800">Барлық сабақтарды аяқтадыңыз!</p>
-              <p className="text-sm text-green-600">Енді емтиханды тапсыра аласыз</p>
+              <p className="text-sm text-green-700">Енді емтиханды тапсыра аласыз</p>
             </div>
           </div>
           <Link href={`/dashboard/exam/${course.exams[0].id}`} className="btn-primary whitespace-nowrap">

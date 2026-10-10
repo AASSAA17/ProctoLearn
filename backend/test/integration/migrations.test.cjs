@@ -108,7 +108,8 @@ test('recording, retention and audit upgrades preserve historical decisions, evi
     }
     const teacher = await db.user.create({ data: { email: 'reviewer@example.invalid', name: 'Reviewer', password: 'not-a-login-hash', role: 'ADMIN' } });
     const student = await db.user.create({ data: { email: 'reviewed@example.invalid', name: 'Student', password: 'not-a-login-hash' } });
-    const course = await db.course.create({ data: { title: 'Review migration fixture', teacherId: teacher.id } });
+    const course = { id: randomUUID() };
+    await db.$executeRaw`INSERT INTO courses (id,title,"teacherId") VALUES (${course.id}, 'Review migration fixture', ${teacher.id})`;
     const exam = await db.exam.create({ data: { courseId: course.id, title: 'Exam', duration: 1 } });
     const reviewedAt = new Date('2026-09-27T12:00:00Z');
     // Seed the historical schema without asking the current client to insert new defaults.
@@ -116,7 +117,9 @@ test('recording, retention and audit upgrades preserve historical decisions, evi
     await db.$executeRaw`INSERT INTO "attempts" ("id", "examId", "userId", "score", "status", "finishedAt", "reviewStatus", "reviewedAt", "reviewedBy", "reviewReason") VALUES (${attempt.id}, ${exam.id}, ${student.id}, 100, 'FINISHED', ${reviewedAt.toISOString()}::timestamp, 'REJECTED', ${reviewedAt.toISOString()}::timestamp, ${teacher.id}, 'Preserve original decision')`;
     const evidence = { id: randomUUID(), url: `recordings/${attempt.id}/preserved.webm` };
     await db.$executeRaw`INSERT INTO "evidence_files" ("id", "attemptId", "type", "url") VALUES (${evidence.id}, ${attempt.id}, 'recording_camera', ${evidence.url})`;
-    const certificate = await db.certificate.create({ data: { userId: student.id, courseId: course.id, qrCode: randomUUID(), issuedVia: 'LEGACY' } });
+    const certificate = { id: randomUUID(), qrCode: randomUUID() };
+    await db.$executeRaw`INSERT INTO certificates (id,"userId","courseId","qrCode","issuedVia") VALUES (${certificate.id},${student.id},${course.id},${certificate.qrCode},'LEGACY')`;
+    const [historicalCertificate] = await db.$queryRaw`SELECT * FROM certificates WHERE id=${certificate.id}`;
     prisma(url, 'migrate', 'deploy');
     prisma(url, 'migrate', 'deploy');
     const history = await db.attemptReview.findMany({ where: { attemptId: attempt.id } });
@@ -126,7 +129,13 @@ test('recording, retention and audit upgrades preserve historical decisions, evi
     assert.equal(history[0].reason, 'Preserve original decision');
     assert.equal(history[0].source, 'INITIAL');
     assert.equal(history[0].createdAt.toISOString(), reviewedAt.toISOString());
-    assert.deepEqual(await db.certificate.findUnique({ where: { id: certificate.id } }), certificate);
+    const upgradedCertificate = await db.certificate.findUnique({ where: { id: certificate.id } });
+    for (const [key, value] of Object.entries(historicalCertificate)) assert.deepEqual(upgradedCertificate[key], value);
+    assert.equal(upgradedCertificate.snapshotStatus, 'LEGACY_UNAVAILABLE');
+    assert.equal(upgradedCertificate.recipientName, null);
+    assert.equal(upgradedCertificate.courseTitle, null);
+    assert.equal(upgradedCertificate.issuerName, null);
+    assert.equal((await db.course.findUnique({ where: { id: course.id } })).status, 'DRAFT');
     assert.equal(await db.recordingUpload.count(), 0, 'upgrade must not invent completed recordings');
     const retained = await db.evidenceFile.findUnique({ where: { id: evidence.id } });
     assert.equal(retained.url, evidence.url); assert.equal(retained.deletedAt, null); assert.equal(retained.deletionRequestedAt, null);

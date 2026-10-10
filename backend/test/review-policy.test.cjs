@@ -32,6 +32,8 @@ function fixture() {
   };
   const failures = { certificate: false, enrollment: false, cas: false };
   const db = {
+    user: { findUnique: async () => ({ name: "Student fixture" }) },
+    course: { findUnique: async () => ({ title: "Course fixture" }) },
     userNotification: { createMany: async ({ data }) => { for (const item of data) if (!state.notifications.some(n => n.dedupeKey === item.dedupeKey)) state.notifications.push(item); return { count: data.length }; } },
     attempt: {
       findUnique: async ({ where }) => where.id === 'attempt' ? structuredClone({

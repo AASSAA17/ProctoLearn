@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Header, Param, Res, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiCookieAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CertificatesService } from './certificates.service';
@@ -19,6 +19,8 @@ export class CertificatesController {
   }
 
   @Get('verify/:code')
+  @Header('Cache-Control', 'no-store, max-age=0')
+  @Header('Pragma', 'no-cache')
   @ApiOperation({ summary: 'Сертификатты тексеру (QR арқылы)' })
   verify(@Param('code') code: string) {
     return this.certificatesService.verify(code);
@@ -38,6 +40,7 @@ export class CertificatesController {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="certificate-${id}.pdf"`,
       'Content-Length': buffer.length,
+      'Cache-Control': 'private, no-store',
     });
     res.end(buffer);
   }

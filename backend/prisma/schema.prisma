@@ -42,6 +42,12 @@ enum CourseLevel {
   ADVANCED
 }
 
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 enum StepType {
   VIDEO
   TEXT
@@ -94,6 +100,8 @@ model Course {
   description     String?
   teacherId       String
   level           CourseLevel      @default(BEGINNER)
+  status          CourseStatus     @default(DRAFT)
+  publishedAt     DateTime?
   teacher         User             @relation(fields: [teacherId], references: [id])
   lessons         Lesson[]
   modules         CourseModule[]
@@ -321,6 +329,10 @@ model Certificate {
   issuedAt DateTime @default(now())
   qrCode   String   @unique
   issuedVia String @default("LEGACY")
+  recipientName String?
+  courseTitle String?
+  issuerName String?
+  snapshotStatus String @default("LEGACY_UNAVAILABLE")
   status   String   @default("VALID")
   revokedAt DateTime?
   revokedBy String?
@@ -328,6 +340,7 @@ model Certificate {
   user     User     @relation(fields: [userId], references: [id])
   course   Course   @relation(fields: [courseId], references: [id])
 
+  @@index([status])
   @@map("certificates")
 }
 

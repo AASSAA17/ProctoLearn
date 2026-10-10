@@ -2,11 +2,12 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID, createHash } = require('node:crypto');
 require('reflect-metadata');
-const { S3Client, CreateBucketCommand, PutObjectCommand, DeleteBucketCommand } = require('@aws-sdk/client-s3');
+const { S3Client, CreateBucketCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { ConfigService } = require('@nestjs/config');
 const { MinioService } = require('../../src/minio/minio.service');
 const { RecordingUploadsService } = require('../../src/evidence/recording-uploads.service');
 const { recordingFixture, webm } = require('./recording-fixture.cjs');
+const { deleteEmptyFixtureBucket } = require('./storage-cleanup.cjs');
 
 const host = process.env.TEST_MINIO_ENDPOINT;
 const port = Number(process.env.TEST_MINIO_PORT);
@@ -96,7 +97,7 @@ test('actual S3-compatible object storage streams, checksums, retries and failed
       if (!objects.length) break;
       for (const object of objects) await storage.removeObject(object.name);
     }
-    await client.send(new DeleteBucketCommand({ Bucket: bucket }));
+    await deleteEmptyFixtureBucket(client, bucket);
     storage.onModuleDestroy();
     client.destroy();
   }

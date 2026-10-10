@@ -22,8 +22,9 @@ export class SubmissionsController {
   getLessonProgress(
     @Param('lessonId') lessonId: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('role') role: string,
   ) {
-    return this.submissionsService.getLessonProgress(lessonId, userId);
+    return this.submissionsService.getLessonProgress(lessonId, userId, role);
   }
 
   @Get('submissions/course/:courseId/progress')
@@ -31,7 +32,8 @@ export class SubmissionsController {
   getCourseProgress(
     @Param('courseId') courseId: string,
     @CurrentUser('id') userId: string,
+    @CurrentUser('role') role: string,
   ) {
-    return this.submissionsService.getCourseProgress(courseId, userId);
+    return this.submissionsService.getCourseProgress(courseId, userId, role);
   }
 }

@@ -9,6 +9,11 @@ import ProctorAssignments from '@/components/ProctorAssignments';
 import OutlineSettings from '@/components/OutlineSettings';
 import { ExamSettings, QuestionEditor, type EditableQuestion } from '@/components/ExamEditor';
 
+function mutationError(error: unknown, fallback: string) {
+  const message = (error as { response?: { data?: { message?: unknown } } })?.response?.data?.message;
+  return typeof message === 'string' ? message : fallback;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Step {
   id: string;
@@ -36,6 +41,7 @@ interface Course {
   title: string;
   description?: string;
   level: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   modules: CourseModule[];
   exams?: Exam[];
 }
@@ -105,8 +111,12 @@ function StepForm({
     if (!Number.isInteger(order) || order < 1) { setSaveError('Реті оң бүтін сан болуы керек.'); return; }
     if (type === 'TEXT' && !html.trim()) { setSaveError('Мәтін мазмұнын енгізіңіз.'); return; }
     if (type === 'VIDEO') {
-      try { if (!['https:', 'http:'].includes(new URL(videoUrl).protocol)) throw new Error(); }
-      catch { setSaveError('HTTP немесе HTTPS бейне сілтемесін енгізіңіз.'); return; }
+      try {
+        const source = videoUrl.trim();
+        const localPath = source.startsWith('/') && !source.startsWith('//');
+        if (!localPath && !/^https?:\/\//i.test(source)) throw new Error();
+        if (!['https:', 'http:'].includes(new URL(source, window.location.origin).protocol)) throw new Error();
+      } catch { setSaveError('HTTP, HTTPS сілтемесін немесе / белгісінен басталатын жергілікті бейне жолын енгізіңіз.'); return; }
     }
     if (type === 'TASK') {
       if (!question.trim()) { setSaveError('Сұрақ мәтінін енгізіңіз.'); return; }
@@ -173,7 +183,8 @@ function StepForm({
           <input
             aria-label="Бейне сілтемесі"
             required
-            type="url"
+            type="text"
+            inputMode="url"
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
             placeholder="Бейне URL (YouTube embed немесе тікелей)"
@@ -340,8 +351,8 @@ function LessonCard({
       await api.delete(`/steps/${stepId}`);
       toast.success('Қадам жойылды');
       onRefresh();
-    } catch {
-      toast.error('Жою қатесі');
+    } catch (error) {
+      toast.error(mutationError(error, 'Жою қатесі'));
     }
   };
 
@@ -366,15 +377,15 @@ function LessonCard({
               onCancel={() => setEditingStep(null)}
             />
           ) : (
-            <div className="flex items-center gap-2 bg-white border border-gray-100 rounded-lg px-3 py-2 group">
+            <div className="flex flex-wrap items-center gap-2 bg-white border border-gray-100 rounded-lg px-3 py-2 group">
               <span className="text-xs text-gray-600">{step.order}.</span>
-              <span className="text-xs font-medium">{STEP_TYPE_LABELS[step.type]}</span>
-              <span className="text-xs text-gray-600 min-w-0 flex-1 truncate">
+              <span className="text-xs font-medium shrink-0">{STEP_TYPE_LABELS[step.type]}</span>
+              <span className="text-xs text-gray-600 min-w-0 basis-full sm:basis-0 flex-1 truncate">
                 {step.type === 'TASK' && (step.content.question ?? '')}
                 {step.type === 'VIDEO' && (step.content.videoUrl ?? '')}
                 {step.type === 'TEXT' && '(мәтін)'}
               </span>
-              <div className="flex gap-1">
+              <div className="flex shrink-0 whitespace-nowrap gap-1">
                 <button
                   aria-label={`Қадамды өңдеу: ${step.order}`}
                   onClick={() => setEditingStep(step)}
@@ -458,8 +469,8 @@ function ModuleCard({
       await api.delete(`/modules/${mod.id}`);
       toast.success('Бөлім жойылды');
       onRefresh();
-    } catch {
-      toast.error('Жою қатесі');
+    } catch (error) {
+      toast.error(mutationError(error, 'Жою қатесі'));
     }
   };
 
@@ -469,8 +480,8 @@ function ModuleCard({
       await api.delete(`/lessons/${lessonId}`);
       toast.success('Сабақ жойылды');
       onRefresh();
-    } catch {
-      toast.error('Жою қатесі');
+    } catch (error) {
+      toast.error(mutationError(error, 'Жою қатесі'));
     }
   };
 
@@ -481,7 +492,7 @@ function ModuleCard({
         <button aria-label={`Бөлім: ${mod.title}`} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)} className="text-gray-600 hover:text-gray-800 text-sm">
           {collapsed ? '▶' : '▼'}
         </button>
-        <span className="font-semibold text-gray-800 flex-1 min-w-0 break-words">
+        <span className="font-semibold text-gray-800 grow basis-[calc(100%-2rem)] sm:basis-0 min-w-0 break-words">
           {mod.order}. {mod.title}
         </span>
         <span className="text-xs text-gray-600">{mod.lessons.length} сабақ</span>
@@ -576,6 +587,9 @@ export default function EditCoursePage() {
   const { id: courseId } = useParams<{ id: string }>();
   const router = useRouter();
   const [course, setCourse] = useState<Course | null>(null);
+  const [details, setDetails] = useState({ title: '', description: '', level: 'BEGINNER' });
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [addingModule, setAddingModule] = useState(false);
   const [moduleForm, setModuleForm] = useState({ title: '', order: 1 });
@@ -601,6 +615,7 @@ export default function EditCoursePage() {
     try {
       const { data } = await api.get(`/courses/${courseId}/material`);
       setCourse(data);
+      setDetails({ title: data.title, description: data.description ?? '', level: data.level });
       setModuleForm((p) => ({ ...p, order: (data.modules?.length ?? 0) + 1 }));
     } catch {
       toast.error('Курс жүктеу қатесі');
@@ -639,6 +654,28 @@ export default function EditCoursePage() {
   };
 
   useEffect(() => { loadCourse(); loadExams(); }, [loadCourse, loadExams]);
+
+  const saveDetails = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSavingDetails(true);
+    try {
+      await api.patch(`/courses/${courseId}`, details);
+      toast.success('Курс мәліметтері сақталды');
+      await loadCourse();
+    } catch { toast.error('Курс мәліметтерін сақтау мүмкін болмады'); }
+    finally { setSavingDetails(false); }
+  };
+
+  const changePublication = async (action: 'publish' | 'archive') => {
+    if (!confirm(action === 'publish' ? 'Сақталған курсты каталогта жариялау керек пе?' : 'Курсты мұрағаттау керек пе? Тіркелген студенттер оқуды жалғастыра алады.')) return;
+    setPublishing(true);
+    try {
+      await api.post(`/courses/${courseId}/${action}`);
+      toast.success(action === 'publish' ? 'Курс жарияланды' : 'Курс мұрағатталды');
+      await loadCourse();
+    } catch (error) { toast.error(mutationError(error, 'Курс күйін өзгерту мүмкін болмады')); }
+    finally { setPublishing(false); }
+  };
 
   const handleAddModule = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -681,8 +718,8 @@ export default function EditCoursePage() {
       toast.success('Емтихан жойылды');
       setExams((prev) => prev.filter((e) => e.id !== examId));
       if (expandedExam === examId) setExpandedExam(null);
-    } catch {
-      toast.error('Жою қатесі');
+    } catch (error) {
+      toast.error(mutationError(error, 'Жою қатесі'));
     }
   };
 
@@ -693,8 +730,8 @@ export default function EditCoursePage() {
       toast.success('Сұрақ жойылды');
       setExamQuestions((prev) => prev.filter((q) => q.id !== questionId));
       loadExams();
-    } catch {
-      toast.error('Жою қатесі');
+    } catch (error) {
+      toast.error(mutationError(error, 'Жою қатесі'));
     }
   };
 
@@ -740,6 +777,20 @@ export default function EditCoursePage() {
       </div>
 
       {/* Modules */}
+      <section className="rounded-xl border bg-white p-5 space-y-4" aria-label="Курс мәліметтері мен жариялау">
+        <h2 className="font-semibold">Курс мәліметтері</h2>
+        <p className="text-sm text-gray-600">Күйі: {{ DRAFT: 'Жоба', PUBLISHED: 'Жарияланған', ARCHIVED: 'Мұрағатта' }[course.status]}. Жарияланған курста сақталған өзгерістер студенттерге бірден көрінеді.</p>
+        <form onSubmit={saveDetails} className="space-y-3">
+          <label className="block text-sm">Атауы<input required maxLength={200} className="input mt-1" value={details.title} onChange={(e) => setDetails({ ...details, title: e.target.value })} /></label>
+          <label className="block text-sm">Сипаттама<textarea maxLength={20000} className="input mt-1" rows={5} value={details.description} onChange={(e) => setDetails({ ...details, description: e.target.value })} /></label>
+          <label className="block text-sm">Деңгей<select className="input mt-1" value={details.level} onChange={(e) => setDetails({ ...details, level: e.target.value })}><option value="BEGINNER">Бастапқы</option><option value="INTERMEDIATE">Орта</option><option value="ADVANCED">Жоғары</option></select></label>
+          <button className="btn-primary" disabled={savingDetails || publishing}>{savingDetails ? 'Сақталуда…' : 'Мәліметтерді сақтау'}</button>
+        </form>
+        <div className="flex flex-wrap gap-3">
+          {course.status !== 'PUBLISHED' && <button className="btn-primary" disabled={publishing || savingDetails} onClick={() => changePublication('publish')}>Курсты жариялау</button>}
+          {course.status !== 'ARCHIVED' && <button className="btn-secondary" disabled={publishing || savingDetails} onClick={() => changePublication('archive')}>Мұрағаттау</button>}
+        </div>
+      </section>
       <div className="space-y-4">
         <h2 className="text-base font-semibold text-gray-800">Курс құрылымы</h2>
 

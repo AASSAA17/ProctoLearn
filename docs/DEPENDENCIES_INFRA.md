@@ -96,3 +96,11 @@ Windows launcher создал отдельный кластер PostgreSQL 18.3,
 - Локальные проверки не подтверждают production TLS, настоящий SMTP, резервное копирование, восстановление после аварии или воспроизведение всех контейнеров/кодеков видео. Для них нужны отдельные проверки окружения и последующих этапов.
 
 Предупреждение deprecation и опубликованная уязвимость — разные сигналы. Нулевой аудит, когда он подтверждён, означает отсутствие известных advisory в проверенном дереве на дату проверки и не означает отсутствие всех ошибок или рисков.
+
+## Final demo dependency review — 2026-10-10
+
+The historical zero-finding audit above is not the current audit. This release pins Next.js and eslint-config-next 16.3.8 (previously 16.3.6), source-map-js 1.2.2, and a scoped @nestjs/swagger → js-yaml 5.4.3 override. Backend and frontend production builds passed with these lockfiles; migration/drift and real PostgreSQL suites passed.
+
+Actual full dependency audits after these repairs: backend **0** findings; frontend **9** findings (**7 high, 2 moderate**, 0 critical). The remaining frontend advisories concern braces (deeply nested glob stack exhaustion) and postcss-selector-parser (quadratic selector parsing), with affected dependent tools such as micromatch, fast-glob, Tailwind, chokidar and eslint-config-next counted separately by npm. The reviewed usage processes developer-controlled project globs/CSS during development/build; no application endpoint passes student input into these compilers. This reduces runtime exposure but does not remove the advisories. Do not describe the whole repository as vulnerability-free. A forced Tailwind major migration or suggested Next downgrade was not accepted as a narrow release repair. Reassess on dependency advisory/patch updates before production.
+
+Private reproducible audit outputs: `.local/release-backend-audit-final.json` and `.local/release-frontend-audit-final.json`. These are point-in-time results, not a warranty. Production deployment remains outside this demo acceptance.

@@ -247,6 +247,8 @@ MINIO_BUCKET=proctolearn-evidence
 
 API_PORT=4000
 NODE_ENV=production
+FRONTEND_URL=https://app.example.com
+CERTIFICATE_PUBLIC_ORIGIN=https://app.example.com
 
 NEXT_PUBLIC_API_URL=https://localhost/api
 NEXT_PUBLIC_WS_URL=wss://localhost

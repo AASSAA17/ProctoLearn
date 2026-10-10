@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { CertificatesService } from '../certificates/certificates.service';
@@ -237,6 +237,10 @@ export class AdminService {
     };
   }
 
+  async getUserCertificates(userId: string) {
+    return this.certificatesService.findByUser(userId);
+  }
+
   // ─── Пароль басқару ────────────────────────────────────────────────────────
 
   async resetUserPassword(userId: string, actorId: string) {
@@ -319,6 +323,7 @@ export class AdminService {
         update: { completedAt: now, examAccessGrantedAt: now, examAccessGrantedBy: adminId },
       });
       const certificate = await this.certificatesService.issue(userId, courseId, tx, 'ADMIN_OVERRIDE');
+      if (certificate.status === 'REVOKED') throw new ConflictException('Сертификат кері қайтарылған; автоматты қайта беру мүмкін емес');
       await recordAudit(tx, { actorId: adminId, action: 'ADMIN_CERTIFICATE_GRANTED', targetType: 'USER', targetId: userId, metadata: { courseId, certificateId: certificate.id } });
       await notifyUser(tx, { userId, type: 'CERTIFICATE_ISSUED', title: 'Сертификат берілді', body: 'Әкімші шешімімен сертификат берілді. Оны сертификаттар бөлімінен ашуға болады.', targetPath: '/dashboard/certificates', dedupeKey: `certificate:${certificate.id}` });
       return { message: 'Сертификат әкімші шешімімен берілді', certificate };
