@@ -10,7 +10,7 @@ const compiled = new Module(filename, module);
 compiled._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText, filename);
-const { dashboardLinks, staffHome, studentOnlyPath, canVisitDashboardPath } = compiled.exports;
+const { dashboardLinks, staffHome, staffHomeFor, pilotModeEnabled, studentOnlyPath, canVisitDashboardPath } = compiled.exports;
 
 test('staff navigation contains only role workspaces and common pages', () => {
   const expected = {
@@ -27,6 +27,16 @@ test('staff navigation contains only role workspaces and common pages', () => {
   ]);
   assert.equal(dashboardLinks('ADMIN').find(link => link.href === '/dashboard/teacher/courses').label, 'Курстарды басқару');
   assert.equal(dashboardLinks('TEACHER').find(link => link.href === '/dashboard/teacher/courses').label, 'Менің курстарым');
+});
+
+test('pilot admin navigation is visible only in the pilot build', () => {
+  assert.equal(pilotModeEnabled({ NEXT_PUBLIC_PILOT_MODE: 'true' }), true);
+  assert.equal(pilotModeEnabled({ NEXT_PUBLIC_PILOT_MODE: 'false' }), false);
+  assert.equal(pilotModeEnabled({}), false);
+  assert.equal(dashboardLinks('ADMIN', false).some(link => link.href === '/dashboard/admin/pilot'), false);
+  assert.equal(staffHomeFor('ADMIN', false).some(item => item.href === '/dashboard/admin/pilot'), false);
+  assert.equal(dashboardLinks('ADMIN', true).some(link => link.href === '/dashboard/admin/pilot'), true);
+  assert.equal(staffHomeFor('ADMIN', true).some(item => item.href === '/dashboard/admin/pilot'), true);
 });
 
 test('student-only paths do not capture staff workspaces or common pages', () => {

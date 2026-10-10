@@ -1,5 +1,11 @@
 # Final demo release — acceptance ledger
 
+## Отдельный controlled pilot — 10.10.2026
+
+Это дополнение не повышает статус демонстрации до production. `.local/release-demo` сохраняется; pilot использует отдельные DB/bucket/ports и production build. Операторские действия, действующие ограничения провайдера и открытые gates приведены в `PILOT_RUNBOOK.md` и `WORK_LOG.md`.
+
+Пакет 15/50/150/15 подготовлен для редактора как DRAFT; ключи итоговых экзаменов приватны. Публикация требует настоящего преподавательского решения. HTTPS ngrok, физический телефон и реальные добровольные участники пока AWAITING_OPERATOR. AI остаётся отключён согласно прежнему незакрытому gate.
+
 Baseline `95d14edf8961cfca3ae6ae152d380e74365e6391`; branch `release/final-demo-20261010`; execution date2026-10-10. Phase A only: functioning platform plus one original course. Full course production is Phase B. Implementation/release revision is recorded at freeze below.
 
 **Overall: CONDITIONAL_DEMO_READY for laptop core; AI_DEMO_BLOCKED; FULL_DEMO_READY is not achieved.** The current remaining-gates follow-up and its limits are recorded below. Physical phone/camera/screen, native browser zoom, screen reader and repeatable model quality prevent unconditional acceptance. CI for each published SHA is a separate freeze gate, not inferred from local tests.

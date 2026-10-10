@@ -8,12 +8,14 @@ import { MailModule } from '../mail/mail.module';
 import { AuthCookies } from './auth-cookies';
 import { CsrfService } from './csrf.service';
 import { CsrfGuard } from './csrf.guard';
+import { PilotModule } from '../pilot/pilot.module';
 
 @Module({
   imports: [
     PassportModule,
     JwtModule.register({}),
     MailModule,
+    PilotModule,
   ],
   providers: [AuthService, JwtStrategy, AuthCookies, CsrfService, CsrfGuard],
   controllers: [AuthController],

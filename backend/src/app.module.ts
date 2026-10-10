@@ -21,12 +21,14 @@ import { StepsModule } from './steps/steps.module';
 import { StepSubmissionsModule } from './step-submissions/step-submissions.module';
 import { AiModule } from './ai/ai.module';
 import { ActivityInterceptor } from './common/interceptors/activity.interceptor';
-import { GraphiteMetricsInterceptor } from '@/common/interceptors/graphite-metrics.interceptor';
+import { GraphiteMetricsInterceptor } from './common/interceptors/graphite-metrics.interceptor';
 import { GraphiteService } from './common/services/graphite.service';
 import { validateEnvironment } from './common/config/environment';
 import { CsrfGuard } from './auth/csrf.guard';
 import { HealthModule } from './health/health.module';
 import { OperationsModule } from './operations/operations.module';
+import { ContentImportModule } from './content-import/content-import.module';
+import { PilotModule } from './pilot/pilot.module';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { OperationsModule } from './operations/operations.module';
     MinioModule,
     HealthModule,
     OperationsModule,
+    ContentImportModule,
+    PilotModule,
     MailModule,
     AuthModule,
     UsersModule,

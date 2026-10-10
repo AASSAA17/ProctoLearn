@@ -1,5 +1,11 @@
 export type DashboardRole = 'STUDENT' | 'TEACHER' | 'PROCTOR' | 'ADMIN';
 
+const pilotAdminHome = { href: '/dashboard/admin/pilot', title: 'Пилотты басқару', description: 'Шақырулар, қатысушылар және курс орындары' };
+
+export function pilotModeEnabled(environment: Record<string, string | undefined> = process.env) {
+  return environment.NEXT_PUBLIC_PILOT_MODE === 'true';
+}
+
 export const staffHome: Record<Exclude<DashboardRole, 'STUDENT'>, { href: string; title: string; description: string }[]> = {
   TEACHER: [{ href: '/dashboard/teacher/courses', title: 'Менің курстарым', description: 'Курстарды, сабақтарды және емтихандарды басқару' }],
   PROCTOR: [{ href: '/dashboard/proctor', title: 'Проктор панелі', description: 'Тапсырылған сессияларды бақылау және тексеру' }],
@@ -10,7 +16,12 @@ export const staffHome: Record<Exclude<DashboardRole, 'STUDENT'>, { href: string
   ],
 };
 
-export function dashboardLinks(role: DashboardRole) {
+export function staffHomeFor(role: Exclude<DashboardRole, 'STUDENT'>, pilotMode = pilotModeEnabled()) {
+  const items = staffHome[role];
+  return pilotMode && role === 'ADMIN' ? [items[0], pilotAdminHome, ...items.slice(1)] : items;
+}
+
+export function dashboardLinks(role: DashboardRole, pilotMode = pilotModeEnabled()) {
   const common = [
     { href: '/dashboard', label: 'Басты бет', icon: '🏠', exact: true },
     { href: '/dashboard/notifications', label: 'Хабарландырулар', icon: '🔔', exact: false },
@@ -26,7 +37,10 @@ export function dashboardLinks(role: DashboardRole) {
     ...common,
     ...(role === 'TEACHER' || role === 'ADMIN' ? [{ href: '/dashboard/teacher/courses', label: role === 'ADMIN' ? 'Курстарды басқару' : 'Менің курстарым', icon: '🎓', exact: false }] : []),
     ...(role === 'PROCTOR' || role === 'ADMIN' ? [{ href: '/dashboard/proctor', label: 'Проктор', icon: '🔍', exact: false }] : []),
-    ...(role === 'ADMIN' ? [{ href: '/dashboard/admin', label: 'Админ', icon: '⚙️', exact: false }] : []),
+    ...(role === 'ADMIN' ? [
+      { href: '/dashboard/admin', label: 'Админ', icon: '⚙️', exact: true },
+      ...(pilotMode ? [{ href: '/dashboard/admin/pilot', label: 'Пилот', icon: '👥', exact: false }] : []),
+    ] : []),
   ];
 }
 

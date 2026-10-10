@@ -32,7 +32,7 @@ const STRENGTH_COLORS = ['', 'bg-red-500', 'bg-yellow-400', 'bg-green-500'];
 const STRENGTH_TEXT = ['', 'text-red-700', 'text-amber-800', 'text-green-700'];
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({ name: '', email: '', phoneDigits: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({ name: '', email: '', phoneDigits: '', invitationToken: '', password: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -62,7 +62,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
     try {
-      await register(form.name, form.email, form.password, phone || undefined);
+      await register(form.name, form.email, form.password, phone || undefined, form.invitationToken.trim() || undefined);
       toast.success('Тіркелу сәтті!');
       router.push('/dashboard');
     } catch (err: any) {
@@ -99,6 +99,11 @@ export default function RegisterPage() {
               <p className="text-xs text-red-700 mt-1">Тағы {10 - form.phoneDigits.length} цифр енгізіңіз</p>
             )}
             {form.phoneDigits.length === 10 && <p className="text-xs text-green-700 mt-1">✓ {phone}</p>}</div>
+          </div>
+          <div>
+            <label htmlFor="register-invitation" className="block text-sm font-medium text-gray-700 mb-1">Пилотқа шақыру коды <span className="font-normal text-gray-500">(шақырылғандар үшін)</span></label>
+            <input id="register-invitation" autoComplete="off" name="invitationToken" type="password" className={ic()} value={form.invitationToken} onChange={handleChange} maxLength={128} aria-describedby="invitation-hint" />
+            <p id="invitation-hint" className="mt-1 text-xs text-gray-500">Кодты пилот иесі жеке береді. Оны сілтемеге қоспаңыз және басқа адамға жібермеңіз.</p>
           </div>
           <div>
             <label htmlFor="register-password" className="block text-sm font-medium text-gray-700 mb-1">Құпиясөз <span className="text-red-500">*</span></label>

@@ -9,5 +9,5 @@ export default defineConfig([
     // Keep this performance diagnostic visible without rewriting their cancellation semantics.
     rules: { 'react-hooks/set-state-in-effect': 'warn' },
   },
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts']),
+  globalIgnores(['.next/**', '.next-pilot/**', 'out/**', 'build/**', 'next-env.d.ts']),
 ]);

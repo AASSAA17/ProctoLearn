@@ -56,7 +56,7 @@ export class CoursesService {
     if (!access) throw new NotFoundException('Курс табылмады');
     if (access.status !== 'PUBLISHED' && !canManageCourse(access, viewer)) {
       const enrolled = viewer && await this.prisma.enrollment.findUnique({ where: { userId_courseId: { userId: viewer.id, courseId: id } } });
-      if (!enrolled) throw new NotFoundException('Курс табылмады');
+      if (!enrolled || enrolled.accessStatus === 'WITHDRAWN') throw new NotFoundException('Курс табылмады');
     }
     const course = await this.loadCourse(id);
     return {
@@ -79,7 +79,7 @@ export class CoursesService {
       const enrollment = await this.prisma.enrollment.findUnique({
         where: { userId_courseId: { userId: viewer.id, courseId: id } },
       });
-      if (!enrollment) throw new ForbiddenException('Алдымен курсқа тіркеліңіз');
+      if (!enrollment || enrollment.accessStatus === 'WITHDRAWN') throw new ForbiddenException('Алдымен курсқа тіркеліңіз');
     }
     const course = await this.loadCourse(id);
     return {

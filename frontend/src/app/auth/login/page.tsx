@@ -98,7 +98,9 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm"><Link href="/auth/forgot-password" className="text-primary-700 hover:underline">Құпиясөзді ұмыттыңыз ба?</Link></p>
+        {process.env.NEXT_PUBLIC_PILOT_MODE === 'true'
+          ? <p className="mt-4 text-center text-sm text-slate-600">Құпиясөзді қалпына келтіру үшін пилот әкімшісіне хабарласыңыз.</p>
+          : <p className="mt-4 text-center text-sm"><Link href="/auth/forgot-password" className="text-primary-700 hover:underline">Құпиясөзді ұмыттыңыз ба?</Link></p>}
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Тіркелмедіңіз бе?{' '}

@@ -8,6 +8,7 @@ import { collectDefaultMetrics, register } from 'prom-client';
 import { ConfigService } from '@nestjs/config';
 import { getFrontendOrigins } from './common/config/origins';
 import { configuredTrustedProxies } from './common/config/trusted-proxies';
+import { json } from 'express';
 
 let metricsInitialized = false;
 
@@ -15,6 +16,9 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.enableShutdownHooks();
   app.set('trust proxy', configuredTrustedProxies(app.get(ConfigService).get('TRUSTED_PROXIES')));
+  // A complete authenticated course contains twelve text lessons plus tasks.
+  // Keep the normal parser bound elsewhere; this route remains local staff only.
+  app.use('/content-import/draft', json({ limit: '2mb' }));
 
   if (!metricsInitialized) {
     collectDefaultMetrics();

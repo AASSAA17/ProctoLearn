@@ -4,6 +4,7 @@ import { Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { accessTokenFromRequest } from '../auth-cookies';
+import { pilotSettings } from '../../pilot/pilot-policy';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -27,6 +28,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     if (!user || user.tokenVersion !== payload.ver) {
       throw new UnauthorizedException('Пайдаланушы табылмады');
+    }
+
+    if (pilotSettings(this.configService).enabled && user.role === 'STUDENT') {
+      const membership = await this.prisma.pilotMembership.findUnique({ where: { userId: user.id }, select: { status: true } });
+      if (!membership || membership.status !== 'ACTIVE') {
+        throw new UnauthorizedException({ code: 'PILOT_ACCESS_DENIED', message: 'Пилотқа кіруге рұқсат жоқ немесе рұқсат тоқтатылған' });
+      }
     }
 
     // Track online status (fire-and-forget)

@@ -2,7 +2,10 @@ import axios from 'axios';
 import { CsrfCoordinator, isCsrfFailure, isUnauthorized, SessionCoordinator, SessionLock } from './session-coordinator';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-export const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000';
+// An empty build-time value deliberately selects the browser's current origin.
+// This lets the controlled pilot keep Socket.IO behind the same HTTPS host
+// without baking a provider hostname into the JavaScript bundle.
+export const WS_URL = process.env.NEXT_PUBLIC_WS_URL || (typeof window !== 'undefined' ? window.location.origin : 'ws://localhost:4000');
 const options = { baseURL: API_URL, withCredentials: true, timeout: 20000, headers: { 'Content-Type': 'application/json' } };
 const raw = axios.create(options);
 export const api = axios.create(options);

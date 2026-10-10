@@ -14,6 +14,7 @@ function load(name) {
 }
 const { certificateVerificationUrl, notificationTarget } = load('public-links');
 const {
+  certificateVerificationUpstream,
   fetchPublicCertificateVerification,
   isCertificateVerificationCode,
   publicCertificateVerification,
@@ -71,6 +72,14 @@ test('public certificate bridge uses the fixed loopback upstream without credent
       issuedAt: '2026-10-10T12:00:00.000Z', issuedVia: 'PROCTORED_EXAM',
     },
   });
+});
+
+test('public certificate bridge selects only configured loopback API profiles', () => {
+  assert.equal(certificateVerificationUpstream({}), 'http://127.0.0.1:4000');
+  assert.equal(certificateVerificationUpstream({ INTERNAL_API_ORIGIN: 'http://127.0.0.1:4100' }), 'http://127.0.0.1:4100');
+  for (const value of ['https://pilot.example.test', 'http://localhost:4100', 'http://127.0.0.1:4100/path', 'http://127.0.0.1:9999']) {
+    assert.throws(() => certificateVerificationUpstream({ INTERNAL_API_ORIGIN: value }), { name: 'PublicCertificateVerificationUnavailable' });
+  }
 });
 
 test('public certificate response preserves revoked and unknown states without leaking upstream fields', () => {

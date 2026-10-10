@@ -28,7 +28,8 @@ export class AttemptsService {
   async preflight(examId: string, userId: string) {
     const exam = await this.prisma.exam.findUnique({ where: { id: examId }, select: { id: true, courseId: true, title: true, duration: true } });
     if (!exam) throw new NotFoundException('Емтихан табылмады');
-    if (!await this.prisma.enrollment.findUnique({ where: { userId_courseId: { userId, courseId: exam.courseId } } })) {
+    const enrollment = await this.prisma.enrollment.findUnique({ where: { userId_courseId: { userId, courseId: exam.courseId } } });
+    if (!enrollment || enrollment.accessStatus === 'WITHDRAWN') {
       throw new ForbiddenException('Алдымен курсқа тіркеліңіз');
     }
     const active = await this.prisma.attempt.findFirst({ where: { examId, userId, status: 'IN_PROGRESS', finishedAt: null } });
@@ -100,7 +101,7 @@ export class AttemptsService {
       const exam = await tx.exam.findUnique({ where: { id: examId }, include: { questions: { orderBy: { id: 'asc' } } } });
       if (!exam) throw new NotFoundException('Емтихан табылмады');
       const enrollment = await tx.enrollment.findUnique({ where: { userId_courseId: { userId, courseId: exam.courseId } } });
-      if (!enrollment) throw new ForbiddenException('Алдымен курсқа тіркеліңіз');
+      if (!enrollment || enrollment.accessStatus === 'WITHDRAWN') throw new ForbiddenException('Алдымен курсқа тіркеліңіз');
       const existing = await tx.attempt.findFirst({ where: { examId, userId, status: 'IN_PROGRESS', finishedAt: null } });
       if (existing) {
         const active = await this.withSnapshot(tx, { ...existing, exam });

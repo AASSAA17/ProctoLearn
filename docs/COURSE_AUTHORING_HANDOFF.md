@@ -1,5 +1,13 @@
 # Course authoring handoff — Phase B
 
+## Контролируемый pilot — 10.10.2026
+
+Новый изолированный профиль и узкий importer описаны в `PILOT_RUNBOOK.md`. Авторизованный teacher/admin вызывает `POST /content-import/draft` только для точной локальной pilot БД. Импорт соответствует существующим DTO, создаёт DRAFT транзакционно и записывает `ContentImportReceipt` с authoring ID, revision hash, content hash и course ID. Повтор идентичного пакета возвращает прежний граф; изменение учителем или пакетом вызывает конфликт, не перезапись. Новый endpoint имеет отдельный предел JSON 2 MiB; обычный предел запросов не расширен.
+
+Новые 15 курсов — отдельный пакет `proctolearn-pilot-curriculum-v1`; старые демонстрационные курсы не входят в его счётчик. Публичный манифест содержит 50 модулей и 150 уроков, но не скрытые итоговые вопросы/ключи. Полные авторские пакеты находятся в `.local/pilot-author`; проверка и защищённый backup обязательны. Состояние человеческого рассмотрения всех курсов — HUMAN_REVIEW_PENDING. Дополнительные значения workflow не отправляются как enum курса: в базе используется существующий DRAFT.
+
+Новых возможностей выполнения студенческого кода, транскодирования видео, ручной проверки эссе или параллельных опубликованной/черновой версий не добавлено. Проекты имеют рубрику самопроверки. Результаты примеров и scoring отдельно приведены в `COURSE_QA_REPORT.md`.
+
 This contract describes the implemented teacher editor and REST DTOs. Full syllabi, professional videos, a large exercise bank and academic review remain Phase B content production. They are not required to rebuild or change the platform.
 
 ## Authoring without source changes
