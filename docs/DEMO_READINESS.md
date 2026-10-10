@@ -90,3 +90,7 @@ PR6 is independently `fix-p2-batch3 → main` at`939647b`; `git cherry` does not
 Proposed preservation tag for the previously verified revision: `demo/verified-2026-10-10-19cd99e`. This is a proposal only, pointing to19cd99e; no tag/release was created. A later tag for this follow-up needs its own exact verified SHA and approval.
 
 Follow-up implementation freeze: `1c68db3bef3865df08b9ccfbc1c0b6d5530358c0`; local launcher/frontend/off-browser checks repeated after commit. Final handoff HEAD adds this record only; exact-head remote CI is published with the focused PR. Independent focused review completed after the diagnostic metadata timeout repair. No remaining actionable review findings; physical/AI/dependency limits above still apply.
+
+### Authorized temporary phone verifier follow-up — 2026-10-10
+
+A later explicit owner request authorized Cloudflare Quick Tunnel for anonymous verification of two fictional certificates only. TECHNICAL_PUBLIC_VERIFICATION: PASS (actual HTTPS browser hydration, fixed same-origin bridge, boundary denial, dedicated revocation, decoded refreshed PDF QR, start/check/stop/restore/restart). PHYSICAL_PHONE_SCAN: AWAITING_OPERATOR. The previous absent-topology statement is historical. The local application remains available; no auth/admin/recording/AI/storage/database service is published. Temporary URL and private fixture data stay ignored. See DEMO_RUNBOOK B and the focused TEST_RESULTS follow-up. Permanent deployment, hardware acceptance and unrelated release gates remain separate.

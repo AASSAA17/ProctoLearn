@@ -55,11 +55,14 @@ async function start(env, maintenance, build, restored = false) {
   const stopFile = path.join(DIRECTORY, 'stop-request');
   if (fs.existsSync(stopFile)) fs.unlinkSync(stopFile);
   const runningFile = path.join(DIRECTORY, 'running.json');
-  const running = { pid: process.pid, mode: maintenance ? 'maintenance' : 'application', ready: false, restored, database: env.POSTGRES_DB, bucket: env.MINIO_BUCKET, startedAt: new Date().toISOString() };
+  const configuration = optionalConfiguration();
+  const running = { pid: process.pid, mode: maintenance ? 'maintenance' : 'application', ready: false, restored, database: env.POSTGRES_DB, bucket: env.MINIO_BUCKET, startedAt: new Date().toISOString(),
+    certificateOrigin: configuration.CERTIFICATE_PUBLIC_ORIGIN, aiProvider: configuration.AI_PROVIDER };
   fs.writeFileSync(runningFile, JSON.stringify(running), { mode: 0o600 });
   try {
-    await native({ ...env, ...optionalConfiguration() }, {
+    await native({ ...env, ...configuration }, {
       localDir: DIRECTORY, controlDir: DIRECTORY, infrastructureOnly: maintenance, skipBuild: !build,
+      controlToken: `${running.pid}@${running.startedAt}`,
       mailCatcher: !maintenance, extraPorts: maintenance ? [] : [1025, 8025],
       noStorageAdmin: true,
       requireExistingResources: restored,
@@ -82,10 +85,12 @@ function optionalConfiguration(settings = process.env) {
     AI_PROVIDER: aiProvider, OLLAMA_MODEL: 'qwen3:4b', OLLAMA_BASE_URL: 'http://127.0.0.1:11434',
   };
 }
-async function stop() {
+async function stop(expectedIdentity) {
   const active = state();
   if (!active || !alive(active.pid)) { console.log('Release supervisor is not running; data was preserved.'); return; }
-  fs.writeFileSync(path.join(DIRECTORY, 'stop-request'), 'stop\n', { mode: 0o600 });
+  const identity = `${active.pid}@${active.startedAt}`;
+  if (expectedIdentity && identity !== expectedIdentity) throw new Error('Release session changed; conditional stop refused.');
+  fs.writeFileSync(path.join(DIRECTORY, 'stop-request'), `${identity}\n`, { mode: 0o600 });
   const until = Date.now() + 30000;
   while (Date.now() < until && state()?.pid === active.pid && alive(active.pid)) await new Promise(resolve => setTimeout(resolve, 250));
   if (state()?.pid === active.pid && alive(active.pid)) throw new Error('Supervisor did not stop within 30 seconds; inspect private release logs. No processes were force-killed.');
@@ -163,6 +168,10 @@ async function main(args = process.argv.slice(2)) {
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major < 24 || (major === 24 && minor < 15)) throw new Error('Use Node.js 24.15 or newer LTS.');
   const [command, value] = args;
+  if (command === 'stop' && value && args.length === 2) {
+    if (!/^[1-9][0-9]*@\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) throw new Error('Invalid expected release session identity.');
+    return stop(value);
+  }
   if (command === 'start-restored') {
     if (args.length !== 2 || !/^restore-[a-f0-9]{12}\.json$/.test(value || '')) throw new Error('Use start-restored restore-<suffix>.json from a verified restore.');
     const env = prepare();

@@ -3,7 +3,21 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { ensureLocalEnvironment, connectionUrl } = require('./local-launch.cjs');
+const { ensureLocalEnvironment, connectionUrl, stopRequested } = require('./local-launch.cjs');
+
+test('a delayed conditional stop cannot stop a replacement release session', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'proctolearn-stop-'));
+  const file = path.join(directory, 'stop-request');
+  try {
+    const first = '123@2026-10-10T12:00:00.000Z';
+    const replacement = '123@2026-10-10T13:00:00.000Z';
+    fs.writeFileSync(file, first + '\n');
+    assert.equal(stopRequested(file, first), true);
+    assert.equal(stopRequested(file, replacement), false, 'even PID reuse must not adopt the previous stop request');
+    fs.writeFileSync(file, replacement + '\n');
+    assert.equal(stopRequested(file, replacement), true);
+  } finally { fs.unlinkSync(file); fs.rmdirSync(directory); }
+});
 
 test('local setup creates independent strong secrets and never changes existing settings', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'proctolearn-local-'));
