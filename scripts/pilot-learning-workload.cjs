@@ -37,7 +37,9 @@ async function main() {
   const { PrismaClient } = req('@prisma/client');
   const db = new PrismaClient({ datasources: { db: { url: env.DATABASE_URL } } });
   const owner = randomUUID(); const courseId = randomUUID(); const lessonId = randomUUID(); const stepId = randomUUID(); const examId = randomUUID();
-  const password = `Synthetic!9${randomBytes(24).toString('base64url')}`;
+  // Meet the shared password policy deterministically; the random suffix must
+  // add entropy, not decide whether the fixture happens to be valid.
+  const password = `Synthetic!!99${randomBytes(24).toString('base64url')}`;
   const children = new Set(); const users = []; let proxy; let api; let mediaAttempt; let storage;
   const report = { startedAt: new Date().toISOString(), candidate: candidate.id, sourceHead: candidate.head,
     sourceDirty: candidate.dirty, target: 'owned disposable PostgreSQL 55432 / localhost proxy 3200',
