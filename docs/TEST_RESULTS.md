@@ -117,3 +117,7 @@ node scripts/demo-release.cjs exec frontend e2e/release-ai-disabled.cjs
 ```
 
 The new real-model diagnostic is opt-in and excluded from routine CI; it uses bounded telemetry plus exact UUID fixture cleanup. Review added a10s timeout to metadata/placement requests; inference keeps its120s bound. This instrumentation-only repair was syntax-checked; no extra model trial was used to overwrite the reported failure. Its full-model failure must not be replaced by deterministic/mock CI success. Existing workflow covers launcher tests, backend/frontend checks and an independent Linux/container stage9; inspect the new exact HEAD before integration.
+
+### Follow-up freeze revision
+
+Implementation freeze: `1c68db3bef3865df08b9ccfbc1c0b6d5530358c0`. After committing this exact revision, launcher6tests, frontend69tests and the real browser AIoff smoke were repeated successfully (240ms explicit disabled reply, readiness/catalog200). The production build, stage9 and role UI were already run on the same application/dependency files. The last diagnostic-only repair bounds metadata requests; model acceptance was deliberately not rerun after that telemetry change. Independent focused review found no remaining actionable issue. New final HEAD includes this documentation record; consult its PR checks for the independent exact-head CI result, which is not inferred from the preceding release's green run.
