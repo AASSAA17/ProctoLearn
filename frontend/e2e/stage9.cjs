@@ -67,6 +67,31 @@ async function publishCourse(context, courseId) {
   assert.equal(response.status(), 201, await response.text());
 }
 
+async function createPublicCatalogFixture(context) {
+  const csrf = await context.request.get(`${api}/auth/csrf`);
+  assert.equal(csrf.status(), 200);
+  const headers = { Origin: web, 'X-CSRF-Token': (await csrf.json()).csrfToken };
+  const created = await context.request.post(`${api}/courses`, { headers, data: {
+    title: `E2E public catalog ${randomUUID()}`,
+    description: 'Isolated public catalog fixture: introduction to HTML headings for beginning learners.',
+    level: 'BEGINNER',
+  } });
+  assert.equal(created.status(), 201);
+  const course = await created.json();
+  createdFixtureCourses.add(course.id);
+  assert.equal(course.status, 'DRAFT');
+  assert.equal((await fetch(`${api}/courses/${course.id}`)).status, 404);
+  const lesson = await context.request.post(`${api}/courses/${course.id}/lessons`, { headers, data: {
+    title: 'HTML heading introduction',
+    content: 'A page heading describes its main topic. Use an h1 element for the main heading and h2 elements for sections.',
+    order: 1,
+  } });
+  assert.equal(lesson.status(), 201);
+  await publishCourse(context, course.id);
+  assert.equal((await fetch(`${api}/courses/${course.id}`)).status, 200);
+  console.log('PASS owned catalog fixture created as draft and explicitly published through author API');
+}
+
 async function createExam(teacherContext) {
   const [teacher, student, proctor] = await Promise.all(['teacher', 'student', 'proctor'].map(email =>
     prisma.user.findUniqueOrThrow({ where: { email: account(email).email } })));
@@ -482,6 +507,12 @@ async function main() {
   const contexts = [];
   const sessions = new Map();
   try {
+    // Fresh CI seeds intentionally remain private drafts. Supply only this suite's
+    // own public fixture instead of depending on or publishing historical courses.
+    const teacher = await login(browser, 'TEACHER');
+    contexts.push(teacher.context);
+    sessions.set('TEACHER', teacher);
+    await createPublicCatalogFixture(teacher.context);
     const publicPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
     await publicPage.goto(web);
     await publicPage.locator('#courses').getByRole('heading', { name: 'Қолжетімді курстар', exact: true }).waitFor();
@@ -527,9 +558,12 @@ async function main() {
       ['PROCTOR', '/dashboard/proctor', 'Проктор'],
       ['ADMIN', '/dashboard/admin/users', 'Пайдаланушылар'],
     ]) {
-      const session = await login(browser, role);
-      contexts.push(session.context);
-      sessions.set(role, session);
+      let session = sessions.get(role);
+      if (!session) {
+        session = await login(browser, role);
+        contexts.push(session.context);
+        sessions.set(role, session);
+      }
       await session.page.goto(web + route);
       await session.page.getByRole('heading', { name: heading }).first().waitFor();
       await auditPage(session.page);
