@@ -30,6 +30,12 @@ export function isCertificateVerificationCode(code: string): boolean {
   return UUID_PATTERN.test(code);
 }
 
+export function certificateVerificationUpstream(environment: Record<string, string | undefined> = process.env): string {
+  const value = environment.INTERNAL_API_ORIGIN || CERTIFICATE_VERIFICATION_UPSTREAM;
+  if (!['http://127.0.0.1:4000', 'http://127.0.0.1:4100'].includes(value)) throw new PublicCertificateVerificationUnavailable();
+  return value;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -83,7 +89,7 @@ export async function fetchPublicCertificateVerification(
 ): Promise<PublicCertificateVerification> {
   try {
     const response = await fetchUpstream(
-      `${CERTIFICATE_VERIFICATION_UPSTREAM}/certificates/verify/${encodeURIComponent(code)}`,
+      `${certificateVerificationUpstream()}/certificates/verify/${encodeURIComponent(code)}`,
       {
         method: 'GET',
         cache: 'no-store',

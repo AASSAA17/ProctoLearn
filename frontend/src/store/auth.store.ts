@@ -14,7 +14,7 @@ interface AuthState {
   error: string | null;
   setUser: (user: User | null) => void;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
+  register: (name: string, email: string, password: string, phone?: string, invitationToken?: string) => Promise<void>;
   logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
 }
@@ -29,9 +29,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (expected !== generation) throw new Error('Сессия басқа қойындыда өзгерді. Қайта көріңіз.');
     set({ user: data.user, initialized: true, error: null, isLoading: false });
   },
-  register: async (name, email, password, phone) => {
+  register: async (name, email, password, phone, invitationToken) => {
     const expected = ++generation;
-    const { data } = await authMutation<{ user: User }>('/auth/register', { name, email, password, phone });
+    const { data } = await authMutation<{ user: User }>('/auth/register', { name, email, password, phone, ...(invitationToken ? { invitationToken } : {}) });
     if (expected !== generation) throw new Error('Сессия басқа қойындыда өзгерді. Қайта көріңіз.');
     set({ user: data.user, initialized: true, error: null, isLoading: false });
   },

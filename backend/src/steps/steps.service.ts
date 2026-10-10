@@ -102,7 +102,7 @@ export class StepsService {
     return { isCorrect, score: isCorrect ? 100 : 0 };
   }
 
-  private validateTask(type: StepType, content: any) {
+  validateTask(type: StepType, content: any) {
     if (type !== StepType.TASK) return;
     const { taskType, correctAnswer } = content;
     const options = content.options;

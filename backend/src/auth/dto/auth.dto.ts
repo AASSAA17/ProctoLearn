@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { NewPassword } from './password-policy';
 
@@ -21,6 +21,13 @@ export class RegisterDto {
   @ApiProperty({ example: 'Pass!!12', minLength: 6, maxLength: 72 })
   @NewPassword()
   password: string;
+
+  @ApiPropertyOptional({ description: 'Пилот иесі бір рет беретін шақыру құпиясөзі' })
+  @IsOptional()
+  @IsString()
+  @MinLength(32)
+  @MaxLength(128)
+  invitationToken?: string;
 }
 
 export class LoginDto {

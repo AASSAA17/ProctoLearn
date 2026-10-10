@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 import { Toaster } from 'react-hot-toast';
+import { ReleaseIndicator } from '@/components/ReleaseIndicator';
 
 const inter = localFont({
   src: '../../public/fonts/InterVariable.woff2',
@@ -25,6 +26,7 @@ export default function RootLayout({
     <html lang="kk" className={inter.variable}>
       <body className="font-sans bg-[var(--dashboard-bg)] min-h-screen antialiased">
         {children}
+        <ReleaseIndicator />
         <Toaster position="top-right" />
       </body>
     </html>

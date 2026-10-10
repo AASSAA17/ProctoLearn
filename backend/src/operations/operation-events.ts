@@ -11,6 +11,12 @@ const metadataKeys: Record<string, readonly string[]> = {
   EVIDENCE_RETENTION_REQUESTED: ['attemptId', 'retentionDays'],
   EVIDENCE_RETENTION_DELETED: ['attemptId', 'retentionDays'],
   EVIDENCE_HOLD_CHANGED: ['attemptId', 'onHold'],
+  PILOT_INVITATION_CREATED: [],
+  PILOT_INVITATION_REDEEMED: [],
+  PILOT_INVITATION_REVOKED: [],
+  PILOT_MEMBER_SUSPENDED: [],
+  PILOT_MEMBER_RESUMED: [],
+  PILOT_COURSE_WITHDRAWN: ['courseId'],
 };
 
 /** Call only inside the same transaction as the action. Do not log request bodies. */

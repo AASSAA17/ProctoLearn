@@ -1,5 +1,19 @@
 # Final demo acceptance — 2026-10-10
 
+## Controlled pilot / curriculum: отдельная область проверки
+
+Финальный локальный artifact `338f8ecaac2e105a`, source `bca47b8734704257d28d39be9400277b10e432db`: backend238PASS/frontend75PASS/integration90PASS/migrations3PASS. Workload1/3/5 повторён на этом artifact:352HTTP,0failures,p95≈36.99/41.31/28.12ms. Все15 DRAFT импортированы и replay проверен; C01 actual editor PATCH200. Полный scope и незакрытые gates — WORK_LOG/PILOT_RUNBOOK, а не выведенный из этих чисел production readiness.
+
+Новый профиль не использует данные демонстрации. Проверки с синтетическими участниками выполняются в обозначенной disposable БД `proctolearn_security_test:55432`, а не в pilot.
+
+- Backend unit chain и disposable integration chain: выполнены успешно; приватные логи `.local/pilot-backend-unit.log`, `.local/pilot-integration.log`. Importer проверен на транзакционный rollback, concurrent replay и конфликт редакторских изменений.
+- Frontend unit chain: 75 PASS; TypeScript PASS; lint 0 errors / 20 warnings. Прокси/профиль/launcher: 19 PASS. Публичный режим запрещает staff routes; локальный HTTP режим допускает точный набор маршрутов при сохранении backend ролей/CSRF.
+- Состав контента: 15 курсов, 50 модулей, 150 уроков, 450 formative TASK, 15 экзаменов / 195 отдельных вопросов, 15 самостоятельных проектов; structural validator 0 errors / 0 warnings. Реальный grader: 1290 correct/incorrect и 645 malformed проверок PASS.
+- 105 технических примеров выполнены, включая 9 Git-for-Windows shell-проверок, которые не доказывают native Linux permissions. 45 протоколов/примеров ожидают человека или среды; Docker не объявлен проверенным. Подробный поурочный scope — `COURSE_QA_REPORT.md` и манифест.
+- Приватный PNG pandas/matplotlib визуально проверен: кириллица читается, оси/точки соответствуют синтетическим данным 10/20/15. Это учебный пример, не результаты исследования.
+
+Локальный нагрузочный сценарий проверяет 1/3/5 отдельных клиентов, WebSocket, ограниченные media transfers, cross-user denial и сохранение прогресса после перезапуска. Он не является измерением 10 одновременных видеоэкзаменов или WAN/ngrok capacity. Итоговая фактическая revision и результаты promotion/import/backup добавляются в WORK_LOG; физический телефон, настоящее TLS termination и live participant test не подтверждены viewport-эмуляцией.
+
 Scope: Phase A, one original course. Branch `release/final-demo-20261010`, implementation developed from `95d14edf8961cfca3ae6ae152d380e74365e6391`. Current release gates and revision are in [DEMO_READINESS.md](DEMO_READINESS.md). Historical audit/redesign runs are not counted as current evidence.
 
 ## Environment and executed checks

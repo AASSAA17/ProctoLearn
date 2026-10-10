@@ -59,7 +59,7 @@ export async function assertCourseReader(prisma: PrismaService, course: any, vie
   const enrollment = await prisma.enrollment.findUnique({
     where: { userId_courseId: { userId: viewer.id, courseId: course.id } },
   });
-  if (!enrollment) throw new ForbiddenException('Курсқа тіркеліңіз');
+  if (!enrollment || enrollment.accessStatus === 'WITHDRAWN') throw new ForbiddenException('Курсқа тіркеліңіз');
   return false;
 }
 

@@ -54,107 +54,173 @@ enum StepType {
   TASK
 }
 
+enum PilotMembershipStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum EnrollmentAccessStatus {
+  ACTIVE
+  WITHDRAWN
+}
+
 model User {
-  id                  String                @id @default(uuid())
-  name                String
-  email               String                @unique
-  phone               String?
-  password            String
-  role                Role                  @default(STUDENT)
-  createdAt           DateTime              @default(now())
-  lastSeen            DateTime?
-  isOnline            Boolean               @default(false)
-  mustChangePassword  Boolean               @default(false)
-  courses             Course[]
-  attempts            Attempt[]
-  certificates        Certificate[]
-  refreshToken        String?
-  tokenVersion        Int                   @default(0)
-  lessonProgress      LessonProgress[]
-  passwordResetTokens PasswordResetToken[]
-  enrollments         Enrollment[]
-  submissions         Submission[]
-  proctorAssignments  ExamProctor[]
+  id                         String               @id @default(uuid())
+  name                       String
+  email                      String               @unique
+  phone                      String?
+  password                   String
+  role                       Role                 @default(STUDENT)
+  createdAt                  DateTime             @default(now())
+  lastSeen                   DateTime?
+  isOnline                   Boolean              @default(false)
+  mustChangePassword         Boolean              @default(false)
+  courses                    Course[]
+  attempts                   Attempt[]
+  certificates               Certificate[]
+  refreshToken               String?
+  tokenVersion               Int                  @default(0)
+  lessonProgress             LessonProgress[]
+  passwordResetTokens        PasswordResetToken[]
+  enrollments                Enrollment[]
+  submissions                Submission[]
+  proctorAssignments         ExamProctor[]
+  pilotMembership            PilotMembership?
+  pilotInvitationsCreated    PilotInvitation[]    @relation("PilotInvitationCreator")
+  pilotInvitationRedeemed    PilotInvitation?     @relation("PilotInvitationRedeemer")
+  pilotMembershipSuspensions PilotMembership[]    @relation("PilotMembershipSuspender")
 
   @@map("users")
 }
 
 model LessonProgress {
-  id        String   @id @default(uuid())
-  userId    String
-  courseId  String
-  lessonId  String
-  viewedAt  DateTime @default(now())
-  completionSource String @default("LEGACY")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  id               String   @id @default(uuid())
+  userId           String
+  courseId         String
+  lessonId         String
+  viewedAt         DateTime @default(now())
+  completionSource String   @default("LEGACY")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course           Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson           Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@unique([userId, lessonId])
   @@map("lesson_progress")
 }
 
 model Course {
-  id              String           @id @default(uuid())
-  title           String
-  description     String?
-  teacherId       String
-  level           CourseLevel      @default(BEGINNER)
-  status          CourseStatus     @default(DRAFT)
-  publishedAt     DateTime?
-  teacher         User             @relation(fields: [teacherId], references: [id])
-  lessons         Lesson[]
-  modules         CourseModule[]
-  exams           Exam[]
-  certificates    Certificate[]
-  lessonProgress  LessonProgress[]
-  enrollments     Enrollment[]
-  createdAt       DateTime         @default(now())
+  id             String                @id @default(uuid())
+  importReceipt  ContentImportReceipt?
+  title          String
+  description    String?
+  teacherId      String
+  level          CourseLevel           @default(BEGINNER)
+  status         CourseStatus          @default(DRAFT)
+  publishedAt    DateTime?
+  teacher        User                  @relation(fields: [teacherId], references: [id])
+  lessons        Lesson[]
+  modules        CourseModule[]
+  exams          Exam[]
+  certificates   Certificate[]
+  lessonProgress LessonProgress[]
+  enrollments    Enrollment[]
+  createdAt      DateTime              @default(now())
 
   @@map("courses")
 }
 
+// Atomic idempotency journal for the authenticated draft importer, never learner content.
+model ContentImportReceipt {
+  id           String   @id
+  ownerId      String
+  courseId     String   @unique
+  revisionHash String
+  contentHash  String
+  createdAt    DateTime @default(now())
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Restrict)
+
+  @@map("content_import_receipts")
+}
+
 model Enrollment {
-  id         String   @id @default(uuid())
-  userId     String
-  courseId   String
-  enrolledAt DateTime @default(now())
-  completedAt DateTime?
+  id                  String                 @id @default(uuid())
+  userId              String
+  courseId            String
+  enrolledAt          DateTime               @default(now())
+  completedAt         DateTime?
   examAccessGrantedAt DateTime?
   examAccessGrantedBy String?
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  accessStatus        EnrollmentAccessStatus @default(ACTIVE)
+  withdrawnAt         DateTime?
+  user                User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course              Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
   @@map("enrollments")
 }
 
+model PilotInvitation {
+  id           String           @id @default(uuid())
+  email        String
+  tokenDigest  String           @unique
+  expiresAt    DateTime
+  createdAt    DateTime         @default(now())
+  createdById  String
+  revokedAt    DateTime?
+  redeemedAt   DateTime?
+  redeemedById String?          @unique
+  createdBy    User             @relation("PilotInvitationCreator", fields: [createdById], references: [id])
+  redeemedBy   User?            @relation("PilotInvitationRedeemer", fields: [redeemedById], references: [id], onDelete: Restrict)
+  membership   PilotMembership?
+
+  @@index([email, redeemedAt, revokedAt])
+  @@index([expiresAt])
+  @@map("pilot_invitations")
+}
+
+model PilotMembership {
+  id               String                @id @default(uuid())
+  userId           String                @unique
+  invitationId     String                @unique
+  status           PilotMembershipStatus @default(ACTIVE)
+  joinedAt         DateTime              @default(now())
+  suspendedAt      DateTime?
+  suspendedById    String?
+  suspensionReason String?
+  user             User                  @relation(fields: [userId], references: [id])
+  invitation       PilotInvitation       @relation(fields: [invitationId], references: [id])
+  suspendedBy      User?                 @relation("PilotMembershipSuspender", fields: [suspendedById], references: [id], onDelete: Restrict)
+
+  @@index([status])
+  @@map("pilot_memberships")
+}
+
 model Lesson {
-  id             String           @id @default(uuid())
-  courseId       String?
-  moduleId       String?
-  title          String
+  id               String           @id @default(uuid())
+  courseId         String?
+  moduleId         String?
+  title            String
   content          String
   videoUrl         String?
   assignment       String?
   assignmentAnswer String?
   order            Int
-  course         Course?          @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  module         CourseModule?    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  lessonProgress LessonProgress[]
-  steps          Step[]
-  createdAt      DateTime         @default(now())
+  course           Course?          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  module           CourseModule?    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  lessonProgress   LessonProgress[]
+  steps            Step[]
+  createdAt        DateTime         @default(now())
 
   @@map("lessons")
 }
 
 model CourseModule {
-  id       String   @id @default(uuid())
-  title    String
-  order    Int
-  courseId String
-  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessons  Lesson[]
+  id        String   @id @default(uuid())
+  title     String
+  order     Int
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons   Lesson[]
   createdAt DateTime @default(now())
 
   @@map("course_modules")
@@ -189,16 +255,16 @@ model Submission {
 }
 
 model Exam {
-  id        String     @id @default(uuid())
-  courseId  String
-  title     String
-  duration  Int
-  passScore Int        @default(60)
-  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  questions Question[]
-  attempts  Attempt[]
+  id                 String        @id @default(uuid())
+  courseId           String
+  title              String
+  duration           Int
+  passScore          Int           @default(60)
+  course             Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions          Question[]
+  attempts           Attempt[]
   proctorAssignments ExamProctor[]
-  createdAt DateTime   @default(now())
+  createdAt          DateTime      @default(now())
 
   @@map("exams")
 }
@@ -207,8 +273,8 @@ model ExamProctor {
   examId    String
   proctorId String
   createdAt DateTime @default(now())
-  exam      Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
-  proctor   User @relation(fields: [proctorId], references: [id], onDelete: Cascade)
+  exam      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  proctor   User     @relation(fields: [proctorId], references: [id], onDelete: Cascade)
 
   @@id([examId, proctorId])
   @@index([proctorId])
@@ -229,36 +295,36 @@ model Question {
 }
 
 model Attempt {
-  id         String        @id @default(uuid())
-  examId     String
-  userId     String
-  startedAt  DateTime      @default(now())
-  finishedAt DateTime?
-  score      Int?
-  trustScore Int           @default(100)
-  status     AttemptStatus @default(IN_PROGRESS)
-  examSnapshot Json?
-  draftAnswers Json @default("[]")
-  draftRevision Int @default(0)
-  draftUpdatedAt DateTime?
-  submissionDigest String?
-  reviewStatus ReviewStatus @default(PENDING)
-  flaggedAt DateTime?
-  reviewedAt DateTime?
-  reviewedBy String?
-  reviewReason String?
-  evidenceLegalHold Boolean @default(false)
+  id                 String            @id @default(uuid())
+  examId             String
+  userId             String
+  startedAt          DateTime          @default(now())
+  finishedAt         DateTime?
+  score              Int?
+  trustScore         Int               @default(100)
+  status             AttemptStatus     @default(IN_PROGRESS)
+  examSnapshot       Json?
+  draftAnswers       Json              @default("[]")
+  draftRevision      Int               @default(0)
+  draftUpdatedAt     DateTime?
+  submissionDigest   String?
+  reviewStatus       ReviewStatus      @default(PENDING)
+  flaggedAt          DateTime?
+  reviewedAt         DateTime?
+  reviewedBy         String?
+  reviewReason       String?
+  evidenceLegalHold  Boolean           @default(false)
   evidenceHoldReason String?
-  evidenceHoldAt DateTime?
-  evidenceHoldBy String?
-  exam       Exam          @relation(fields: [examId], references: [id])
-  user       User          @relation(fields: [userId], references: [id])
-  events     ProctorEvent[]
-  evidences  EvidenceFile[]
-  answers    Answer[]
-  recordingUploads RecordingUpload[]
-  appeal AttemptAppeal?
-  reviews AttemptReview[]
+  evidenceHoldAt     DateTime?
+  evidenceHoldBy     String?
+  exam               Exam              @relation(fields: [examId], references: [id])
+  user               User              @relation(fields: [userId], references: [id])
+  events             ProctorEvent[]
+  evidences          EvidenceFile[]
+  answers            Answer[]
+  recordingUploads   RecordingUpload[]
+  appeal             AttemptAppeal?
+  reviews            AttemptReview[]
 
   @@index([examId, userId])
   @@map("attempts")
@@ -270,7 +336,7 @@ model Answer {
   questionId String
   answer     String
   isCorrect  Boolean?
-  attempt   Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  attempt    Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   question   Question @relation(fields: [questionId], references: [id])
 
   @@index([attemptId])
@@ -290,78 +356,78 @@ model ProctorEvent {
 }
 
 model EvidenceFile {
-  id        String   @id @default(uuid())
-  attemptId String
-  type      String
-  url       String
-  createdAt DateTime @default(now())
+  id                  String               @id @default(uuid())
+  attemptId           String
+  type                String
+  url                 String
+  createdAt           DateTime             @default(now())
   deletionRequestedAt DateTime?
-  deletedAt DateTime?
-  deletionJob EvidenceDeletionJob?
-  attempt   Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  deletedAt           DateTime?
+  deletionJob         EvidenceDeletionJob?
+  attempt             Attempt              @relation(fields: [attemptId], references: [id], onDelete: Cascade)
 
   @@index([deletedAt, createdAt])
   @@map("evidence_files")
 }
 
 model EvidenceDeletionJob {
-  id String @id @default(uuid())
-  evidenceId String @unique
-  state String @default("PENDING")
+  id            String       @id @default(uuid())
+  evidenceId    String       @unique
+  state         String       @default("PENDING")
   retentionDays Int
-  attempts Int @default(0)
-  leaseToken String?
-  leaseUntil DateTime?
-  lastError String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  completedAt DateTime?
-  evidence EvidenceFile @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  attempts      Int          @default(0)
+  leaseToken    String?
+  leaseUntil    DateTime?
+  lastError     String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  completedAt   DateTime?
+  evidence      EvidenceFile @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
 
   @@index([state, leaseUntil])
   @@map("evidence_deletion_jobs")
 }
 
 model Certificate {
-  id       String   @id @default(uuid())
-  userId   String
-  courseId String
-  issuedAt DateTime @default(now())
-  qrCode   String   @unique
-  issuedVia String @default("LEGACY")
-  recipientName String?
-  courseTitle String?
-  issuerName String?
-  snapshotStatus String @default("LEGACY_UNAVAILABLE")
-  status   String   @default("VALID")
-  revokedAt DateTime?
-  revokedBy String?
+  id               String    @id @default(uuid())
+  userId           String
+  courseId         String
+  issuedAt         DateTime  @default(now())
+  qrCode           String    @unique
+  issuedVia        String    @default("LEGACY")
+  recipientName    String?
+  courseTitle      String?
+  issuerName       String?
+  snapshotStatus   String    @default("LEGACY_UNAVAILABLE")
+  status           String    @default("VALID")
+  revokedAt        DateTime?
+  revokedBy        String?
   revocationReason String?
-  user     User     @relation(fields: [userId], references: [id])
-  course   Course   @relation(fields: [courseId], references: [id])
+  user             User      @relation(fields: [userId], references: [id])
+  course           Course    @relation(fields: [courseId], references: [id])
 
   @@index([status])
   @@map("certificates")
 }
 
 model RecordingUpload {
-  id String @id @default(uuid())
-  attemptId String
-  kind String
-  clientSessionId String
-  mimeType String
-  state String @default("OPEN")
-  bytes Int @default(0)
-  expectedChunks Int?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  expiresAt DateTime
-  evidenceId String? @unique
-  interrupted Boolean @default(false)
-  finalizeToken String?
+  id                 String           @id @default(uuid())
+  attemptId          String
+  kind               String
+  clientSessionId    String
+  mimeType           String
+  state              String           @default("OPEN")
+  bytes              Int              @default(0)
+  expectedChunks     Int?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  expiresAt          DateTime
+  evidenceId         String?          @unique
+  interrupted        Boolean          @default(false)
+  finalizeToken      String?
   finalizeLeaseUntil DateTime?
-  attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  chunks RecordingChunk[]
+  attempt            Attempt          @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  chunks             RecordingChunk[]
 
   @@unique([attemptId, kind, clientSessionId])
   @@index([state, expiresAt])
@@ -369,41 +435,41 @@ model RecordingUpload {
 }
 
 model RecordingChunk {
-  uploadId String
-  index Int
-  sha256 String
-  size Int
-  objectKey String @unique
-  createdAt DateTime @default(now())
-  upload RecordingUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  uploadId  String
+  index     Int
+  sha256    String
+  size      Int
+  objectKey String          @unique
+  createdAt DateTime        @default(now())
+  upload    RecordingUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
 
   @@id([uploadId, index])
   @@map("recording_chunks")
 }
 
 model AttemptAppeal {
-  id String @id @default(uuid())
-  attemptId String @unique
-  reason String
-  state String @default("OPEN")
-  createdAt DateTime @default(now())
+  id        String    @id @default(uuid())
+  attemptId String    @unique
+  reason    String
+  state     String    @default("OPEN")
+  createdAt DateTime  @default(now())
   decidedAt DateTime?
   decidedBy String?
-  response String?
-  attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  response  String?
+  attempt   Attempt   @relation(fields: [attemptId], references: [id], onDelete: Cascade)
 
   @@map("attempt_appeals")
 }
 
 model AttemptReview {
-  id String @id @default(uuid())
-  attemptId String
+  id         String   @id @default(uuid())
+  attemptId  String
   reviewerId String
-  decision String
-  reason String
-  source String
-  createdAt DateTime @default(now())
-  attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  decision   String
+  reason     String
+  source     String
+  createdAt  DateTime @default(now())
+  attempt    Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
 
   @@index([attemptId, createdAt])
   @@map("attempt_reviews")
@@ -422,13 +488,13 @@ model PasswordResetToken {
 
 // Actor/target identifiers intentionally survive account and entity deletion.
 model AuditEvent {
-  id String @id @default(uuid())
-  createdAt DateTime @default(now())
-  actorId String?
-  action String
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now())
+  actorId    String?
+  action     String
   targetType String
-  targetId String
-  metadata Json
+  targetId   String
+  metadata   Json
 
   @@index([createdAt, id])
   @@index([targetType, targetId])
@@ -437,15 +503,15 @@ model AuditEvent {
 
 // Durable in-app delivery; created in the business transaction, not sent over a network.
 model UserNotification {
-  id String @id @default(uuid())
-  userId String
-  type String
-  title String
-  body String
+  id         String    @id @default(uuid())
+  userId     String
+  type       String
+  title      String
+  body       String
   targetPath String
-  dedupeKey String @unique
-  createdAt DateTime @default(now())
-  readAt DateTime?
+  dedupeKey  String    @unique
+  createdAt  DateTime  @default(now())
+  readAt     DateTime?
 
   @@index([userId, createdAt, id])
   @@index([userId, readAt])

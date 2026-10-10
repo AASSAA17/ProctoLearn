@@ -5,7 +5,7 @@ import { useAuthStore, type User } from '@/store/auth.store';
 import Link from 'next/link';
 import api from '@/lib/api';
 import LoadFailure from '@/components/LoadFailure';
-import { staffHome } from '@/lib/role-navigation';
+import { staffHomeFor } from '@/lib/role-navigation';
 import { NavIcon } from '@/components/nav-icon';
 
 interface Enrollment {
@@ -44,7 +44,7 @@ function StaffDashboard({ user }: { user: User }) {
       <p className="mt-2 text-sm text-gray-600">Жұмысты өз рөліңіздің бөлімінен бастаңыз.</p>
     </div>
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {staffHome[user.role].map((item, index) => <Link key={item.href} href={item.href} className="group rounded-2xl border border-gray-200 bg-white p-7 shadow-sm transition hover:border-violet-300 hover:shadow-md">
+      {staffHomeFor(user.role).map((item, index) => <Link key={item.href} href={item.href} className="group rounded-2xl border border-gray-200 bg-white p-7 shadow-sm transition hover:border-violet-300 hover:shadow-md">
         <span aria-hidden="true" className="mb-6 grid h-11 w-11 place-items-center rounded-xl bg-violet-50 text-violet-700"><NavIcon icon={item.href.includes('proctor') ? '🔍' : item.href.includes('teacher') ? '🎓' : '⚙️'} /></span>
         <p className="workspace-eyebrow">0{index + 1}</p>
         <h2 className="font-semibold text-gray-900">{item.title}</h2>

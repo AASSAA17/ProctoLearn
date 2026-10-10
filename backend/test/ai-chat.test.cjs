@@ -63,7 +63,8 @@ test('tools allow only own records and do not query unauthorized outline', async
   assert.deepEqual(await tools.execute('alice', 'course_outline', { courseId: 'bobs-course' }), { error: 'NOT_FOUND_OR_FORBIDDEN' });
   await tools.execute('alice', 'my_courses', {});
   assert.equal(reads[1].where.userId, 'alice');
-  assert.deepEqual(reads[0].where.OR, [{ enrollments: { some: { userId: 'alice' } } }, { teacherId: 'alice' }]);
+  assert.equal(reads[1].where.accessStatus, 'ACTIVE');
+  assert.deepEqual(reads[0].where.OR, [{ enrollments: { some: { userId: 'alice', accessStatus: 'ACTIVE' } } }, { teacherId: 'alice' }]);
   assert.equal(JSON.stringify(reads).includes('assignmentAnswer'), false);
 });
 

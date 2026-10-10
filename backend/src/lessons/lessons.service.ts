@@ -154,6 +154,7 @@ export class LessonsService {
     const courseId = lesson.courseId ?? lesson.module?.courseId ?? lesson.module?.course?.id;
     if (manager || !courseId) return;
     const enrollment = await this.prisma.enrollment.findUnique({ where: { userId_courseId: { userId: viewer.id, courseId } } });
+    if (enrollment?.accessStatus === 'WITHDRAWN') throw new ForbiddenException('Курсқа тіркеліңіз');
     if (enrollment?.examAccessGrantedAt) return;
     const previous = await this.prisma.lesson.findMany({
       where: { OR: [{ courseId }, { module: { courseId } }] },

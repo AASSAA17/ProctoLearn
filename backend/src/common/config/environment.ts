@@ -1,6 +1,7 @@
 import { configuredOrigins } from './origins';
 import { configuredTrustedProxies } from './trusted-proxies';
 import { certificateOrigin } from './certificate-origin';
+import { validatePilotEnvironment } from '../../pilot/pilot-policy';
 
 /** Fail closed instead of silently signing tokens with a public default key. */
 export function validateEnvironment(env: Record<string, unknown>) {
@@ -17,5 +18,6 @@ export function validateEnvironment(env: Record<string, unknown>) {
   configuredOrigins(typeof env.FRONTEND_URL === 'string' ? env.FRONTEND_URL : undefined, env.NODE_ENV === 'production');
   configuredTrustedProxies(env.TRUSTED_PROXIES);
   certificateOrigin(typeof env.CERTIFICATE_PUBLIC_ORIGIN === 'string' ? env.CERTIFICATE_PUBLIC_ORIGIN : undefined, env.NODE_ENV === 'production');
+  validatePilotEnvironment(env);
   return env;
 }

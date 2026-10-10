@@ -1,0 +1,5442 @@
+{
+  "schemaVersion": 1,
+  "cohort": "proctolearn-pilot-curriculum-v1",
+  "language": "kk",
+  "authoringStatus": "HUMAN_REVIEW_PENDING",
+  "counts": {
+    "courses": 15,
+    "modules": 50,
+    "lessons": 150,
+    "formativeQuestions": 450,
+    "finalExams": 15,
+    "finalQuestions": 195,
+    "selfAssessedProjects": 15
+  },
+  "publication": "DRAFT_ONLY; actual human approval required",
+  "courses": [
+    {
+      "authoringId": "C01",
+      "title": "HTML және CSS негіздері",
+      "level": "BEGINNER",
+      "language": "kk",
+      "audience": "18+ volunteer learners",
+      "prerequisites": [
+        "браузер мен мәтіндік редакторды қолдану"
+      ],
+      "outcomes": [
+        "doctype, head және body бар қазақша құжатты сақтау",
+        "ашылатын, жабылатын тег пен атрибутты ажырату",
+        "салыстырмалы жолмен екі оқу бетін байланыстыру",
+        "h1/h2 иерархиясы мен реттелген тізімді құру",
+        "навигация мен негізгі мазмұнды семантикалық бөлу",
+        "label арқылы email өрісін байланыстыру",
+        "класс селекторымен ережені шектеу",
+        "padding пен border әсерін санмен есептеу",
+        "мәтінді салыстырмалы өлшеммен және көрінетін фокуспен беру",
+        "flex-wrap арқылы карточкаларды тар экранға орналастыру",
+        "тар экраннан бастап кең экран стилін қосу",
+        "жинақталған беттен үш нақты ақауды тауып түзету"
+      ],
+      "review": "HUMAN_REVIEW_PENDING",
+      "batch": 1,
+      "draftRevisionHash": "e6c54013b147b25ea185af7fc90ba6a7541e51073319fb191c898571c587dbaf",
+      "examQuestionCount": 15,
+      "examPolicy": "Duration/pass score proposed; teacher and recording quota review required",
+      "project": {
+        "title": "Кітап алмасу клубының бейімделгіш беті",
+        "evaluation": "SELF_ASSESSED_NOT_SCORED"
+      },
+      "modules": [
+        {
+          "authoringId": "C01-M1",
+          "title": "HTML құрылымы",
+          "order": 1,
+          "lessons": [
+            {
+              "authoringId": "C01-L01",
+              "title": "Құжат қаңқасы және UTF-8",
+              "order": 1,
+              "outcomes": [
+                "doctype, head және body бар қазақша құжатты сақтау"
+              ],
+              "prerequisites": [
+                "браузер мен мәтіндік редакторды қолдану"
+              ],
+              "assessmentMapping": [
+                "C01-L01-F1",
+                "C01-L01-F2",
+                "C01-L01-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C01-E1"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content/Basic_HTML_syntax",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome DOM/computed styles/interaction with explicit educational fixture wrappers where needed"
+            },
+            {
+              "authoringId": "C01-L02",
+              "title": "Элемент, атрибут және дұрыс ұяласу",
+              "order": 2,
+              "outcomes": [
+                "ашылатын, жабылатын тег пен атрибутты ажырату"
+              ],
+              "prerequisites": [
+                "C01-L01"
+              ],
+              "assessmentMapping": [
+                "C01-L02-F1",
+                "C01-L02-F2",
+                "C01-L02-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C01-E2"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Element",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome DOM/computed styles/interaction with explicit educational fixture wrappers where needed"
+            },
+            {
+              "authoringId": "C01-L03",
+              "title": "Жергілікті жолдар және беттер арасындағы сілтеме",
+              "order": 3,
+              "outcomes": [
+                "салыстырмалы жолмен екі оқу бетін байланыстыру"
+              ],
+              "prerequisites": [
+                "C01-L02"
+              ],
+              "assessmentMapping": [
+                "C01-L03-F1",
+                "C01-L03-F2",
+                "C01-L03-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C01-E3"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Element/a",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Both actual relative href values; navigation between physical files not claimed"
+            }
+          ]
+        },
+        {
+          "authoringId": "C01-M2",
+          "title": "Мазмұн және семантика",
+          "order": 2,
+          "lessons": [
+            {
+              "authoringId": "C01-L04",
+              "title": "Тақырып иерархиясы және тізімдер",
+              "order": 1,
+              "outcomes": [
+                "h1/h2 иерархиясы мен реттелген тізімді құру"
+              ],
+              "prerequisites": [
+                "C01-L03"
+              ],
+              "assessmentMapping": [
+                "C01-L04-F1",
+                "C01-L04-F2",
+                "C01-L04-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C01-E4"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Element/Heading_Elements",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome DOM/computed styles/interaction with explicit educational fixture wrappers where needed"
+            },
+            {
+              "authoringId": "C01-L05",
+              "title": "main, nav және суреттің балама мәтіні",
+              "order": 2,
+              "outcomes": [
+                "навигация мен негізгі мазмұнды семантикалық бөлу"
+              ],
+              "prerequisites": [
+                "C01-L04"
+              ],
+              "assessmentMapping": [
+                "C01-L05-F1",
+                "C01-L05-F2",
+                "C01-L05-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C01-E5",
+                "C01-E13"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Element/main",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome DOM/computed styles/interaction with explicit educational fixture wrappers where needed"
+            },
+            {
+              "authoringId": "C01-L06",
+              "title": "Форма белгілері және енгізу түрлері",
+              "order": 3,
+              "outcomes": [
+                "label арқылы email өрісін байланыстыру"
+              ],
+              "prerequisites": [
+                "C01-L05"
+              ],
+              "assessmentMapping": [
+                "C01-L06-F1",
+                "C01-L06-F2",
+                "C01-L06-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C01-E6",
+                "C01-E14"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.w3.org/WAI/tutorials/forms/labels/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome DOM/computed styles/interaction with explicit educational fixture wrappers where needed"
+            }
+          ]
+        },
+        {
+          "authoringId": "C01-M3",
+          "title": "CSS безендіру",
+          "order": 3,
+          "lessons": [
+            {
+              "authoringId": "C01-L07",
+              "title": "Селектор, класс және каскад",
+              "order": 1,
+              "outcomes": [
+                "класс селекторымен ережені шектеу"
+              ],
+              "prerequisites": [
+                "C01-L06"
+              ],
+              "assessmentMapping": [
+                "C01-L07-F1",
+                "C01-L07-F2",
+                "C01-L07-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C01-E7"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_cascade/Specificity",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome DOM/computed styles/interaction with explicit educational fixture wrappers where needed"
+            },
+            {
+              "authoringId": "C01-L08",
+              "title": "Box model және border-box есебі",
+              "order": 2,
+              "outcomes": [
+                "padding пен border әсерін санмен есептеу"
+              ],
+              "prerequisites": [
+                "C01-L07"
+              ],
+              "assessmentMapping": [
+                "C01-L08-F1",
+                "C01-L08-F2",
+                "C01-L08-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C01-E8"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Styling_basics/Box_model",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome DOM/computed styles/interaction with explicit educational fixture wrappers where needed"
+            },
+            {
+              "authoringId": "C01-L09",
+              "title": "Оқылатын мәтін, аралық және фокус",
+              "order": 3,
+              "outcomes": [
+                "мәтінді салыстырмалы өлшеммен және көрінетін фокуспен беру"
+              ],
+              "prerequisites": [
+                "C01-L08"
+              ],
+              "assessmentMapping": [
+                "C01-L09-F1",
+                "C01-L09-F2",
+                "C01-L09-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C01-E9"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/line-height",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome DOM/computed styles/interaction with explicit educational fixture wrappers where needed"
+            }
+          ]
+        },
+        {
+          "authoringId": "C01-M4",
+          "title": "Бейімделгіш бет және қорытынды практика",
+          "order": 4,
+          "lessons": [
+            {
+              "authoringId": "C01-L10",
+              "title": "Flexbox және карточкалардың оралуы",
+              "order": 1,
+              "outcomes": [
+                "flex-wrap арқылы карточкаларды тар экранға орналастыру"
+              ],
+              "prerequisites": [
+                "C01-L09"
+              ],
+              "assessmentMapping": [
+                "C01-L10-F1",
+                "C01-L10-F2",
+                "C01-L10-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C01-E10"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Basic_concepts_of_flexbox",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome DOM/computed styles/interaction with explicit educational fixture wrappers where needed"
+            },
+            {
+              "authoringId": "C01-L11",
+              "title": "Viewport және mobile-first media query",
+              "order": 2,
+              "outcomes": [
+                "тар экраннан бастап кең экран стилін қосу"
+              ],
+              "prerequisites": [
+                "C01-L10"
+              ],
+              "assessmentMapping": [
+                "C01-L11-F1",
+                "C01-L11-F2",
+                "C01-L11-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C01-E11"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_media_queries/Using_media_queries",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome DOM/computed styles/interaction with explicit educational fixture wrappers where needed"
+            },
+            {
+              "authoringId": "C01-L12",
+              "title": "Қорытынды бетке қолжетімділік тексеруі",
+              "order": 3,
+              "outcomes": [
+                "жинақталған беттен үш нақты ақауды тауып түзету"
+              ],
+              "prerequisites": [
+                "C01-L11"
+              ],
+              "assessmentMapping": [
+                "C01-L12-F1",
+                "C01-L12-F2",
+                "C01-L12-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C01-E12",
+                "C01-E15"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.w3.org/WAI/test-evaluate/preliminary/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Native zoom and assistive technology are not executable source code"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "authoringId": "C02",
+      "title": "Python бағдарламалау негіздері",
+      "level": "BEGINNER",
+      "language": "kk",
+      "audience": "18+ volunteer learners",
+      "prerequisites": [
+        "файл сақтау және терминалды ашу; Python 3.12 орнатылған оқу ортасы"
+      ],
+      "outcomes": [
+        "амалдардың ретін қолданып жалпы құнды есептеу",
+        "f-string арқылы санды түсінікті мәтінге қосу",
+        "сан мәтінін int арқылы түрлендіріп жарамсыз кірісті тану",
+        "өту шегін >= арқылы дұрыс тексеру",
+        "диапазонды айналып қосынды есептеу",
+        "шектеулі қайталауда есептегішті жаңарту",
+        "нәтиже қайтаратын таза функция жазу",
+        "тізім индексі мен сөздік кілтін ажырату",
+        "бос және қалыпты кіріс үшін есеп функциясын тексеру"
+      ],
+      "review": "HUMAN_REVIEW_PENDING",
+      "batch": 1,
+      "draftRevisionHash": "2bd33c609c98c3c43b5ffa28acc422c9c3abc4b26f0610d72aa1269cff170732",
+      "examQuestionCount": 12,
+      "examPolicy": "Duration/pass score proposed; teacher and recording quota review required",
+      "project": {
+        "title": "Ойдан шығарылған кітап тізімінің есебі",
+        "evaluation": "SELF_ASSESSED_NOT_SCORED"
+      },
+      "modules": [
+        {
+          "authoringId": "C02-M1",
+          "title": "Деректер және амалдар",
+          "order": 1,
+          "lessons": [
+            {
+              "authoringId": "C02-L01",
+              "title": "Айнымалы және сандық өрнек",
+              "order": 1,
+              "outcomes": [
+                "амалдардың ретін қолданып жалпы құнды есептеу"
+              ],
+              "prerequisites": [
+                "файл сақтау және терминалды ашу; Python 3.12 орнатылған оқу ортасы"
+              ],
+              "assessmentMapping": [
+                "C02-L01-F1",
+                "C02-L01-F2",
+                "C02-L01-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C02-E1"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/introduction.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Python 3.12.14"
+            },
+            {
+              "authoringId": "C02-L02",
+              "title": "Мәтін және форматталған шығару",
+              "order": 2,
+              "outcomes": [
+                "f-string арқылы санды түсінікті мәтінге қосу"
+              ],
+              "prerequisites": [
+                "C02-L01"
+              ],
+              "assessmentMapping": [
+                "C02-L02-F1",
+                "C02-L02-F2",
+                "C02-L02-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C02-E2"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/introduction.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Python 3.12.14"
+            },
+            {
+              "authoringId": "C02-L03",
+              "title": "Түрлендіру және кіріс қатесі",
+              "order": 3,
+              "outcomes": [
+                "сан мәтінін int арқылы түрлендіріп жарамсыз кірісті тану"
+              ],
+              "prerequisites": [
+                "C02-L02"
+              ],
+              "assessmentMapping": [
+                "C02-L03-F1",
+                "C02-L03-F2",
+                "C02-L03-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C02-E3",
+                "C02-E12"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/errors.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Python 3.12.14"
+            }
+          ]
+        },
+        {
+          "authoringId": "C02-M2",
+          "title": "Шарттар және циклдер",
+          "order": 2,
+          "lessons": [
+            {
+              "authoringId": "C02-L04",
+              "title": "if және шекаралық мән",
+              "order": 1,
+              "outcomes": [
+                "өту шегін >= арқылы дұрыс тексеру"
+              ],
+              "prerequisites": [
+                "C02-L03"
+              ],
+              "assessmentMapping": [
+                "C02-L04-F1",
+                "C02-L04-F2",
+                "C02-L04-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C02-E4"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/controlflow.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Python 3.12.14"
+            },
+            {
+              "authoringId": "C02-L05",
+              "title": "for, range және жинақтау",
+              "order": 2,
+              "outcomes": [
+                "диапазонды айналып қосынды есептеу"
+              ],
+              "prerequisites": [
+                "C02-L04"
+              ],
+              "assessmentMapping": [
+                "C02-L05-F1",
+                "C02-L05-F2",
+                "C02-L05-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C02-E5"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/controlflow.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Python 3.12.14"
+            },
+            {
+              "authoringId": "C02-L06",
+              "title": "while және тоқтау шарты",
+              "order": 3,
+              "outcomes": [
+                "шектеулі қайталауда есептегішті жаңарту"
+              ],
+              "prerequisites": [
+                "C02-L05"
+              ],
+              "assessmentMapping": [
+                "C02-L06-F1",
+                "C02-L06-F2",
+                "C02-L06-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C02-E6"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/controlflow.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Python 3.12.14"
+            }
+          ]
+        },
+        {
+          "authoringId": "C02-M3",
+          "title": "Функциялар, жинақтар және шағын бағдарламалар",
+          "order": 3,
+          "lessons": [
+            {
+              "authoringId": "C02-L07",
+              "title": "Функция параметрі және return",
+              "order": 1,
+              "outcomes": [
+                "нәтиже қайтаратын таза функция жазу"
+              ],
+              "prerequisites": [
+                "C02-L06"
+              ],
+              "assessmentMapping": [
+                "C02-L07-F1",
+                "C02-L07-F2",
+                "C02-L07-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C02-E7",
+                "C02-E10"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/controlflow.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Python 3.12.14"
+            },
+            {
+              "authoringId": "C02-L08",
+              "title": "Тізім және сөздік арқылы деректі ұйымдастыру",
+              "order": 2,
+              "outcomes": [
+                "тізім индексі мен сөздік кілтін ажырату"
+              ],
+              "prerequisites": [
+                "C02-L07"
+              ],
+              "assessmentMapping": [
+                "C02-L08-F1",
+                "C02-L08-F2",
+                "C02-L08-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C02-E8"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/datastructures.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Python 3.12.14"
+            },
+            {
+              "authoringId": "C02-L09",
+              "title": "Бағдарламаны бөліктерге бөлу және тексеру",
+              "order": 3,
+              "outcomes": [
+                "бос және қалыпты кіріс үшін есеп функциясын тексеру"
+              ],
+              "prerequisites": [
+                "C02-L08"
+              ],
+              "assessmentMapping": [
+                "C02-L09-F1",
+                "C02-L09-F2",
+                "C02-L09-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C02-E9",
+                "C02-E11"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/errors.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Python 3.12.14"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "authoringId": "C03",
+      "title": "PostgreSQL: дерекқор және SQL",
+      "level": "BEGINNER",
+      "language": "kk",
+      "audience": "18+ volunteer learners",
+      "prerequisites": [
+        "кесте ұғымы; оқшауланған PostgreSQL оқу дерекқоры"
+      ],
+      "outcomes": [
+        "қарапайым books кестесін тиісті түрлермен сипаттау",
+        "қайталанбайтын идентификатор мен міндетті өрісті шектеу",
+        "беру жазбасын кітап кілтімен байланыстыру",
+        "тек қажет бағанды анық атаумен шығару",
+        "NULL мәнін IS NULL арқылы сүзгілеу",
+        "қайталанған мәнде екінші сұрыптау кілтін қолдану",
+        "екі кестені кілт арқылы біріктіру",
+        "берілмеген кітапты нөлдік санмен есепке қосу",
+        "топталған есепті сүзгілеп параметр орнын ажырату"
+      ],
+      "review": "HUMAN_REVIEW_PENDING",
+      "batch": 1,
+      "draftRevisionHash": "7136b659b11da733983440262c454993172e3bfb9c6f9cde5d5f95509730cc5e",
+      "examQuestionCount": 12,
+      "examPolicy": "Duration/pass score proposed; teacher and recording quota review required",
+      "project": {
+        "title": "Оқу кітапханасының сұраулар жинағы",
+        "evaluation": "SELF_ASSESSED_NOT_SCORED"
+      },
+      "modules": [
+        {
+          "authoringId": "C03-M1",
+          "title": "Кестелер, кілттер және байланыстар",
+          "order": 1,
+          "lessons": [
+            {
+              "authoringId": "C03-L01",
+              "title": "Жол, баған және дерек түрі",
+              "order": 1,
+              "outcomes": [
+                "қарапайым books кестесін тиісті түрлермен сипаттау"
+              ],
+              "prerequisites": [
+                "кесте ұғымы; оқшауланған PostgreSQL оқу дерекқоры"
+              ],
+              "assessmentMapping": [
+                "C03-L01-F1",
+                "C03-L01-F2",
+                "C03-L01-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C03-E1",
+                "C03-E12"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.postgresql.org/docs/18/datatype.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "PostgreSQL 18, temporary educational tables, actual bound $1 parameter where needed"
+            },
+            {
+              "authoringId": "C03-L02",
+              "title": "PRIMARY KEY, UNIQUE және NOT NULL",
+              "order": 2,
+              "outcomes": [
+                "қайталанбайтын идентификатор мен міндетті өрісті шектеу"
+              ],
+              "prerequisites": [
+                "C03-L01"
+              ],
+              "assessmentMapping": [
+                "C03-L02-F1",
+                "C03-L02-F2",
+                "C03-L02-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C03-E2"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.postgresql.org/docs/18/ddl-constraints.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "PostgreSQL 18, temporary educational tables, actual bound $1 parameter where needed"
+            },
+            {
+              "authoringId": "C03-L03",
+              "title": "Сыртқы кілт және бір-көп байланысы",
+              "order": 3,
+              "outcomes": [
+                "беру жазбасын кітап кілтімен байланыстыру"
+              ],
+              "prerequisites": [
+                "C03-L02"
+              ],
+              "assessmentMapping": [
+                "C03-L03-F1",
+                "C03-L03-F2",
+                "C03-L03-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C03-E3"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.postgresql.org/docs/18/ddl-constraints.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "PostgreSQL 18, temporary educational tables, actual bound $1 parameter where needed"
+            }
+          ]
+        },
+        {
+          "authoringId": "C03-M2",
+          "title": "Таңдау, сүзгілеу және реттеу",
+          "order": 2,
+          "lessons": [
+            {
+              "authoringId": "C03-L04",
+              "title": "SELECT және бағанның бүркеншік атауы",
+              "order": 1,
+              "outcomes": [
+                "тек қажет бағанды анық атаумен шығару"
+              ],
+              "prerequisites": [
+                "C03-L03"
+              ],
+              "assessmentMapping": [
+                "C03-L04-F1",
+                "C03-L04-F2",
+                "C03-L04-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C03-E4"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.postgresql.org/docs/18/tutorial-select.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "PostgreSQL 18, temporary educational tables, actual bound $1 parameter where needed"
+            },
+            {
+              "authoringId": "C03-L05",
+              "title": "WHERE, AND және NULL",
+              "order": 2,
+              "outcomes": [
+                "NULL мәнін IS NULL арқылы сүзгілеу"
+              ],
+              "prerequisites": [
+                "C03-L04"
+              ],
+              "assessmentMapping": [
+                "C03-L05-F1",
+                "C03-L05-F2",
+                "C03-L05-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C03-E5",
+                "C03-E11"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.postgresql.org/docs/18/tutorial-select.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "PostgreSQL 18, temporary educational tables, actual bound $1 parameter where needed"
+            },
+            {
+              "authoringId": "C03-L06",
+              "title": "ORDER BY және тұрақты беттеу",
+              "order": 3,
+              "outcomes": [
+                "қайталанған мәнде екінші сұрыптау кілтін қолдану"
+              ],
+              "prerequisites": [
+                "C03-L05"
+              ],
+              "assessmentMapping": [
+                "C03-L06-F1",
+                "C03-L06-F2",
+                "C03-L06-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C03-E6"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.postgresql.org/docs/18/tutorial-select.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "PostgreSQL 18, temporary educational tables, actual bound $1 parameter where needed"
+            }
+          ]
+        },
+        {
+          "authoringId": "C03-M3",
+          "title": "Біріктіру, топтау және практикалық сұраулар",
+          "order": 3,
+          "lessons": [
+            {
+              "authoringId": "C03-L07",
+              "title": "INNER JOIN және байланыс шарты",
+              "order": 1,
+              "outcomes": [
+                "екі кестені кілт арқылы біріктіру"
+              ],
+              "prerequisites": [
+                "C03-L06"
+              ],
+              "assessmentMapping": [
+                "C03-L07-F1",
+                "C03-L07-F2",
+                "C03-L07-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C03-E7",
+                "C03-E10"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.postgresql.org/docs/18/tutorial-join.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "PostgreSQL 18, temporary educational tables, actual bound $1 parameter where needed"
+            },
+            {
+              "authoringId": "C03-L08",
+              "title": "LEFT JOIN және COUNT айырмасы",
+              "order": 2,
+              "outcomes": [
+                "берілмеген кітапты нөлдік санмен есепке қосу"
+              ],
+              "prerequisites": [
+                "C03-L07"
+              ],
+              "assessmentMapping": [
+                "C03-L08-F1",
+                "C03-L08-F2",
+                "C03-L08-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C03-E8"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.postgresql.org/docs/18/tutorial-join.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "PostgreSQL 18, temporary educational tables, actual bound $1 parameter where needed"
+            },
+            {
+              "authoringId": "C03-L09",
+              "title": "GROUP BY, HAVING және қауіпсіз параметр",
+              "order": 3,
+              "outcomes": [
+                "топталған есепті сүзгілеп параметр орнын ажырату"
+              ],
+              "prerequisites": [
+                "C03-L08"
+              ],
+              "assessmentMapping": [
+                "C03-L09-F1",
+                "C03-L09-F2",
+                "C03-L09-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C03-E9"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.postgresql.org/docs/18/tutorial-agg.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "PostgreSQL 18, temporary educational tables, actual bound $1 parameter where needed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "authoringId": "C04",
+      "title": "Интерактивті вебке арналған JavaScript",
+      "level": "BEGINNER",
+      "language": "kk",
+      "audience": "18+ volunteer learners",
+      "prerequisites": [
+        "C01 немесе HTML/CSS баламалы білімі"
+      ],
+      "outcomes": [
+        "өзгеретін және тұрақты байланысты ажырату",
+        "=== арқылы түр араласуын болдырмау",
+        "жарамсыз кірістен кейін есепті тоқтату",
+        "сыртқы күйді өзгертпейтін функция құру",
+        "таңдау мен түрлендіруді ажырату",
+        "spread арқылы бір қасиеті жаңарған көшірме жасау",
+        "мәтінді HTML ретінде орындамай DOM-ға шығару",
+        "click оқиғасында санауышты бір рет жаңарту",
+        "ата-ана тыңдаушыда нақты батырманы анықтау",
+        "форманың бос атауын қабылдамай хабарлау",
+        "желі қатесі мен HTTP 404-ті ажырату",
+        "ескірген сұрауды тоқтатып қайта әрекет ұсыну"
+      ],
+      "review": "HUMAN_REVIEW_PENDING",
+      "batch": 2,
+      "draftRevisionHash": "5cb6f93b1cb548d79170e077b560a586d90708a466e3cb946d38faae2bcf316a",
+      "examQuestionCount": 15,
+      "examPolicy": "Duration/pass score proposed; teacher and recording quota review required",
+      "project": {
+        "title": "Жергілікті оқу жоспары",
+        "evaluation": "SELF_ASSESSED_NOT_SCORED"
+      },
+      "modules": [
+        {
+          "authoringId": "C04-M1",
+          "title": "Тіл негіздері",
+          "order": 1,
+          "lessons": [
+            {
+              "authoringId": "C04-L01",
+              "title": "const, let және мән түрлері",
+              "order": 1,
+              "outcomes": [
+                "өзгеретін және тұрақты байланысты ажырату"
+              ],
+              "prerequisites": [
+                "C01 немесе HTML/CSS баламалы білімі"
+              ],
+              "assessmentMapping": [
+                "C04-L01-F1",
+                "C04-L01-F2",
+                "C04-L01-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C04-E1"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "v24.19.0 isolated VM, no IO bindings"
+            },
+            {
+              "authoringId": "C04-L02",
+              "title": "Қатаң салыстыру және санға түрлендіру",
+              "order": 2,
+              "outcomes": [
+                "=== арқылы түр араласуын болдырмау"
+              ],
+              "prerequisites": [
+                "C04-L01"
+              ],
+              "assessmentMapping": [
+                "C04-L02-F1",
+                "C04-L02-F2",
+                "C04-L02-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C04-E2"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "v24.19.0 isolated VM, no IO bindings"
+            },
+            {
+              "authoringId": "C04-L03",
+              "title": "Шарт және қорғаныш тармақ",
+              "order": 3,
+              "outcomes": [
+                "жарамсыз кірістен кейін есепті тоқтату"
+              ],
+              "prerequisites": [
+                "C04-L02"
+              ],
+              "assessmentMapping": [
+                "C04-L03-F1",
+                "C04-L03-F2",
+                "C04-L03-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C04-E3"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "v24.19.0 isolated VM, no IO bindings"
+            }
+          ]
+        },
+        {
+          "authoringId": "C04-M2",
+          "title": "Функциялар, массивтер және объектілер",
+          "order": 2,
+          "lessons": [
+            {
+              "authoringId": "C04-L04",
+              "title": "Параметр және таза түрлендіру",
+              "order": 1,
+              "outcomes": [
+                "сыртқы күйді өзгертпейтін функция құру"
+              ],
+              "prerequisites": [
+                "C04-L03"
+              ],
+              "assessmentMapping": [
+                "C04-L04-F1",
+                "C04-L04-F2",
+                "C04-L04-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C04-E4"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "v24.19.0 isolated VM, no IO bindings"
+            },
+            {
+              "authoringId": "C04-L05",
+              "title": "map, filter және массивтің көшірмесі",
+              "order": 2,
+              "outcomes": [
+                "таңдау мен түрлендіруді ажырату"
+              ],
+              "prerequisites": [
+                "C04-L04"
+              ],
+              "assessmentMapping": [
+                "C04-L05-F1",
+                "C04-L05-F2",
+                "C04-L05-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C04-E5"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "v24.19.0 isolated VM, no IO bindings"
+            },
+            {
+              "authoringId": "C04-L06",
+              "title": "Объект және қауіпсіз жаңарту",
+              "order": 3,
+              "outcomes": [
+                "spread арқылы бір қасиеті жаңарған көшірме жасау"
+              ],
+              "prerequisites": [
+                "C04-L05"
+              ],
+              "assessmentMapping": [
+                "C04-L06-F1",
+                "C04-L06-F2",
+                "C04-L06-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C04-E6"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "v24.19.0 isolated VM, no IO bindings"
+            }
+          ]
+        },
+        {
+          "authoringId": "C04-M3",
+          "title": "DOM және оқиғалар",
+          "order": 3,
+          "lessons": [
+            {
+              "authoringId": "C04-L07",
+              "title": "querySelector және textContent",
+              "order": 1,
+              "outcomes": [
+                "мәтінді HTML ретінде орындамай DOM-ға шығару"
+              ],
+              "prerequisites": [
+                "C04-L06"
+              ],
+              "assessmentMapping": [
+                "C04-L07-F1",
+                "C04-L07-F2",
+                "C04-L07-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C04-E7",
+                "C04-E14"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/API/Document/querySelector",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome, explicit DOM dependency fixtures and real loopback HTTP success/error/abort"
+            },
+            {
+              "authoringId": "C04-L08",
+              "title": "addEventListener және батырма күйі",
+              "order": 2,
+              "outcomes": [
+                "click оқиғасында санауышты бір рет жаңарту"
+              ],
+              "prerequisites": [
+                "C04-L07"
+              ],
+              "assessmentMapping": [
+                "C04-L08-F1",
+                "C04-L08-F2",
+                "C04-L08-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C04-E8"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome, explicit DOM dependency fixtures and real loopback HTTP success/error/abort"
+            },
+            {
+              "authoringId": "C04-L09",
+              "title": "Оқиғаның көтерілуі және delegation",
+              "order": 3,
+              "outcomes": [
+                "ата-ана тыңдаушыда нақты батырманы анықтау"
+              ],
+              "prerequisites": [
+                "C04-L08"
+              ],
+              "assessmentMapping": [
+                "C04-L09-F1",
+                "C04-L09-F2",
+                "C04-L09-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C04-E9",
+                "C04-E13"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/API/Event",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome, explicit DOM dependency fixtures and real loopback HTTP success/error/abort"
+            }
+          ]
+        },
+        {
+          "authoringId": "C04-M4",
+          "title": "Формалар, сұраулар және қателер",
+          "order": 4,
+          "lessons": [
+            {
+              "authoringId": "C04-L10",
+              "title": "submit және форма валидациясы",
+              "order": 1,
+              "outcomes": [
+                "форманың бос атауын қабылдамай хабарлау"
+              ],
+              "prerequisites": [
+                "C04-L09"
+              ],
+              "assessmentMapping": [
+                "C04-L10-F1",
+                "C04-L10-F2",
+                "C04-L10-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C04-E10"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.w3.org/WAI/tutorials/forms/notifications/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome, explicit DOM dependency fixtures and real loopback HTTP success/error/abort"
+            },
+            {
+              "authoringId": "C04-L11",
+              "title": "fetch және HTTP қатесі",
+              "order": 2,
+              "outcomes": [
+                "желі қатесі мен HTTP 404-ті ажырату"
+              ],
+              "prerequisites": [
+                "C04-L10"
+              ],
+              "assessmentMapping": [
+                "C04-L11-F1",
+                "C04-L11-F2",
+                "C04-L11-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C04-E11"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome, explicit DOM dependency fixtures and real loopback HTTP success/error/abort"
+            },
+            {
+              "authoringId": "C04-L12",
+              "title": "AbortController және қалпына келтіру",
+              "order": 3,
+              "outcomes": [
+                "ескірген сұрауды тоқтатып қайта әрекет ұсыну"
+              ],
+              "prerequisites": [
+                "C04-L11"
+              ],
+              "assessmentMapping": [
+                "C04-L12-F1",
+                "C04-L12-F2",
+                "C04-L12-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C04-E12",
+                "C04-E15"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/API/AbortController",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual Chrome, explicit DOM dependency fixtures and real loopback HTTP success/error/abort"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "authoringId": "C05",
+      "title": "Git және GitHub арқылы бірлесіп жұмыс",
+      "level": "BEGINNER",
+      "language": "kk",
+      "audience": "18+ volunteer learners",
+      "prerequisites": [
+        "файл мен терминал негіздері; Git жергілікті орнатылған"
+      ],
+      "outcomes": [
+        "жаңа оқу репозиторийінің күйін түсіндіру",
+        "commit-ке кіретін нақты diff-ті тексеру",
+        "тарихтан өзгерісті тауып жеке файлды ignore ету",
+        "түзетуді негізгі тармақтан бөлек дайындау",
+        "қақтығысқан екі ниетті салыстырып шешу",
+        "жарияланған түзетуді тарих сақтап кері қайтару",
+        "remote тарихын жұмысқа бірден қоспай алу",
+        "review үшін тармақты жіберу мен merge-ті бөлу",
+        "AI көмегін және адам тексеруін шынайы тіркеу"
+      ],
+      "review": "HUMAN_REVIEW_PENDING",
+      "batch": 2,
+      "draftRevisionHash": "73ba7e6e916ce7b17affb6f6479344e1d5874699ad572b5bd5738e46ee7dbcfc",
+      "examQuestionCount": 12,
+      "examPolicy": "Duration/pass score proposed; teacher and recording quota review required",
+      "project": {
+        "title": "Оқу репозиторийіндегі шағын өзгеріс",
+        "evaluation": "SELF_ASSESSED_NOT_SCORED"
+      },
+      "modules": [
+        {
+          "authoringId": "C05-M1",
+          "title": "Репозиторий және тарих",
+          "order": 1,
+          "lessons": [
+            {
+              "authoringId": "C05-L01",
+              "title": "git init және жұмыс ағашы",
+              "order": 1,
+              "outcomes": [
+                "жаңа оқу репозиторийінің күйін түсіндіру"
+              ],
+              "prerequisites": [
+                "файл мен терминал негіздері; Git жергілікті орнатылған"
+              ],
+              "assessmentMapping": [
+                "C05-L01-F1",
+                "C05-L01-F2",
+                "C05-L01-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C05-E1"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://git-scm.com/book/en/v2/Git-Basics-Recording-Changes-to-the-Repository",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual init/status in new directory"
+            },
+            {
+              "authoringId": "C05-L02",
+              "title": "git add, diff және шағын commit",
+              "order": 2,
+              "outcomes": [
+                "commit-ке кіретін нақты diff-ті тексеру"
+              ],
+              "prerequisites": [
+                "C05-L01"
+              ],
+              "assessmentMapping": [
+                "C05-L02-F1",
+                "C05-L02-F2",
+                "C05-L02-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C05-E2"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://git-scm.com/book/en/v2/Git-Basics-Recording-Changes-to-the-Repository",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Commit preserves index, not later unstaged edit"
+            },
+            {
+              "authoringId": "C05-L03",
+              "title": "log, show және құпияны елемеу",
+              "order": 3,
+              "outcomes": [
+                "тарихтан өзгерісті тауып жеке файлды ignore ету"
+              ],
+              "prerequisites": [
+                "C05-L02"
+              ],
+              "assessmentMapping": [
+                "C05-L03-F1",
+                "C05-L03-F2",
+                "C05-L03-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C05-E3",
+                "C05-E10"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://git-scm.com/book/en/v2",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "History and untracked ignore"
+            }
+          ]
+        },
+        {
+          "authoringId": "C05-M2",
+          "title": "Тармақтар және біріктіру",
+          "order": 2,
+          "lessons": [
+            {
+              "authoringId": "C05-L04",
+              "title": "switch және мақсатты тармақ",
+              "order": 1,
+              "outcomes": [
+                "түзетуді негізгі тармақтан бөлек дайындау"
+              ],
+              "prerequisites": [
+                "C05-L03"
+              ],
+              "assessmentMapping": [
+                "C05-L04-F1",
+                "C05-L04-F2",
+                "C05-L04-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C05-E4",
+                "C05-E11"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Branch based on actual current commit"
+            },
+            {
+              "authoringId": "C05-L05",
+              "title": "merge және conflict маркерлері",
+              "order": 2,
+              "outcomes": [
+                "қақтығысқан екі ниетті салыстырып шешу"
+              ],
+              "prerequisites": [
+                "C05-L04"
+              ],
+              "assessmentMapping": [
+                "C05-L05-F1",
+                "C05-L05-F2",
+                "C05-L05-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C05-E5"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual conflict markers and resolved merge, no fabricated human scheduling decision"
+            },
+            {
+              "authoringId": "C05-L06",
+              "title": "revert және қауіпсіз кері қайтару",
+              "order": 3,
+              "outcomes": [
+                "жарияланған түзетуді тарих сақтап кері қайтару"
+              ],
+              "prerequisites": [
+                "C05-L05"
+              ],
+              "assessmentMapping": [
+                "C05-L06-F1",
+                "C05-L06-F2",
+                "C05-L06-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C05-E6"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://git-scm.com/book/en/v2",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Real revert adds new history without reset"
+            }
+          ]
+        },
+        {
+          "authoringId": "C05-M3",
+          "title": "Қашықтағы репозиторий және ынтымақтастық",
+          "order": 3,
+          "lessons": [
+            {
+              "authoringId": "C05-L07",
+              "title": "remote, fetch және pull айырмасы",
+              "order": 1,
+              "outcomes": [
+                "remote тарихын жұмысқа бірден қоспай алу"
+              ],
+              "prerequisites": [
+                "C05-L06"
+              ],
+              "assessmentMapping": [
+                "C05-L07-F1",
+                "C05-L07-F2",
+                "C05-L07-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C05-E7"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://git-scm.com/book/en/v2/Git-Basics-Working-with-Remotes",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Real local bare remote fetch; no external GitHub account needed"
+            },
+            {
+              "authoringId": "C05-L08",
+              "title": "push және pull request шекарасы",
+              "order": 2,
+              "outcomes": [
+                "review үшін тармақты жіберу мен merge-ті бөлу"
+              ],
+              "prerequisites": [
+                "C05-L07"
+              ],
+              "assessmentMapping": [
+                "C05-L08-F1",
+                "C05-L08-F2",
+                "C05-L08-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C05-E8"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://git-scm.com/book/en/v2/Git-Basics-Working-with-Remotes",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Real push to disposable local remote/upstream; GitHub PR UI review remains operator action"
+            },
+            {
+              "authoringId": "C05-L09",
+              "title": "Review, авторлық және шағын өзгеріс журналы",
+              "order": 3,
+              "outcomes": [
+                "AI көмегін және адам тексеруін шынайы тіркеу"
+              ],
+              "prerequisites": [
+                "C05-L08"
+              ],
+              "assessmentMapping": [
+                "C05-L09-F1",
+                "C05-L09-F2",
+                "C05-L09-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C05-E9",
+                "C05-E12"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://git-scm.com/book/en/v2",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Truthful work ledger is a review exercise, not executable code"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "authoringId": "C06",
+      "title": "Linux және командалық жол",
+      "level": "BEGINNER",
+      "language": "kk",
+      "audience": "18+ volunteer learners",
+      "prerequisites": [
+        "Linux оқу shell-іне қауіпсіз қолжетімділік; тек disposable оқу бума"
+      ],
+      "outcomes": [
+        "әрекет алдында ағымдағы буманы анықтау",
+        "жолды бір аргумент ретінде беру",
+        "оқу файлды көшіріп бастапқы нұсқаны сақтау",
+        "файл рұқсатын owner/group/other бойынша оқу",
+        "процесті тоқтатпас бұрын PID пен команданы сәйкестендіру",
+        "нақты конфигурацияны тек қажетті процеске беру",
+        "нәтиже мен қатені бөлек файлға жазу",
+        "бір команданың шығысын екіншісіне сүзгілеуге беру",
+        "аргументті тексеретін оқу script жазу"
+      ],
+      "review": "HUMAN_REVIEW_PENDING",
+      "batch": 2,
+      "draftRevisionHash": "c730f730e3bd0857ef42accd5233ea9ba2f6343f5e7bf1355c84da61a7559632",
+      "examQuestionCount": 12,
+      "examPolicy": "Duration/pass score proposed; teacher and recording quota review required",
+      "project": {
+        "title": "Оқу бумасының диагностикалық есебі",
+        "evaluation": "SELF_ASSESSED_NOT_SCORED"
+      },
+      "modules": [
+        {
+          "authoringId": "C06-M1",
+          "title": "Файлдар және бумалар",
+          "order": 1,
+          "lessons": [
+            {
+              "authoringId": "C06-L01",
+              "title": "pwd, ls және салыстырмалы жол",
+              "order": 1,
+              "outcomes": [
+                "әрекет алдында ағымдағы буманы анықтау"
+              ],
+              "prerequisites": [
+                "Linux оқу shell-іне қауіпсіз қолжетімділік; тек disposable оқу бума"
+              ],
+              "assessmentMapping": [
+                "C06-L01-F1",
+                "C06-L01-F2",
+                "C06-L01-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C06-E1"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.gnu.org/software/bash/manual/html_node/Shell-Commands.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Git Bash on Windows; not a Linux kernel",
+              "nativeLinuxVerification": "PENDING"
+            },
+            {
+              "authoringId": "C06-L02",
+              "title": "Тырнақша және бос орны бар атау",
+              "order": 2,
+              "outcomes": [
+                "жолды бір аргумент ретінде беру"
+              ],
+              "prerequisites": [
+                "C06-L01"
+              ],
+              "assessmentMapping": [
+                "C06-L02-F1",
+                "C06-L02-F2",
+                "C06-L02-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C06-E2",
+                "C06-E10"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.gnu.org/software/bash/manual/html_node/Quoting.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Git Bash on Windows; not a Linux kernel",
+              "nativeLinuxVerification": "PENDING"
+            },
+            {
+              "authoringId": "C06-L03",
+              "title": "cp, mv және өзгерістен бұрын тексеру",
+              "order": 3,
+              "outcomes": [
+                "оқу файлды көшіріп бастапқы нұсқаны сақтау"
+              ],
+              "prerequisites": [
+                "C06-L02"
+              ],
+              "assessmentMapping": [
+                "C06-L03-F1",
+                "C06-L03-F2",
+                "C06-L03-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C06-E3"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.gnu.org/software/coreutils/manual/html_node/cp-invocation.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Git Bash on Windows; not a Linux kernel",
+              "nativeLinuxVerification": "PENDING"
+            }
+          ]
+        },
+        {
+          "authoringId": "C06-M2",
+          "title": "Рұқсаттар және процестер",
+          "order": 2,
+          "lessons": [
+            {
+              "authoringId": "C06-L04",
+              "title": "rwx және ең аз рұқсат",
+              "order": 1,
+              "outcomes": [
+                "файл рұқсатын owner/group/other бойынша оқу"
+              ],
+              "prerequisites": [
+                "C06-L03"
+              ],
+              "assessmentMapping": [
+                "C06-L04-F1",
+                "C06-L04-F2",
+                "C06-L04-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C06-E4"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.gnu.org/software/coreutils/manual/html_node/Mode-Structure.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Git Bash on Windows; not a Linux kernel",
+              "nativeLinuxVerification": "PENDING"
+            },
+            {
+              "authoringId": "C06-L05",
+              "title": "ps және процестің нақты иесі",
+              "order": 2,
+              "outcomes": [
+                "процесті тоқтатпас бұрын PID пен команданы сәйкестендіру"
+              ],
+              "prerequisites": [
+                "C06-L04"
+              ],
+              "assessmentMapping": [
+                "C06-L05-F1",
+                "C06-L05-F2",
+                "C06-L05-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C06-E5"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.gnu.org/software/bash/manual/html_node/Job-Control-Builtins.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Git Bash on Windows; not a Linux kernel",
+              "nativeLinuxVerification": "PENDING"
+            },
+            {
+              "authoringId": "C06-L06",
+              "title": "Орта айнымалысы және құпияны шығармау",
+              "order": 3,
+              "outcomes": [
+                "нақты конфигурацияны тек қажетті процеске беру"
+              ],
+              "prerequisites": [
+                "C06-L05"
+              ],
+              "assessmentMapping": [
+                "C06-L06-F1",
+                "C06-L06-F2",
+                "C06-L06-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C06-E6",
+                "C06-E11"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.gnu.org/software/bash/manual/html_node/Environment.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Git Bash on Windows; not a Linux kernel",
+              "nativeLinuxVerification": "PENDING"
+            }
+          ]
+        },
+        {
+          "authoringId": "C06-M3",
+          "title": "Бағыттау, сценарий және диагностика",
+          "order": 3,
+          "lessons": [
+            {
+              "authoringId": "C06-L07",
+              "title": "stdout, stderr және бағыттау",
+              "order": 1,
+              "outcomes": [
+                "нәтиже мен қатені бөлек файлға жазу"
+              ],
+              "prerequisites": [
+                "C06-L06"
+              ],
+              "assessmentMapping": [
+                "C06-L07-F1",
+                "C06-L07-F2",
+                "C06-L07-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C06-E7"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.gnu.org/software/bash/manual/html_node/Redirections.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Git Bash on Windows; not a Linux kernel",
+              "nativeLinuxVerification": "PENDING"
+            },
+            {
+              "authoringId": "C06-L08",
+              "title": "Pipe, grep және exit status",
+              "order": 2,
+              "outcomes": [
+                "бір команданың шығысын екіншісіне сүзгілеуге беру"
+              ],
+              "prerequisites": [
+                "C06-L07"
+              ],
+              "assessmentMapping": [
+                "C06-L08-F1",
+                "C06-L08-F2",
+                "C06-L08-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C06-E8"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.gnu.org/software/bash/manual/html_node/Pipelines.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Git Bash on Windows; not a Linux kernel",
+              "nativeLinuxVerification": "PENDING"
+            },
+            {
+              "authoringId": "C06-L09",
+              "title": "Шағын script және қауіпсіз диагностика",
+              "order": 3,
+              "outcomes": [
+                "аргументті тексеретін оқу script жазу"
+              ],
+              "prerequisites": [
+                "C06-L08"
+              ],
+              "assessmentMapping": [
+                "C06-L09-F1",
+                "C06-L09-F2",
+                "C06-L09-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C06-E9",
+                "C06-E12"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.gnu.org/software/bash/manual/html_node/Bourne-Shell-Builtins.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Git Bash on Windows; not a Linux kernel",
+              "nativeLinuxVerification": "PENDING"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "authoringId": "C07",
+      "title": "React интерфейстері",
+      "level": "INTERMEDIATE",
+      "language": "kk",
+      "audience": "18+ volunteer learners",
+      "prerequisites": [
+        "C04 JavaScript; C01 HTML/CSS; npm оқу ортасы"
+      ],
+      "outcomes": [
+        "қайта қолданылатын тақырып компонентін құру",
+        "деректі props арқылы ата-ана компоненттен беру",
+        "тізімдегі элементті тұрақты ID-мен сәйкестендіру",
+        "state setter арқылы санауышты жаңарту",
+        "алдыңғы state негізінде бірнеше жаңартуды есептеу",
+        "ортақ тізімді ата-анада сақтап filter арқылы жаңарту",
+        "value/onChange жұбымен форма күйін ұстау",
+        "сыртқы жүйе байланысын cleanup арқылы тоқтату",
+        "сұраудың үш әртүрлі нәтижесін UI-да ажырату",
+        "форма, тізім және сүзгіні анық props-пен бөлу",
+        "сақталған JSON-ды қате жағдаймен бірге оқу",
+        "жобаны нақты пайдаланушы әрекеттерімен тексеру"
+      ],
+      "review": "HUMAN_REVIEW_PENDING",
+      "batch": 3,
+      "draftRevisionHash": "628cef3745a64bfa8a5fd910b86de7c1ac2981c1e31cffd947a4ec03b45a70e3",
+      "examQuestionCount": 15,
+      "examPolicy": "Duration/pass score proposed; teacher and recording quota review required",
+      "project": {
+        "title": "Оқу міндеттерінің React қолданбасы",
+        "evaluation": "SELF_ASSESSED_NOT_SCORED"
+      },
+      "modules": [
+        {
+          "authoringId": "C07-M1",
+          "title": "Компоненттер және JSX",
+          "order": 1,
+          "lessons": [
+            {
+              "authoringId": "C07-L01",
+              "title": "Функциялық компонент және JSX",
+              "order": 1,
+              "outcomes": [
+                "қайта қолданылатын тақырып компонентін құру"
+              ],
+              "prerequisites": [
+                "C04 JavaScript; C01 HTML/CSS; npm оқу ортасы"
+              ],
+              "assessmentMapping": [
+                "C07-L01-F1",
+                "C07-L01-F2",
+                "C07-L01-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C07-E1"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://react.dev/learn",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual React19 Chrome render/interaction with explicit teaching dependency wrappers"
+            },
+            {
+              "authoringId": "C07-L02",
+              "title": "Props және компонент келісімі",
+              "order": 2,
+              "outcomes": [
+                "деректі props арқылы ата-ана компоненттен беру"
+              ],
+              "prerequisites": [
+                "C07-L01"
+              ],
+              "assessmentMapping": [
+                "C07-L02-F1",
+                "C07-L02-F2",
+                "C07-L02-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C07-E2"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://react.dev/learn/passing-props-to-a-component",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual React19 Chrome render/interaction with explicit teaching dependency wrappers"
+            },
+            {
+              "authoringId": "C07-L03",
+              "title": "Шартты көрсету және тұрақты key",
+              "order": 3,
+              "outcomes": [
+                "тізімдегі элементті тұрақты ID-мен сәйкестендіру"
+              ],
+              "prerequisites": [
+                "C07-L02"
+              ],
+              "assessmentMapping": [
+                "C07-L03-F1",
+                "C07-L03-F2",
+                "C07-L03-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C07-E3",
+                "C07-E13"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://react.dev/learn/rendering-lists",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual React19 Chrome render/interaction with explicit teaching dependency wrappers"
+            }
+          ]
+        },
+        {
+          "authoringId": "C07-M2",
+          "title": "Күй және оқиғалар",
+          "order": 2,
+          "lessons": [
+            {
+              "authoringId": "C07-L04",
+              "title": "useState және render snapshot",
+              "order": 1,
+              "outcomes": [
+                "state setter арқылы санауышты жаңарту"
+              ],
+              "prerequisites": [
+                "C07-L03"
+              ],
+              "assessmentMapping": [
+                "C07-L04-F1",
+                "C07-L04-F2",
+                "C07-L04-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C07-E4"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://react.dev/learn/state-a-components-memory",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual React19 Chrome render/interaction with explicit teaching dependency wrappers"
+            },
+            {
+              "authoringId": "C07-L05",
+              "title": "Функциялық жаңарту және кезек",
+              "order": 2,
+              "outcomes": [
+                "алдыңғы state негізінде бірнеше жаңартуды есептеу"
+              ],
+              "prerequisites": [
+                "C07-L04"
+              ],
+              "assessmentMapping": [
+                "C07-L05-F1",
+                "C07-L05-F2",
+                "C07-L05-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C07-E5"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://react.dev/learn/queueing-a-series-of-state-updates",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual React19 Chrome render/interaction with explicit teaching dependency wrappers"
+            },
+            {
+              "authoringId": "C07-L06",
+              "title": "Immutable массив жаңарту және көтерілген күй",
+              "order": 3,
+              "outcomes": [
+                "ортақ тізімді ата-анада сақтап filter арқылы жаңарту"
+              ],
+              "prerequisites": [
+                "C07-L05"
+              ],
+              "assessmentMapping": [
+                "C07-L06-F1",
+                "C07-L06-F2",
+                "C07-L06-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C07-E6",
+                "C07-E14"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://react.dev/learn/updating-arrays-in-state",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual React19 Chrome render/interaction with explicit teaching dependency wrappers"
+            }
+          ]
+        },
+        {
+          "authoringId": "C07-M3",
+          "title": "Формалар, әсерлер және дерек",
+          "order": 3,
+          "lessons": [
+            {
+              "authoringId": "C07-L07",
+              "title": "Басқарылатын input және label",
+              "order": 1,
+              "outcomes": [
+                "value/onChange жұбымен форма күйін ұстау"
+              ],
+              "prerequisites": [
+                "C07-L06"
+              ],
+              "assessmentMapping": [
+                "C07-L07-F1",
+                "C07-L07-F2",
+                "C07-L07-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C07-E7"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://react.dev/reference/react-dom/components/input",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual React19 Chrome render/interaction with explicit teaching dependency wrappers"
+            },
+            {
+              "authoringId": "C07-L08",
+              "title": "useEffect және тазалау",
+              "order": 2,
+              "outcomes": [
+                "сыртқы жүйе байланысын cleanup арқылы тоқтату"
+              ],
+              "prerequisites": [
+                "C07-L07"
+              ],
+              "assessmentMapping": [
+                "C07-L08-F1",
+                "C07-L08-F2",
+                "C07-L08-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C07-E8"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://react.dev/learn/synchronizing-with-effects",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual React19 Chrome render/interaction with explicit teaching dependency wrappers"
+            },
+            {
+              "authoringId": "C07-L09",
+              "title": "Loading, empty және error күйлері",
+              "order": 3,
+              "outcomes": [
+                "сұраудың үш әртүрлі нәтижесін UI-да ажырату"
+              ],
+              "prerequisites": [
+                "C07-L08"
+              ],
+              "assessmentMapping": [
+                "C07-L09-F1",
+                "C07-L09-F2",
+                "C07-L09-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C07-E9"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://react.dev/learn/synchronizing-with-effects",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual React19 Chrome render/interaction with explicit teaching dependency wrappers"
+            }
+          ]
+        },
+        {
+          "authoringId": "C07-M4",
+          "title": "Толық шағын қолданба",
+          "order": 4,
+          "lessons": [
+            {
+              "authoringId": "C07-L10",
+              "title": "Компонент шекарасы және дерек келісімі",
+              "order": 1,
+              "outcomes": [
+                "форма, тізім және сүзгіні анық props-пен бөлу"
+              ],
+              "prerequisites": [
+                "C07-L09"
+              ],
+              "assessmentMapping": [
+                "C07-L10-F1",
+                "C07-L10-F2",
+                "C07-L10-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C07-E10"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://react.dev/learn/passing-props-to-a-component",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual React19 Chrome render/interaction with explicit teaching dependency wrappers"
+            },
+            {
+              "authoringId": "C07-L11",
+              "title": "localStorage және сақтау қатесі",
+              "order": 2,
+              "outcomes": [
+                "сақталған JSON-ды қате жағдаймен бірге оқу"
+              ],
+              "prerequisites": [
+                "C07-L10"
+              ],
+              "assessmentMapping": [
+                "C07-L11-F1",
+                "C07-L11-F2",
+                "C07-L11-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C07-E11",
+                "C07-E15"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://react.dev/learn/synchronizing-with-effects",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual React19 Chrome render/interaction with explicit teaching dependency wrappers"
+            },
+            {
+              "authoringId": "C07-L12",
+              "title": "Мобильді, пернетақта және регрессия",
+              "order": 3,
+              "outcomes": [
+                "жобаны нақты пайдаланушы әрекеттерімен тексеру"
+              ],
+              "prerequisites": [
+                "C07-L11"
+              ],
+              "assessmentMapping": [
+                "C07-L12-F1",
+                "C07-L12-F2",
+                "C07-L12-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C07-E12"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://playwright.dev/docs/best-practices",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Independent app acceptance protocol requires review of learner project; no invented project grade"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "authoringId": "C08",
+      "title": "TypeScript негіздері",
+      "level": "INTERMEDIATE",
+      "language": "kk",
+      "audience": "18+ volunteer learners",
+      "prerequisites": [
+        "C04 JavaScript және функция/объект ұғымы"
+      ],
+      "outcomes": [
+        "сан мен мәтінге келісімді түр беру",
+        "сан массивін қабылдайтын оқитын функция жазу",
+        "unknown мәнін тексергеннен кейін қолдану",
+        "қосымша параметрге әдепкі мән беру",
+        "Task объектісінің келісімін анықтау",
+        "status бойынша дерек пішінін тарылту",
+        "кіріс элемент түрін жоғалтпай бірінші мәнді алу",
+        "модель мен функцияны бөлек модульге шығару",
+        "түр қатесі мен бизнес қатесін бөлек тексеру"
+      ],
+      "review": "HUMAN_REVIEW_PENDING",
+      "batch": 3,
+      "draftRevisionHash": "76ce7320e54cec18cbe52fbbb3744145abd5d12db98caca5f3ccee5c1bce59b1",
+      "examQuestionCount": 12,
+      "examPolicy": "Duration/pass score proposed; teacher and recording quota review required",
+      "project": {
+        "title": "Түрленген оқу тапсырмасы моделі",
+        "evaluation": "SELF_ASSESSED_NOT_SCORED"
+      },
+      "modules": [
+        {
+          "authoringId": "C08-M1",
+          "title": "Негізгі түрлер",
+          "order": 1,
+          "lessons": [
+            {
+              "authoringId": "C08-L01",
+              "title": "Type annotation және inference",
+              "order": 1,
+              "outcomes": [
+                "сан мен мәтінге келісімді түр беру"
+              ],
+              "prerequisites": [
+                "C04 JavaScript және функция/объект ұғымы"
+              ],
+              "assessmentMapping": [
+                "C08-L01-F1",
+                "C08-L01-F2",
+                "C08-L01-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C08-E1"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.typescriptlang.org/docs/handbook/2/everyday-types.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "TypeScript 5.9.2 strict program + isolated runtime assertions"
+            },
+            {
+              "authoringId": "C08-L02",
+              "title": "Массив және readonly келісімі",
+              "order": 2,
+              "outcomes": [
+                "сан массивін қабылдайтын оқитын функция жазу"
+              ],
+              "prerequisites": [
+                "C08-L01"
+              ],
+              "assessmentMapping": [
+                "C08-L02-F1",
+                "C08-L02-F2",
+                "C08-L02-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C08-E2"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.typescriptlang.org/docs/handbook/2/objects.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "TypeScript 5.9.2 strict program + isolated runtime assertions"
+            },
+            {
+              "authoringId": "C08-L03",
+              "title": "unknown және сыртқы кіріс",
+              "order": 3,
+              "outcomes": [
+                "unknown мәнін тексергеннен кейін қолдану"
+              ],
+              "prerequisites": [
+                "C08-L02"
+              ],
+              "assessmentMapping": [
+                "C08-L03-F1",
+                "C08-L03-F2",
+                "C08-L03-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C08-E3",
+                "C08-E10"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.typescriptlang.org/docs/handbook/2/narrowing.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "TypeScript 5.9.2 strict program + isolated runtime assertions"
+            }
+          ]
+        },
+        {
+          "authoringId": "C08-M2",
+          "title": "Функциялар, объектілер және union",
+          "order": 2,
+          "lessons": [
+            {
+              "authoringId": "C08-L04",
+              "title": "Функция параметрі және optional мән",
+              "order": 1,
+              "outcomes": [
+                "қосымша параметрге әдепкі мән беру"
+              ],
+              "prerequisites": [
+                "C08-L03"
+              ],
+              "assessmentMapping": [
+                "C08-L04-F1",
+                "C08-L04-F2",
+                "C08-L04-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C08-E4"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.typescriptlang.org/docs/handbook/2/functions.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "TypeScript 5.9.2 strict program + isolated runtime assertions"
+            },
+            {
+              "authoringId": "C08-L05",
+              "title": "Interface және optional қасиет",
+              "order": 2,
+              "outcomes": [
+                "Task объектісінің келісімін анықтау"
+              ],
+              "prerequisites": [
+                "C08-L04"
+              ],
+              "assessmentMapping": [
+                "C08-L05-F1",
+                "C08-L05-F2",
+                "C08-L05-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C08-E5"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.typescriptlang.org/docs/handbook/2/objects.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "TypeScript 5.9.2 strict program + isolated runtime assertions"
+            },
+            {
+              "authoringId": "C08-L06",
+              "title": "Discriminated union және exhaustive тексеру",
+              "order": 3,
+              "outcomes": [
+                "status бойынша дерек пішінін тарылту"
+              ],
+              "prerequisites": [
+                "C08-L05"
+              ],
+              "assessmentMapping": [
+                "C08-L06-F1",
+                "C08-L06-F2",
+                "C08-L06-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C08-E6",
+                "C08-E11"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.typescriptlang.org/docs/handbook/2/narrowing.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "TypeScript 5.9.2 strict program + isolated runtime assertions"
+            }
+          ]
+        },
+        {
+          "authoringId": "C08-M3",
+          "title": "Түрленген шағын жоба",
+          "order": 3,
+          "lessons": [
+            {
+              "authoringId": "C08-L07",
+              "title": "Generic функция және түрді сақтау",
+              "order": 1,
+              "outcomes": [
+                "кіріс элемент түрін жоғалтпай бірінші мәнді алу"
+              ],
+              "prerequisites": [
+                "C08-L06"
+              ],
+              "assessmentMapping": [
+                "C08-L07-F1",
+                "C08-L07-F2",
+                "C08-L07-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C08-E7"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.typescriptlang.org/docs/handbook/2/generics.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "TypeScript 5.9.2 strict program + isolated runtime assertions"
+            },
+            {
+              "authoringId": "C08-L08",
+              "title": "Модуль экспорты және келісім шекарасы",
+              "order": 2,
+              "outcomes": [
+                "модель мен функцияны бөлек модульге шығару"
+              ],
+              "prerequisites": [
+                "C08-L07"
+              ],
+              "assessmentMapping": [
+                "C08-L08-F1",
+                "C08-L08-F2",
+                "C08-L08-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C08-E8"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.typescriptlang.org/docs/handbook/2/modules.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "TypeScript 5.9.2 strict program + isolated runtime assertions"
+            },
+            {
+              "authoringId": "C08-L09",
+              "title": "Compile-time және runtime тесттің айырмасы",
+              "order": 3,
+              "outcomes": [
+                "түр қатесі мен бизнес қатесін бөлек тексеру"
+              ],
+              "prerequisites": [
+                "C08-L08"
+              ],
+              "assessmentMapping": [
+                "C08-L09-F1",
+                "C08-L09-F2",
+                "C08-L09-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C08-E9",
+                "C08-E12"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.typescriptlang.org/docs/handbook/2/everyday-types.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "TypeScript 5.9.2 strict program + isolated runtime assertions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "authoringId": "C09",
+      "title": "UI/UX және қолжетімді интерфейстер",
+      "level": "BEGINNER",
+      "language": "kk",
+      "audience": "18+ volunteer learners",
+      "prerequisites": [
+        "қарапайым веб бет ұғымы; C01 пайдалы бірақ міндетті емес"
+      ],
+      "outcomes": [
+        "шешімнен бұрын тексерілетін мәселені тұжырымдау",
+        "мақсатқа дейінгі қадам мен кедергіні картаға түсіру",
+        "UX мақсатын тексерілетін сценарийге айналдыру",
+        "экранда бір негізгі мақсатты айқын ету",
+        "қате себебі мен түзетуін өріске байланысты көрсету",
+        "loading, empty және success мәтінін ажырату",
+        "мазмұнды 360px және 200% zoom кезінде сақтау",
+        "барлық негізгі әрекетті Tab/Enter арқылы орындау",
+        "автоматты және адам тексеруін бөлек тіркеу"
+      ],
+      "review": "HUMAN_REVIEW_PENDING",
+      "batch": 3,
+      "draftRevisionHash": "53120b87a314d796701966dd23cbfc945d844f500c4aff18595e23d0a649b335",
+      "examQuestionCount": 12,
+      "examPolicy": "Duration/pass score proposed; teacher and recording quota review required",
+      "project": {
+        "title": "Кітап іздеу жолының прототипі",
+        "evaluation": "SELF_ASSESSED_NOT_SCORED"
+      },
+      "modules": [
+        {
+          "authoringId": "C09-M1",
+          "title": "Пайдаланушы мәселесі және жолы",
+          "order": 1,
+          "lessons": [
+            {
+              "authoringId": "C09-L01",
+              "title": "Мәселе, болжам және зерттеу сұрағы",
+              "order": 1,
+              "outcomes": [
+                "шешімнен бұрын тексерілетін мәселені тұжырымдау"
+              ],
+              "prerequisites": [
+                "қарапайым веб бет ұғымы; C01 пайдалы бірақ міндетті емес"
+              ],
+              "assessmentMapping": [
+                "C09-L01-F1",
+                "C09-L01-F2",
+                "C09-L01-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C09-E1",
+                "C09-E10"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.w3.org/WAI/people-use-web/user-stories/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C09-L02",
+              "title": "User journey және істен шығу нүктесі",
+              "order": 2,
+              "outcomes": [
+                "мақсатқа дейінгі қадам мен кедергіні картаға түсіру"
+              ],
+              "prerequisites": [
+                "C09-L01"
+              ],
+              "assessmentMapping": [
+                "C09-L02-F1",
+                "C09-L02-F2",
+                "C09-L02-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C09-E2"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.w3.org/WAI/people-use-web/user-stories/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C09-L03",
+              "title": "Талап және қабылдау өлшемі",
+              "order": 3,
+              "outcomes": [
+                "UX мақсатын тексерілетін сценарийге айналдыру"
+              ],
+              "prerequisites": [
+                "C09-L02"
+              ],
+              "assessmentMapping": [
+                "C09-L03-F1",
+                "C09-L03-F2",
+                "C09-L03-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C09-E3"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.w3.org/WAI/test-evaluate/preliminary/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            }
+          ]
+        },
+        {
+          "authoringId": "C09-M2",
+          "title": "Экран құрылымы және иерархия",
+          "order": 2,
+          "lessons": [
+            {
+              "authoringId": "C09-L04",
+              "title": "Ақпарат иерархиясы және негізгі әрекет",
+              "order": 1,
+              "outcomes": [
+                "экранда бір негізгі мақсатты айқын ету"
+              ],
+              "prerequisites": [
+                "C09-L03"
+              ],
+              "assessmentMapping": [
+                "C09-L04-F1",
+                "C09-L04-F2",
+                "C09-L04-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C09-E4"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.w3.org/WAI/tutorials/page-structure/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C09-L05",
+              "title": "Форма қатесі және нұсқаулық мәтін",
+              "order": 2,
+              "outcomes": [
+                "қате себебі мен түзетуін өріске байланысты көрсету"
+              ],
+              "prerequisites": [
+                "C09-L04"
+              ],
+              "assessmentMapping": [
+                "C09-L05-F1",
+                "C09-L05-F2",
+                "C09-L05-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C09-E5"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.w3.org/WAI/tutorials/forms/notifications/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C09-L06",
+              "title": "Жүйе күйі және шынайы әлеуметтік дәлел",
+              "order": 3,
+              "outcomes": [
+                "loading, empty және success мәтінін ажырату"
+              ],
+              "prerequisites": [
+                "C09-L05"
+              ],
+              "assessmentMapping": [
+                "C09-L06-F1",
+                "C09-L06-F2",
+                "C09-L06-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C09-E6",
+                "C09-E11"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.w3.org/WAI/tutorials/forms/notifications/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            }
+          ]
+        },
+        {
+          "authoringId": "C09-M3",
+          "title": "Бейімделгіштік және қолжетімділікті қарау",
+          "order": 3,
+          "lessons": [
+            {
+              "authoringId": "C09-L07",
+              "title": "Тар экран және мәтін масштабы",
+              "order": 1,
+              "outcomes": [
+                "мазмұнды 360px және 200% zoom кезінде сақтау"
+              ],
+              "prerequisites": [
+                "C09-L06"
+              ],
+              "assessmentMapping": [
+                "C09-L07-F1",
+                "C09-L07-F2",
+                "C09-L07-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C09-E7"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C09-L08",
+              "title": "Пернетақта, фокус және семантика",
+              "order": 2,
+              "outcomes": [
+                "барлық негізгі әрекетті Tab/Enter арқылы орындау"
+              ],
+              "prerequisites": [
+                "C09-L07"
+              ],
+              "assessmentMapping": [
+                "C09-L08-F1",
+                "C09-L08-F2",
+                "C09-L08-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C09-E8"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.w3.org/WAI/WCAG22/Understanding/keyboard.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C09-L09",
+              "title": "Контраст, reduced motion және review журналы",
+              "order": 3,
+              "outcomes": [
+                "автоматты және адам тексеруін бөлек тіркеу"
+              ],
+              "prerequisites": [
+                "C09-L08"
+              ],
+              "assessmentMapping": [
+                "C09-L09-F1",
+                "C09-L09-F2",
+                "C09-L09-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C09-E9",
+                "C09-E12"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "authoringId": "C10",
+      "title": "Node.js және Express арқылы REST API",
+      "level": "INTERMEDIATE",
+      "language": "kk",
+      "audience": "18+ volunteer learners",
+      "prerequisites": [
+        "C04 JavaScript; HTTP және JSON ұғымы"
+      ],
+      "outcomes": [
+        "HTTP сұрау мен жауап келісімін түсіндіру",
+        "GET/POST пен 200/201/404-ті дұрыс қолдану",
+        "JSON body-ды тиісті media type-пен қайтару",
+        "route параметрін тексеріп missing ресурсқа 404 беру",
+        "limit мәнін қатаң сандық шекке келтіру",
+        "body parser-ді route алдында шектеумен қосу",
+        "title-ды trim/ұзындықпен тексеру",
+        "ішкі қатені stack ашпай өңдеу",
+        "identity мен ownership тексеруін бөлу",
+        "қайта сұрауда duplicate ресурс қаупін түсіндіру",
+        "нақты HTTP шекарада normal/error тестілеу",
+        "келісім мен іске қосу шекарасын құжаттау"
+      ],
+      "review": "HUMAN_REVIEW_PENDING",
+      "batch": 4,
+      "draftRevisionHash": "c1a41870f436d074482aeeafd78fd71cc4c8e3b41297cedc4b91d26faf0173f8",
+      "examQuestionCount": 15,
+      "examPolicy": "Duration/pass score proposed; teacher and recording quota review required",
+      "project": {
+        "title": "Кітап оқу API-ы",
+        "evaluation": "SELF_ASSESSED_NOT_SCORED"
+      },
+      "modules": [
+        {
+          "authoringId": "C10-M1",
+          "title": "Сервер және HTTP",
+          "order": 1,
+          "lessons": [
+            {
+              "authoringId": "C10-L01",
+              "title": "Request/response және loopback сервер",
+              "order": 1,
+              "outcomes": [
+                "HTTP сұрау мен жауап келісімін түсіндіру"
+              ],
+              "prerequisites": [
+                "C04 JavaScript; HTTP және JSON ұғымы"
+              ],
+              "assessmentMapping": [
+                "C10-L01-F1",
+                "C10-L01-F2",
+                "C10-L01-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C10-E1"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://expressjs.com/en/guide/routing/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Node v24.19.0; Express 5.2.1; real ephemeral loopback HTTP; explicit fragment dependency wrappers"
+            },
+            {
+              "authoringId": "C10-L02",
+              "title": "HTTP әдісі және status мағынасы",
+              "order": 2,
+              "outcomes": [
+                "GET/POST пен 200/201/404-ті дұрыс қолдану"
+              ],
+              "prerequisites": [
+                "C10-L01"
+              ],
+              "assessmentMapping": [
+                "C10-L02-F1",
+                "C10-L02-F2",
+                "C10-L02-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C10-E2"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://expressjs.com/en/guide/routing/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Node v24.19.0; Express 5.2.1; real ephemeral loopback HTTP; explicit fragment dependency wrappers"
+            },
+            {
+              "authoringId": "C10-L03",
+              "title": "JSON және Content-Type",
+              "order": 3,
+              "outcomes": [
+                "JSON body-ды тиісті media type-пен қайтару"
+              ],
+              "prerequisites": [
+                "C10-L02"
+              ],
+              "assessmentMapping": [
+                "C10-L03-F1",
+                "C10-L03-F2",
+                "C10-L03-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C10-E3"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://expressjs.com/en/guide/routing/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Node v24.19.0; Express 5.2.1; real ephemeral loopback HTTP; explicit fragment dependency wrappers"
+            }
+          ]
+        },
+        {
+          "authoringId": "C10-M2",
+          "title": "Маршруттар және сұраулар",
+          "order": 2,
+          "lessons": [
+            {
+              "authoringId": "C10-L04",
+              "title": "Path parameter және іздеу нәтижесі",
+              "order": 1,
+              "outcomes": [
+                "route параметрін тексеріп missing ресурсқа 404 беру"
+              ],
+              "prerequisites": [
+                "C10-L03"
+              ],
+              "assessmentMapping": [
+                "C10-L04-F1",
+                "C10-L04-F2",
+                "C10-L04-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C10-E4"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://expressjs.com/en/guide/routing/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Node v24.19.0; Express 5.2.1; real ephemeral loopback HTTP; explicit fragment dependency wrappers"
+            },
+            {
+              "authoringId": "C10-L05",
+              "title": "Query параметрі және шектелген беттеу",
+              "order": 2,
+              "outcomes": [
+                "limit мәнін қатаң сандық шекке келтіру"
+              ],
+              "prerequisites": [
+                "C10-L04"
+              ],
+              "assessmentMapping": [
+                "C10-L05-F1",
+                "C10-L05-F2",
+                "C10-L05-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C10-E5"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://expressjs.com/en/guide/routing/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Node v24.19.0; Express 5.2.1; real ephemeral loopback HTTP; explicit fragment dependency wrappers"
+            },
+            {
+              "authoringId": "C10-L06",
+              "title": "Middleware реті және JSON body шегі",
+              "order": 3,
+              "outcomes": [
+                "body parser-ді route алдында шектеумен қосу"
+              ],
+              "prerequisites": [
+                "C10-L05"
+              ],
+              "assessmentMapping": [
+                "C10-L06-F1",
+                "C10-L06-F2",
+                "C10-L06-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C10-E6",
+                "C10-E13"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://expressjs.com/en/guide/using-middleware/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Node v24.19.0; Express 5.2.1; real ephemeral loopback HTTP; explicit fragment dependency wrappers"
+            }
+          ]
+        },
+        {
+          "authoringId": "C10-M3",
+          "title": "Валидация және қателер",
+          "order": 3,
+          "lessons": [
+            {
+              "authoringId": "C10-L07",
+              "title": "Серверлік schema және өріс allowlist",
+              "order": 1,
+              "outcomes": [
+                "title-ды trim/ұзындықпен тексеру"
+              ],
+              "prerequisites": [
+                "C10-L06"
+              ],
+              "assessmentMapping": [
+                "C10-L07-F1",
+                "C10-L07-F2",
+                "C10-L07-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C10-E7"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://expressjs.com/en/guide/using-middleware/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Node v24.19.0; Express 5.2.1; real ephemeral loopback HTTP; explicit fragment dependency wrappers"
+            },
+            {
+              "authoringId": "C10-L08",
+              "title": "Орталық error handler және қауіпсіз хабар",
+              "order": 2,
+              "outcomes": [
+                "ішкі қатені stack ашпай өңдеу"
+              ],
+              "prerequisites": [
+                "C10-L07"
+              ],
+              "assessmentMapping": [
+                "C10-L08-F1",
+                "C10-L08-F2",
+                "C10-L08-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C10-E8"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://expressjs.com/en/guide/error-handling/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Node v24.19.0; Express 5.2.1; real ephemeral loopback HTTP; explicit fragment dependency wrappers"
+            },
+            {
+              "authoringId": "C10-L09",
+              "title": "Авторизация және ресурс иесі",
+              "order": 3,
+              "outcomes": [
+                "identity мен ownership тексеруін бөлу"
+              ],
+              "prerequisites": [
+                "C10-L08"
+              ],
+              "assessmentMapping": [
+                "C10-L09-F1",
+                "C10-L09-F2",
+                "C10-L09-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C10-E9",
+                "C10-E14"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Node v24.19.0; Express 5.2.1; real ephemeral loopback HTTP; explicit fragment dependency wrappers"
+            }
+          ]
+        },
+        {
+          "authoringId": "C10-M4",
+          "title": "Шағын API және тексеру",
+          "order": 4,
+          "lessons": [
+            {
+              "authoringId": "C10-L10",
+              "title": "Идемпотенттік және retry тәуекелі",
+              "order": 1,
+              "outcomes": [
+                "қайта сұрауда duplicate ресурс қаупін түсіндіру"
+              ],
+              "prerequisites": [
+                "C10-L09"
+              ],
+              "assessmentMapping": [
+                "C10-L10-F1",
+                "C10-L10-F2",
+                "C10-L10-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C10-E10"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Project/idempotency/report protocol, not executable source; independent student project not graded"
+            },
+            {
+              "authoringId": "C10-L11",
+              "title": "API интеграциялық тест және оқшаулау",
+              "order": 2,
+              "outcomes": [
+                "нақты HTTP шекарада normal/error тестілеу"
+              ],
+              "prerequisites": [
+                "C10-L10"
+              ],
+              "assessmentMapping": [
+                "C10-L11-F1",
+                "C10-L11-F2",
+                "C10-L11-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C10-E11",
+                "C10-E15"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://nodejs.org/api/test.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Project/idempotency/report protocol, not executable source; independent student project not graded"
+            },
+            {
+              "authoringId": "C10-L12",
+              "title": "API нұсқаулығы және қауіпсіз тоқтату",
+              "order": 3,
+              "outcomes": [
+                "келісім мен іске қосу шекарасын құжаттау"
+              ],
+              "prerequisites": [
+                "C10-L11"
+              ],
+              "assessmentMapping": [
+                "C10-L12-F1",
+                "C10-L12-F2",
+                "C10-L12-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C10-E12"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://expressjs.com/en/guide/routing/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Project/idempotency/report protocol, not executable source; independent student project not graded"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "authoringId": "C11",
+      "title": "Docker негіздері",
+      "level": "BEGINNER",
+      "language": "kk",
+      "audience": "18+ volunteer learners",
+      "prerequisites": [
+        "C06 терминал негіздері; контейнерді қолдайтын оқу ортасы"
+      ],
+      "outcomes": [
+        "өзгермейтін шаблон мен іске қосылған экземплярды ажырату",
+        "контейнер портын тек жергілікті хостқа байланыстыру",
+        "қызмет тоқтауының себебін дәлелмен қарау",
+        "қажетті файлды ғана image-ке көшіру",
+        "контейнерден бөлек деректің lifetime-ын түсіндіру",
+        "құпияны image пен public compose-тан бөлу",
+        "ішкі қызмет атауы мен браузер адресін ажырату",
+        "дайын емес қызметке шектелген күту саясатын жазу",
+        "деректі жоймай тоқтату мен қалпына келтіруді жоспарлау"
+      ],
+      "review": "HUMAN_REVIEW_PENDING",
+      "batch": 4,
+      "draftRevisionHash": "5ba37196d263fc4b2b6af68285df570ac4f3cf6e725f195b1d75ebc13ab3635a",
+      "examQuestionCount": 12,
+      "examPolicy": "Duration/pass score proposed; teacher and recording quota review required",
+      "project": {
+        "title": "Екі қызметті жергілікті оқу жинағы",
+        "evaluation": "SELF_ASSESSED_NOT_SCORED"
+      },
+      "modules": [
+        {
+          "authoringId": "C11-M1",
+          "title": "Образдар және контейнерлер",
+          "order": 1,
+          "lessons": [
+            {
+              "authoringId": "C11-L01",
+              "title": "Image және container өмір циклі",
+              "order": 1,
+              "outcomes": [
+                "өзгермейтін шаблон мен іске қосылған экземплярды ажырату"
+              ],
+              "prerequisites": [
+                "C06 терминал негіздері; контейнерді қолдайтын оқу ортасы"
+              ],
+              "assessmentMapping": [
+                "C11-L01-F1",
+                "C11-L01-F2",
+                "C11-L01-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C11-E1"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.docker.com/engine/containers/run/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C11-L02",
+              "title": "Порт жариялау және loopback",
+              "order": 2,
+              "outcomes": [
+                "контейнер портын тек жергілікті хостқа байланыстыру"
+              ],
+              "prerequisites": [
+                "C11-L01"
+              ],
+              "assessmentMapping": [
+                "C11-L02-F1",
+                "C11-L02-F2",
+                "C11-L02-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C11-E2"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.docker.com/engine/containers/run/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C11-L03",
+              "title": "logs, inspect және exit code",
+              "order": 3,
+              "outcomes": [
+                "қызмет тоқтауының себебін дәлелмен қарау"
+              ],
+              "prerequisites": [
+                "C11-L02"
+              ],
+              "assessmentMapping": [
+                "C11-L03-F1",
+                "C11-L03-F2",
+                "C11-L03-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C11-E3"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.docker.com/engine/containers/run/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            }
+          ]
+        },
+        {
+          "authoringId": "C11-M2",
+          "title": "Dockerfile және тұрақты дерек",
+          "order": 2,
+          "lessons": [
+            {
+              "authoringId": "C11-L04",
+              "title": "Dockerfile қабаттары және build context",
+              "order": 1,
+              "outcomes": [
+                "қажетті файлды ғана image-ке көшіру"
+              ],
+              "prerequisites": [
+                "C11-L03"
+              ],
+              "assessmentMapping": [
+                "C11-L04-F1",
+                "C11-L04-F2",
+                "C11-L04-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C11-E4"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.docker.com/reference/dockerfile/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C11-L05",
+              "title": "Named volume және backup шекарасы",
+              "order": 2,
+              "outcomes": [
+                "контейнерден бөлек деректің lifetime-ын түсіндіру"
+              ],
+              "prerequisites": [
+                "C11-L04"
+              ],
+              "assessmentMapping": [
+                "C11-L05-F1",
+                "C11-L05-F2",
+                "C11-L05-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C11-E5",
+                "C11-E11"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.docker.com/engine/storage/volumes/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C11-L06",
+              "title": "ENV, build secret және ең аз құқық",
+              "order": 3,
+              "outcomes": [
+                "құпияны image пен public compose-тан бөлу"
+              ],
+              "prerequisites": [
+                "C11-L05"
+              ],
+              "assessmentMapping": [
+                "C11-L06-F1",
+                "C11-L06-F2",
+                "C11-L06-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C11-E6"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.docker.com/reference/dockerfile/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            }
+          ]
+        },
+        {
+          "authoringId": "C11-M3",
+          "title": "Көп қызмет және диагностика",
+          "order": 3,
+          "lessons": [
+            {
+              "authoringId": "C11-L07",
+              "title": "Compose network және service DNS",
+              "order": 1,
+              "outcomes": [
+                "ішкі қызмет атауы мен браузер адресін ажырату"
+              ],
+              "prerequisites": [
+                "C11-L06"
+              ],
+              "assessmentMapping": [
+                "C11-L07-F1",
+                "C11-L07-F2",
+                "C11-L07-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C11-E7",
+                "C11-E10"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.docker.com/compose/how-tos/networking/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C11-L08",
+              "title": "Healthcheck және bounded retry",
+              "order": 2,
+              "outcomes": [
+                "дайын емес қызметке шектелген күту саясатын жазу"
+              ],
+              "prerequisites": [
+                "C11-L07"
+              ],
+              "assessmentMapping": [
+                "C11-L08-F1",
+                "C11-L08-F2",
+                "C11-L08-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C11-E8"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.docker.com/compose/how-tos/startup-order/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C11-L09",
+              "title": "Stop, backup және restore rehearsal",
+              "order": 3,
+              "outcomes": [
+                "деректі жоймай тоқтату мен қалпына келтіруді жоспарлау"
+              ],
+              "prerequisites": [
+                "C11-L08"
+              ],
+              "assessmentMapping": [
+                "C11-L09-F1",
+                "C11-L09-F2",
+                "C11-L09-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C11-E9",
+                "C11-E12"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.docker.com/engine/storage/volumes/",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "authoringId": "C12",
+      "title": "Веб қолданба қауіпсіздігінің негіздері",
+      "level": "BEGINNER",
+      "language": "kk",
+      "audience": "18+ volunteer learners",
+      "prerequisites": [
+        "C04/C10 немесе HTTP, форма және сервер ұғымдары"
+      ],
+      "outcomes": [
+        "сезімтал дерек пен кіріс шекарасын картаға түсіру",
+        "session құпиясын URL/log-тан қорғау",
+        "қауіпсіз диагностика үшін өріс allowlist құру",
+        "кірісті тексеру мен output encoding айырмасын түсіндіру",
+        "әр рөл/ресурс жұбына рұқсат кестесін жасау",
+        "cookie auth сұрауына CSRF қорғанысын сақтау",
+        "құпия жарияланса rotation қажет екенін түсіндіру",
+        "advisory-ді контекстпен қарап тексерілген жаңарту ұсыну",
+        "қорғанысты negative тестпен дәлелдеу"
+      ],
+      "review": "HUMAN_REVIEW_PENDING",
+      "batch": 4,
+      "draftRevisionHash": "a3782e296a5a61b7617dc25b05e0c8ad0c240eeff3d9fd1c395d8782727fe5bf",
+      "examQuestionCount": 12,
+      "examPolicy": "Duration/pass score proposed; teacher and recording quota review required",
+      "project": {
+        "title": "Оқу API-ының қорғаныс review-ы",
+        "evaluation": "SELF_ASSESSED_NOT_SCORED"
+      },
+      "modules": [
+        {
+          "authoringId": "C12-M1",
+          "title": "Дерек және сенім шекаралары",
+          "order": 1,
+          "lessons": [
+            {
+              "authoringId": "C12-L01",
+              "title": "Актив және trust boundary",
+              "order": 1,
+              "outcomes": [
+                "сезімтал дерек пен кіріс шекарасын картаға түсіру"
+              ],
+              "prerequisites": [
+                "C04/C10 немесе HTTP, форма және сервер ұғымдары"
+              ],
+              "assessmentMapping": [
+                "C12-L01-F1",
+                "C12-L01-F2",
+                "C12-L01-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C12-E1"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C12-L02",
+              "title": "Authentication, session және logout",
+              "order": 2,
+              "outcomes": [
+                "session құпиясын URL/log-тан қорғау"
+              ],
+              "prerequisites": [
+                "C12-L01"
+              ],
+              "assessmentMapping": [
+                "C12-L02-F1",
+                "C12-L02-F2",
+                "C12-L02-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C12-E2"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C12-L03",
+              "title": "Ең аз дерек және журнал redaction",
+              "order": 3,
+              "outcomes": [
+                "қауіпсіз диагностика үшін өріс allowlist құру"
+              ],
+              "prerequisites": [
+                "C12-L02"
+              ],
+              "assessmentMapping": [
+                "C12-L03-F1",
+                "C12-L03-F2",
+                "C12-L03-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C12-E3"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            }
+          ]
+        },
+        {
+          "authoringId": "C12-M2",
+          "title": "Кіріс және қолжетімділік бақылауы",
+          "order": 2,
+          "lessons": [
+            {
+              "authoringId": "C12-L04",
+              "title": "Validation және контекстке сай шығару",
+              "order": 1,
+              "outcomes": [
+                "кірісті тексеру мен output encoding айырмасын түсіндіру"
+              ],
+              "prerequisites": [
+                "C12-L03"
+              ],
+              "assessmentMapping": [
+                "C12-L04-F1",
+                "C12-L04-F2",
+                "C12-L04-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C12-E4"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C12-L05",
+              "title": "Default deny және ownership матрицасы",
+              "order": 2,
+              "outcomes": [
+                "әр рөл/ресурс жұбына рұқсат кестесін жасау"
+              ],
+              "prerequisites": [
+                "C12-L04"
+              ],
+              "assessmentMapping": [
+                "C12-L05-F1",
+                "C12-L05-F2",
+                "C12-L05-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C12-E5",
+                "C12-E10"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C12-L06",
+              "title": "CSRF, Origin және rate-limit шекарасы",
+              "order": 3,
+              "outcomes": [
+                "cookie auth сұрауына CSRF қорғанысын сақтау"
+              ],
+              "prerequisites": [
+                "C12-L05"
+              ],
+              "assessmentMapping": [
+                "C12-L06-F1",
+                "C12-L06-F2",
+                "C12-L06-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C12-E6",
+                "C12-E11"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            }
+          ]
+        },
+        {
+          "authoringId": "C12-M3",
+          "title": "Құпиялар, тәуелділіктер және қорғаныс тексеруі",
+          "order": 3,
+          "lessons": [
+            {
+              "authoringId": "C12-L07",
+              "title": "Secret lifecycle және ашылған кілт",
+              "order": 1,
+              "outcomes": [
+                "құпия жарияланса rotation қажет екенін түсіндіру"
+              ],
+              "prerequisites": [
+                "C12-L06"
+              ],
+              "assessmentMapping": [
+                "C12-L07-F1",
+                "C12-L07-F2",
+                "C12-L07-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C12-E7"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C12-L08",
+              "title": "Dependency lock және осалдықты бағалау",
+              "order": 2,
+              "outcomes": [
+                "advisory-ді контекстпен қарап тексерілген жаңарту ұсыну"
+              ],
+              "prerequisites": [
+                "C12-L07"
+              ],
+              "assessmentMapping": [
+                "C12-L08-F1",
+                "C12-L08-F2",
+                "C12-L08-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C12-E8"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://cheatsheetseries.owasp.org/cheatsheets/Vulnerable_Dependency_Management_Cheat_Sheet.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C12-L09",
+              "title": "Қауіпсіздік regression және дәлел шегі",
+              "order": 3,
+              "outcomes": [
+                "қорғанысты negative тестпен дәлелдеу"
+              ],
+              "prerequisites": [
+                "C12-L08"
+              ],
+              "assessmentMapping": [
+                "C12-L09-F1",
+                "C12-L09-F2",
+                "C12-L09-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C12-E9",
+                "C12-E12"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "authoringId": "C13",
+      "title": "Бағдарламалық қамтуды тестілеу негіздері",
+      "level": "BEGINNER",
+      "language": "kk",
+      "audience": "18+ volunteer learners",
+      "prerequisites": [
+        "C04 JavaScript; C10 пайдалы; қарапайым функция жазу"
+      ],
+      "outcomes": [
+        "анық емес талапты қайталанатын сценарийге айналдыру",
+        "кіріс аралығындағы шекара мәндерін таңдау",
+        "ақауды нақты қадаммен қайта өндіру",
+        "таза функцияны node:test арқылы тексеру",
+        "throw және validation тармақтарын тексеру",
+        "сыртқы тәуелділікті explicit fake арқылы беру",
+        "API келісімін response деңгейінде тексеру",
+        "integration дерегін нақты оқушыдан бөлу",
+        "екі қатар әрекетте invariant сақталуын тексеру",
+        "тестті қолжетімді атпен элемент табуға құру",
+        "уақыттық кідірісті нақты күй күтумен алмастыру",
+        "тексеру нәтижесін revision және шектеумен тіркеу"
+      ],
+      "review": "HUMAN_REVIEW_PENDING",
+      "batch": 5,
+      "draftRevisionHash": "0a89ddff589d7dd6d5b538c4c32a4ab76a64f537438f35b68bf94dedee464267",
+      "examQuestionCount": 15,
+      "examPolicy": "Duration/pass score proposed; teacher and recording quota review required",
+      "project": {
+        "title": "Оқу бағасы функциясының толық тест жинағы",
+        "evaluation": "SELF_ASSESSED_NOT_SCORED"
+      },
+      "modules": [
+        {
+          "authoringId": "C13-M1",
+          "title": "Талаптар және тест жағдайлары",
+          "order": 1,
+          "lessons": [
+            {
+              "authoringId": "C13-L01",
+              "title": "Талаптан қабылдау критерийіне",
+              "order": 1,
+              "outcomes": [
+                "анық емес талапты қайталанатын сценарийге айналдыру"
+              ],
+              "prerequisites": [
+                "C04 JavaScript; C10 пайдалы; қарапайым функция жазу"
+              ],
+              "assessmentMapping": [
+                "C13-L01-F1",
+                "C13-L01-F2",
+                "C13-L01-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C13-E1",
+                "C13-E15"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://nodejs.org/api/test.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C13-L02",
+              "title": "Эквиваленттік кластар және boundary",
+              "order": 2,
+              "outcomes": [
+                "кіріс аралығындағы шекара мәндерін таңдау"
+              ],
+              "prerequisites": [
+                "C13-L01"
+              ],
+              "assessmentMapping": [
+                "C13-L02-F1",
+                "C13-L02-F2",
+                "C13-L02-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C13-E2"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://nodejs.org/api/test.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C13-L03",
+              "title": "Test case және defect evidence",
+              "order": 3,
+              "outcomes": [
+                "ақауды нақты қадаммен қайта өндіру"
+              ],
+              "prerequisites": [
+                "C13-L02"
+              ],
+              "assessmentMapping": [
+                "C13-L03-F1",
+                "C13-L03-F2",
+                "C13-L03-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C13-E3"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://playwright.dev/docs/best-practices",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            }
+          ]
+        },
+        {
+          "authoringId": "C13-M2",
+          "title": "Unit тесттер",
+          "order": 2,
+          "lessons": [
+            {
+              "authoringId": "C13-L04",
+              "title": "Arrange, Act, Assert",
+              "order": 1,
+              "outcomes": [
+                "таза функцияны node:test арқылы тексеру"
+              ],
+              "prerequisites": [
+                "C13-L03"
+              ],
+              "assessmentMapping": [
+                "C13-L04-F1",
+                "C13-L04-F2",
+                "C13-L04-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C13-E4"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://nodejs.org/api/test.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual node --test child, original snippet + explicit assert import where required"
+            },
+            {
+              "authoringId": "C13-L05",
+              "title": "Қате жолы және malformed input",
+              "order": 2,
+              "outcomes": [
+                "throw және validation тармақтарын тексеру"
+              ],
+              "prerequisites": [
+                "C13-L04"
+              ],
+              "assessmentMapping": [
+                "C13-L05-F1",
+                "C13-L05-F2",
+                "C13-L05-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C13-E5"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://nodejs.org/api/test.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual node --test child, original snippet + explicit assert import where required"
+            },
+            {
+              "authoringId": "C13-L06",
+              "title": "Fixture, mock және isolation",
+              "order": 3,
+              "outcomes": [
+                "сыртқы тәуелділікті explicit fake арқылы беру"
+              ],
+              "prerequisites": [
+                "C13-L05"
+              ],
+              "assessmentMapping": [
+                "C13-L06-F1",
+                "C13-L06-F2",
+                "C13-L06-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C13-E6",
+                "C13-E14"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://nodejs.org/api/test.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual node --test child, original snippet + explicit assert import where required"
+            }
+          ]
+        },
+        {
+          "authoringId": "C13-M3",
+          "title": "API және интеграция",
+          "order": 3,
+          "lessons": [
+            {
+              "authoringId": "C13-L07",
+              "title": "HTTP contract және status/body",
+              "order": 1,
+              "outcomes": [
+                "API келісімін response деңгейінде тексеру"
+              ],
+              "prerequisites": [
+                "C13-L06"
+              ],
+              "assessmentMapping": [
+                "C13-L07-F1",
+                "C13-L07-F2",
+                "C13-L07-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C13-E7"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://nodejs.org/api/test.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual loopback HTTP contract []/JSON/200"
+            },
+            {
+              "authoringId": "C13-L08",
+              "title": "Disposable DB және transaction fixture",
+              "order": 2,
+              "outcomes": [
+                "integration дерегін нақты оқушыдан бөлу"
+              ],
+              "prerequisites": [
+                "C13-L07"
+              ],
+              "assessmentMapping": [
+                "C13-L08-F1",
+                "C13-L08-F2",
+                "C13-L08-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C13-E8"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.postgresql.org/docs/18/ddl-constraints.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C13-L09",
+              "title": "Concurrency және соңғы орын жарысы",
+              "order": 3,
+              "outcomes": [
+                "екі қатар әрекетте invariant сақталуын тексеру"
+              ],
+              "prerequisites": [
+                "C13-L08"
+              ],
+              "assessmentMapping": [
+                "C13-L09-F1",
+                "C13-L09-F2",
+                "C13-L09-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C13-E9",
+                "C13-E13"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://www.postgresql.org/docs/18/ddl-constraints.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            }
+          ]
+        },
+        {
+          "authoringId": "C13-M4",
+          "title": "Браузер регрессиясы",
+          "order": 4,
+          "lessons": [
+            {
+              "authoringId": "C13-L10",
+              "title": "Role-based locator және әрекет нәтижесі",
+              "order": 1,
+              "outcomes": [
+                "тестті қолжетімді атпен элемент табуға құру"
+              ],
+              "prerequisites": [
+                "C13-L09"
+              ],
+              "assessmentMapping": [
+                "C13-L10-F1",
+                "C13-L10-F2",
+                "C13-L10-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C13-E10"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://playwright.dev/docs/locators",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C13-L11",
+              "title": "Flaky тест және condition-based күту",
+              "order": 2,
+              "outcomes": [
+                "уақыттық кідірісті нақты күй күтумен алмастыру"
+              ],
+              "prerequisites": [
+                "C13-L10"
+              ],
+              "assessmentMapping": [
+                "C13-L11-F1",
+                "C13-L11-F2",
+                "C13-L11-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C13-E11"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://playwright.dev/docs/test-assertions",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            },
+            {
+              "authoringId": "C13-L12",
+              "title": "Release gate және шынайы QA есебі",
+              "order": 3,
+              "outcomes": [
+                "тексеру нәтижесін revision және шектеумен тіркеу"
+              ],
+              "prerequisites": [
+                "C13-L11"
+              ],
+              "assessmentMapping": [
+                "C13-L12-F1",
+                "C13-L12-F2",
+                "C13-L12-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C13-E12"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://playwright.dev/docs/best-practices",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Human review/project protocol pending"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "authoringId": "C14",
+      "title": "Python тіліндегі объектіге бағытталған бағдарламалау",
+      "level": "INTERMEDIATE",
+      "language": "kk",
+      "audience": "18+ volunteer learners",
+      "prerequisites": [
+        "C02 Python функциялары, жинақтар, exceptions"
+      ],
+      "outcomes": [
+        "екі тәуелсіз объект жасап state айырмасын көрсету",
+        "объект әрекетімен жарамды state сақтау",
+        "тізімді әр instance үшін бөлек құру",
+        "қызмет тәуелділігін объектке параметрмен беру",
+        "subclass базалық келісімді сақтайтынын тексеру",
+        "бір әдіс келісімімен әртүрлі объектіні қолдану",
+        "дерек объектісін анық өрістермен құру",
+        "қате әрекеттен кейін state сақталуын тексеру",
+        "есептеу мен IO-ны бөліп мінезді сақтау"
+      ],
+      "review": "HUMAN_REVIEW_PENDING",
+      "batch": 5,
+      "draftRevisionHash": "77e3cfa463aa1083cf2c7df8b60e7771db59b225de17910ac4a7a0e9f1456009",
+      "examQuestionCount": 12,
+      "examPolicy": "Duration/pass score proposed; teacher and recording quota review required",
+      "project": {
+        "title": "Оқу кітапханасының объект моделі",
+        "evaluation": "SELF_ASSESSED_NOT_SCORED"
+      },
+      "modules": [
+        {
+          "authoringId": "C14-M1",
+          "title": "Кластар және объектілер",
+          "order": 1,
+          "lessons": [
+            {
+              "authoringId": "C14-L01",
+              "title": "class, instance және атрибут",
+              "order": 1,
+              "outcomes": [
+                "екі тәуелсіз объект жасап state айырмасын көрсету"
+              ],
+              "prerequisites": [
+                "C02 Python функциялары, жинақтар, exceptions"
+              ],
+              "assessmentMapping": [
+                "C14-L01-F1",
+                "C14-L01-F2",
+                "C14-L01-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C14-E1"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/classes.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual original Python example output"
+            },
+            {
+              "authoringId": "C14-L02",
+              "title": "Әдіс және invariant",
+              "order": 2,
+              "outcomes": [
+                "объект әрекетімен жарамды state сақтау"
+              ],
+              "prerequisites": [
+                "C14-L01"
+              ],
+              "assessmentMapping": [
+                "C14-L02-F1",
+                "C14-L02-F2",
+                "C14-L02-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C14-E2"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/classes.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual original Python example output"
+            },
+            {
+              "authoringId": "C14-L03",
+              "title": "Instance және class mutable state",
+              "order": 3,
+              "outcomes": [
+                "тізімді әр instance үшін бөлек құру"
+              ],
+              "prerequisites": [
+                "C14-L02"
+              ],
+              "assessmentMapping": [
+                "C14-L03-F1",
+                "C14-L03-F2",
+                "C14-L03-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C14-E3",
+                "C14-E10"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/classes.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual original Python example output"
+            }
+          ]
+        },
+        {
+          "authoringId": "C14-M2",
+          "title": "Композиция және мұрагерлік",
+          "order": 2,
+          "lessons": [
+            {
+              "authoringId": "C14-L04",
+              "title": "Composition: has-a байланысы",
+              "order": 1,
+              "outcomes": [
+                "қызмет тәуелділігін объектке параметрмен беру"
+              ],
+              "prerequisites": [
+                "C14-L03"
+              ],
+              "assessmentMapping": [
+                "C14-L04-F1",
+                "C14-L04-F2",
+                "C14-L04-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C14-E4",
+                "C14-E11"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/classes.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual original Python example output"
+            },
+            {
+              "authoringId": "C14-L05",
+              "title": "Inheritance және орынбасу келісімі",
+              "order": 2,
+              "outcomes": [
+                "subclass базалық келісімді сақтайтынын тексеру"
+              ],
+              "prerequisites": [
+                "C14-L04"
+              ],
+              "assessmentMapping": [
+                "C14-L05-F1",
+                "C14-L05-F2",
+                "C14-L05-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C14-E5"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/classes.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual original Python example output"
+            },
+            {
+              "authoringId": "C14-L06",
+              "title": "Полиморфизм және duck typing",
+              "order": 3,
+              "outcomes": [
+                "бір әдіс келісімімен әртүрлі объектіні қолдану"
+              ],
+              "prerequisites": [
+                "C14-L05"
+              ],
+              "assessmentMapping": [
+                "C14-L06-F1",
+                "C14-L06-F2",
+                "C14-L06-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C14-E6"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/classes.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual original Python example output"
+            }
+          ]
+        },
+        {
+          "authoringId": "C14-M3",
+          "title": "Жобалау және тестілеу",
+          "order": 3,
+          "lessons": [
+            {
+              "authoringId": "C14-L07",
+              "title": "dataclass және value object",
+              "order": 1,
+              "outcomes": [
+                "дерек объектісін анық өрістермен құру"
+              ],
+              "prerequisites": [
+                "C14-L06"
+              ],
+              "assessmentMapping": [
+                "C14-L07-F1",
+                "C14-L07-F2",
+                "C14-L07-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C14-E7"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/library/dataclasses.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual original Python example output"
+            },
+            {
+              "authoringId": "C14-L08",
+              "title": "unittest және объект state-і",
+              "order": 2,
+              "outcomes": [
+                "қате әрекеттен кейін state сақталуын тексеру"
+              ],
+              "prerequisites": [
+                "C14-L07"
+              ],
+              "assessmentMapping": [
+                "C14-L08-F1",
+                "C14-L08-F2",
+                "C14-L08-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C14-E8",
+                "C14-E12"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/library/unittest.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Actual unittest with explicitly taught Shelf fixture definition"
+            },
+            {
+              "authoringId": "C14-L09",
+              "title": "Жауапкершілік және шағын refactor",
+              "order": 3,
+              "outcomes": [
+                "есептеу мен IO-ны бөліп мінезді сақтау"
+              ],
+              "prerequisites": [
+                "C14-L08"
+              ],
+              "assessmentMapping": [
+                "C14-L09-F1",
+                "C14-L09-F2",
+                "C14-L09-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C14-E9"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://docs.python.org/3.12/tutorial/classes.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Refactoring protocol requires independent project review"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "authoringId": "C15",
+      "title": "Python арқылы деректерді талдау",
+      "level": "INTERMEDIATE",
+      "language": "kk",
+      "audience": "18+ volunteer learners",
+      "prerequisites": [
+        "C02 Python жинақтары; орташа/пайыз түсінігі"
+      ],
+      "outcomes": [
+        "баған, бөлгіш және түр болжамын анықтау",
+        "сандық бағанның типі мен жоқ мәндерін анықтау",
+        "есептің бірлігі мен бақылау деңгейін тұжырымдау",
+        "жарамсыз мәтінді анықтап тазалау шешімін жазу",
+        "дубликатты тексерер алдында бірегей кілтті анықтау",
+        "топ бойынша total және count есептеу",
+        "уақыттық дерекке түсінікті сызықтық график құру",
+        "байланысты causal қорытындыдан ажырату",
+        "raw→clean→report жолын нақты командамен тіркеу"
+      ],
+      "review": "HUMAN_REVIEW_PENDING",
+      "batch": 5,
+      "draftRevisionHash": "223c525c8a1508547661dff302253e2562caf5f648814d2ad1a1c83e97a99a1e",
+      "examQuestionCount": 12,
+      "examPolicy": "Duration/pass score proposed; teacher and recording quota review required",
+      "project": {
+        "title": "Жасанды кітап оқу дерегінің талдауы",
+        "evaluation": "SELF_ASSESSED_NOT_SCORED"
+      },
+      "modules": [
+        {
+          "authoringId": "C15-M1",
+          "title": "Жүктеу және зерттеу",
+          "order": 1,
+          "lessons": [
+            {
+              "authoringId": "C15-L01",
+              "title": "CSV және дерек келісімі",
+              "order": 1,
+              "outcomes": [
+                "баған, бөлгіш және түр болжамын анықтау"
+              ],
+              "prerequisites": [
+                "C02 Python жинақтары; орташа/пайыз түсінігі"
+              ],
+              "assessmentMapping": [
+                "C15-L01-F1",
+                "C15-L01-F2",
+                "C15-L01-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C15-E1"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://pandas.pydata.org/docs/getting_started/intro_tutorials/index.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Python3.12.14 / pandas3.0.1 / matplotlib3.11.2 where used, synthetic local data"
+            },
+            {
+              "authoringId": "C15-L02",
+              "title": "dtype, describe және missing шолуы",
+              "order": 2,
+              "outcomes": [
+                "сандық бағанның типі мен жоқ мәндерін анықтау"
+              ],
+              "prerequisites": [
+                "C15-L01"
+              ],
+              "assessmentMapping": [
+                "C15-L02-F1",
+                "C15-L02-F2",
+                "C15-L02-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C15-E2",
+                "C15-E10"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://pandas.pydata.org/docs/getting_started/intro_tutorials/index.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Python3.12.14 / pandas3.0.1 / matplotlib3.11.2 where used, synthetic local data"
+            },
+            {
+              "authoringId": "C15-L03",
+              "title": "Сұрақ, өлшем және талдау жоспары",
+              "order": 3,
+              "outcomes": [
+                "есептің бірлігі мен бақылау деңгейін тұжырымдау"
+              ],
+              "prerequisites": [
+                "C15-L02"
+              ],
+              "assessmentMapping": [
+                "C15-L03-F1",
+                "C15-L03-F2",
+                "C15-L03-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C15-E3"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://pandas.pydata.org/docs/getting_started/intro_tutorials/index.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Data question/interpretation/reproducibility protocol, not executable source"
+            }
+          ]
+        },
+        {
+          "authoringId": "C15-M2",
+          "title": "Тазалау және түрлендіру",
+          "order": 2,
+          "lessons": [
+            {
+              "authoringId": "C15-L04",
+              "title": "Санға түрлендіру және invalid мән",
+              "order": 1,
+              "outcomes": [
+                "жарамсыз мәтінді анықтап тазалау шешімін жазу"
+              ],
+              "prerequisites": [
+                "C15-L03"
+              ],
+              "assessmentMapping": [
+                "C15-L04-F1",
+                "C15-L04-F2",
+                "C15-L04-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C15-E4"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://pandas.pydata.org/docs/reference/api/pandas.to_numeric.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Python3.12.14 / pandas3.0.1 / matplotlib3.11.2 where used, synthetic local data"
+            },
+            {
+              "authoringId": "C15-L05",
+              "title": "Duplicate және identity келісімі",
+              "order": 2,
+              "outcomes": [
+                "дубликатты тексерер алдында бірегей кілтті анықтау"
+              ],
+              "prerequisites": [
+                "C15-L04"
+              ],
+              "assessmentMapping": [
+                "C15-L05-F1",
+                "C15-L05-F2",
+                "C15-L05-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C15-E5"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.drop_duplicates.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Python3.12.14 / pandas3.0.1 / matplotlib3.11.2 where used, synthetic local data"
+            },
+            {
+              "authoringId": "C15-L06",
+              "title": "groupby және есептелген баған",
+              "order": 3,
+              "outcomes": [
+                "топ бойынша total және count есептеу"
+              ],
+              "prerequisites": [
+                "C15-L05"
+              ],
+              "assessmentMapping": [
+                "C15-L06-F1",
+                "C15-L06-F2",
+                "C15-L06-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C15-E6",
+                "C15-E11"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.groupby.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Python3.12.14 / pandas3.0.1 / matplotlib3.11.2 where used, synthetic local data"
+            }
+          ]
+        },
+        {
+          "authoringId": "C15-M3",
+          "title": "Визуализация және түсіндіру",
+          "order": 3,
+          "lessons": [
+            {
+              "authoringId": "C15-L07",
+              "title": "График түрі, ось және бірлік",
+              "order": 1,
+              "outcomes": [
+                "уақыттық дерекке түсінікті сызықтық график құру"
+              ],
+              "prerequisites": [
+                "C15-L06"
+              ],
+              "assessmentMapping": [
+                "C15-L07-F1",
+                "C15-L07-F2",
+                "C15-L07-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C15-E7"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "VERIFIED",
+              "exampleScope": "Python3.12.14 / pandas3.0.1 / matplotlib3.11.2 where used, synthetic local data"
+            },
+            {
+              "authoringId": "C15-L08",
+              "title": "Корреляция, себеп және шектеу",
+              "order": 2,
+              "outcomes": [
+                "байланысты causal қорытындыдан ажырату"
+              ],
+              "prerequisites": [
+                "C15-L07"
+              ],
+              "assessmentMapping": [
+                "C15-L08-F1",
+                "C15-L08-F2",
+                "C15-L08-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C15-E8",
+                "C15-E12"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://pandas.pydata.org/docs/getting_started/intro_tutorials/index.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                },
+                {
+                  "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/scatterp.htm",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "claim": "Association does not prove causality; synthetic interpretation boundary"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Data question/interpretation/reproducibility protocol, not executable source"
+            },
+            {
+              "authoringId": "C15-L09",
+              "title": "Қайта өндіру және талдау есебі",
+              "order": 3,
+              "outcomes": [
+                "raw→clean→report жолын нақты командамен тіркеу"
+              ],
+              "prerequisites": [
+                "C15-L08"
+              ],
+              "assessmentMapping": [
+                "C15-L09-F1",
+                "C15-L09-F2",
+                "C15-L09-F3"
+              ],
+              "finalAssessmentMapping": [
+                "C15-E9"
+              ],
+              "review": "HUMAN_REVIEW_PENDING",
+              "references": [
+                {
+                  "url": "https://pandas.pydata.org/docs/getting_started/intro_tutorials/index.html",
+                  "accessedAt": "2026-10-10",
+                  "check": "OFFICIAL_PAGE_FETCHED",
+                  "attemptedAt": "2026-10-10"
+                }
+              ],
+              "exampleVerification": "PENDING",
+              "exampleScope": "Data question/interpretation/reproducibility protocol, not executable source"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "importEvidence": {
+    "state": "IMPORTED_DRAFT",
+    "profile": "isolated pilot",
+    "release": "338f8ecaac2e105a",
+    "verifiedAt": "2026-10-10T14:55:02.112Z",
+    "counts": {
+      "courses": 15,
+      "modules": 50,
+      "lessons": 150,
+      "exams": 15,
+      "finalQuestions": 195,
+      "formative": 450,
+      "drafts": 15,
+      "memberships": 0,
+      "invitations": 0
+    },
+    "humanReview": "PENDING",
+    "privateMap": ".local/pilot-author/import-map.json"
+  }
+}

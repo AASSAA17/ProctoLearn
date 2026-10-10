@@ -29,7 +29,7 @@ export class AiReadTools {
     // Every query is projected and bound to authenticated identity. Role claims,
     // userId overrides, SQL, URLs and lesson answers are not accepted arguments.
     if (name === 'my_courses') {
-      const rows = await this.prisma.enrollment.findMany({ where: { userId }, take: 10,
+      const rows = await this.prisma.enrollment.findMany({ where: { userId, accessStatus: 'ACTIVE' }, take: 10,
         orderBy: [{ enrolledAt: 'desc' }, { id: 'asc' }], select: {
           completedAt: true, course: { select: { id: true, title: true, level: true } },
         } });
@@ -38,7 +38,7 @@ export class AiReadTools {
     if (needsCourse) {
       const courseId = input.courseId as string;
       const access = await this.prisma.course.findFirst({ where: { id: courseId,
-        OR: [{ enrollments: { some: { userId } } }, ...(name === 'course_outline' ? [{ teacherId: userId }] : [])],
+        OR: [{ enrollments: { some: { userId, accessStatus: 'ACTIVE' } } }, ...(name === 'course_outline' ? [{ teacherId: userId }] : [])],
       }, select: { id: true, title: true } });
       if (!access) return { error: 'NOT_FOUND_OR_FORBIDDEN' };
       const scope = { OR: [{ courseId }, { module: { courseId } }] };

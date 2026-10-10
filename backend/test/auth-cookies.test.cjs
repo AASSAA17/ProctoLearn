@@ -22,6 +22,7 @@ const { CsrfGuard } = require('../src/auth/csrf.guard');
 const { JwtStrategy } = require('../src/auth/strategies/jwt.strategy');
 const { PrismaService } = require('../src/prisma/prisma.service');
 const { MailService } = require('../src/mail/mail.service');
+const { PilotService } = require('../src/pilot/pilot.service');
 const { EvidenceController, RECORDING_DIRECTORY } = require('../src/evidence/evidence.controller');
 const { EvidenceRetentionService } = require('../src/evidence/evidence-retention.service');
 const { EvidenceService } = require('../src/evidence/evidence.service');
@@ -73,6 +74,7 @@ async function fixture(production = false, throttle = false) {
       ...(throttle ? [{ provide: APP_GUARD, useClass: ThrottlerGuard }] : []),
       { provide: ConfigService, useValue: config }, { provide: JwtService, useValue: jwt },
       { provide: PrismaService, useValue: db }, { provide: MailService, useValue: mail },
+      { provide: PilotService, useValue: { enabled: false, assertActiveStudent: async () => {} } },
       { provide: EvidenceService, useValue: {} }, { provide: RecordingUploadsService, useValue: uploads },
       { provide: EvidenceRetentionService, useValue: {} },
       { provide: ProctorService, useValue: proctor },

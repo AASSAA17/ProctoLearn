@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -14,6 +15,7 @@ import * as crypto from 'crypto';
 import { MailService } from '../mail/mail.service';
 import { tokenDigest } from './token-digest';
 import { serializable } from '../prisma/serializable';
+import { PilotService } from '../pilot/pilot.service';
 
 @Injectable()
 export class AuthService {
@@ -22,10 +24,36 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private mailService: MailService,
+    private pilot: PilotService,
   ) {}
 
   async register(dto: RegisterDto) {
     const email = dto.email.toLowerCase().trim();
+    if (this.pilot?.enabled && !dto.invitationToken) {
+      throw new ForbiddenException({ code: 'PILOT_INVITATION_REQUIRED', message: 'Пилотқа тіркелу үшін шақыру қажет' });
+    }
+
+    if (this.pilot?.enabled) {
+      // Reject invalid/revoked/expired invitations before costly password work.
+      // registerInvited repeats this check inside its serializable transaction.
+      await this.pilot.assertRegistrationInvitation(email, dto.invitationToken!);
+      const hashedPassword = await bcrypt.hash(dto.password, 12);
+      const userId = crypto.randomUUID();
+      const tokens = await this.generateTokens(userId, email, 'STUDENT', 0);
+      const user = await this.pilot.registerInvited({
+        userId,
+        name: dto.name,
+        email,
+        phone: dto.phone?.trim() || null,
+        password: hashedPassword,
+        invitationToken: dto.invitationToken,
+        refreshTokenDigest: tokenDigest(tokens.refreshToken),
+      });
+      return { user, ...tokens };
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.password, 12);
+
     const exists = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -33,8 +61,6 @@ export class AuthService {
     if (exists) {
       throw new ConflictException('Бұл email тіркелген');
     }
-
-    const hashedPassword = await bcrypt.hash(dto.password, 12);
 
     const user = await this.prisma.user.create({
       data: {
@@ -67,6 +93,8 @@ export class AuthService {
       throw new UnauthorizedException('Email немесе пароль қате');
     }
 
+    await this.pilot?.assertActiveStudent(user.id, user.role);
+
     const tokens = await this.generateTokens(user.id, user.email, user.role, user.tokenVersion);
     await this.saveRefreshToken(user.id, tokens.refreshToken, user.tokenVersion);
 
@@ -94,6 +122,8 @@ export class AuthService {
 
     const digest = tokenDigest(token);
     if (digest !== user.refreshToken) throw new UnauthorizedException('Жарамсыз refresh token');
+
+    await this.pilot?.assertActiveStudent(user.id, user.role);
 
     const tokens = await this.generateTokens(user.id, user.email, user.role, user.tokenVersion);
     // One use only, including concurrent refreshes and concurrent session revocation.

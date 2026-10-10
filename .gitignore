@@ -6,6 +6,8 @@ node_modules/
 # Build outputs
 dist/
 .next/
+frontend/.next-pilot/
+backend/.dist-pilot/
 out/
 build/
 
