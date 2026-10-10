@@ -1,41 +1,50 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { serializable } from '../prisma/serializable';
 
 @Injectable()
 export class EnrollmentsService {
   constructor(private prisma: PrismaService) {}
 
-  /** Enroll user in a course. Fails if user has another active enrollment. */
+  /** Preserve repeat enrollment and serialize it with publication/archive transitions. */
   async enroll(userId: string, courseId: string) {
-    const course = await this.prisma.course.findUnique({ where: { id: courseId } });
-    if (!course) throw new NotFoundException('Курс табылмады');
+    return serializable(this.prisma, async (tx) => {
+      const course = await tx.course.findUnique({ where: { id: courseId } });
+      if (!course) throw new NotFoundException('Курс табылмады');
 
-    // Check if already enrolled in this course
-    const existing = await this.prisma.enrollment.findUnique({
-      where: { userId_courseId: { userId, courseId } },
-    });
-    if (existing) {
-      if (existing.completedAt) {
-        return { message: 'Курс аяқталды', enrollment: existing };
+      const existing = await tx.enrollment.findUnique({
+        where: { userId_courseId: { userId, courseId } },
+      });
+      if (existing) {
+        if (existing.completedAt) {
+          return { message: 'Курс аяқталды', enrollment: existing };
+        }
+        return { message: 'Курсқа тіркелгенсіз', enrollment: existing };
       }
-      return { message: 'Курсқа тіркелгенсіз', enrollment: existing };
-    }
 
-    const enrollment = await this.prisma.enrollment.create({
-      data: { userId, courseId },
-      include: { course: { select: { id: true, title: true, level: true } } },
+      if (course.status !== 'PUBLISHED') throw new ForbiddenException('Курс жаңа тіркелуге ашық емес');
+      const enrollment = await tx.enrollment.upsert({
+        where: { userId_courseId: { userId, courseId } },
+        update: {},
+        create: { userId, courseId },
+        include: { course: { select: { id: true, title: true, level: true } } },
+      });
+      return { message: 'Курсқа тіркелдіңіз', enrollment };
     });
-    return { message: 'Курсқа тіркелдіңіз', enrollment };
   }
 
   /** Get all enrollments for the current user */
   async getMyEnrollments(userId: string) {
-    return this.prisma.enrollment.findMany({
+    const lessonSelect = {
+      id: true,
+      assignmentAnswer: true,
+      lessonProgress: { where: { userId }, select: { completionSource: true } },
+    } as const;
+    const enrollments = await this.prisma.enrollment.findMany({
       where: { userId },
       include: {
         course: {
@@ -45,29 +54,33 @@ export class EnrollmentsService {
             description: true,
             level: true,
             _count: { select: { lessons: true, exams: true } },
+            lessons: { select: lessonSelect },
+            modules: { select: { lessons: { select: lessonSelect } } },
           },
         },
       },
       orderBy: { enrolledAt: 'desc' },
     });
+    return enrollments.map(({ course, ...enrollment }) => {
+      const { lessons, modules, ...outline } = course;
+      const unique = new Map([...lessons, ...modules.flatMap(module => module.lessons)].map(lesson => [lesson.id, lesson]));
+      const totalLessons = unique.size;
+      const completedLessons = [...unique.values()].filter(lesson => lesson.lessonProgress.some(
+        progress => !lesson.assignmentAnswer || progress.completionSource === 'ASSIGNMENT',
+      )).length;
+      return {
+        ...enrollment,
+        course: { ...outline, _count: { ...outline._count, lessons: totalLessons } },
+        totalLessons,
+        completedLessons,
+        progress: totalLessons ? Math.round(completedLessons / totalLessons * 100) : 0,
+      };
+    });
   }
 
   /** Get the currently active (not completed) enrollment */
   async getActiveEnrollment(userId: string) {
-    return this.prisma.enrollment.findFirst({
-      where: { userId, completedAt: null },
-      include: {
-        course: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            level: true,
-            _count: { select: { lessons: true, exams: true } },
-          },
-        },
-      },
-    });
+    return (await this.getMyEnrollments(userId)).find(enrollment => !enrollment.completedAt) ?? null;
   }
 
   /** Mark enrollment as completed */

@@ -44,6 +44,38 @@ export class CoursesController {
     );
   }
 
+  @Get('manage')
+  @ApiCookieAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.TEACHER, Role.ADMIN)
+  @ApiOperation({ summary: 'Мұғалімнің курстары, соның ішінде жобалар мен мұрағат' })
+  manage(@CurrentUser() viewer: LessonViewer, @Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.coursesService.findAll(Math.max(1, parseInt(page || '1', 10) || 1), Math.min(100, Math.max(1, parseInt(limit || '20', 10) || 20)), undefined, undefined, viewer);
+  }
+
+  @Get(':id/overview')
+  @ApiCookieAuth()
+  @UseGuards(JwtAuthGuard)
+  overview(@Param('id') id: string, @CurrentUser() viewer: LessonViewer) {
+    return this.coursesService.findById(id, viewer);
+  }
+
+  @Post(':id/publish')
+  @ApiCookieAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.TEACHER, Role.ADMIN)
+  publish(@Param('id') id: string, @CurrentUser() viewer: LessonViewer) {
+    return this.coursesService.publish(id, viewer);
+  }
+
+  @Post(':id/archive')
+  @ApiCookieAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.TEACHER, Role.ADMIN)
+  archive(@Param('id') id: string, @CurrentUser() viewer: LessonViewer) {
+    return this.coursesService.archive(id, viewer);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Курсты ID бойынша алу (жалпыға қолжетімді)' })
   findById(@Param('id') id: string) {
@@ -76,7 +108,7 @@ export class CoursesController {
   @ApiCookieAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.TEACHER, Role.ADMIN)
-  @ApiOperation({ summary: 'Курсты жою' })
+  @ApiOperation({ summary: 'Курсты мұрағаттау (оқу тарихы сақталады)' })
   remove(
     @Param('id') id: string,
     @CurrentUser('id') teacherId: string,

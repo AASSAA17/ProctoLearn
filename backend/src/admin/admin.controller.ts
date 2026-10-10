@@ -83,6 +83,12 @@ export class AdminController {
     return this.adminService.revokeCertificate(certificateId, adminId, reason ?? '');
   }
 
+  @Get('users/:userId/certificates')
+  @ApiOperation({ summary: 'Пайдаланушы сертификаттарының мәртебесі' })
+  userCertificates(@Param('userId') userId: string) {
+    return this.adminService.getUserCertificates(userId);
+  }
+
   @Post('users/:userId/grant-exam-access/:courseId')
   @ApiOperation({ summary: 'Пайдаланушыға тікелей экзаменге кіру рұқсатын беру' })
   grantExamAccess(

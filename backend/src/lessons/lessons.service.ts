@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLessonDto, UpdateLessonDto } from './dto/lesson.dto';
+import { serializable } from '../prisma/serializable';
 import {
   LessonViewer, assertCourseManager, assertCourseReader, lessonCourse,
   lessonCourseInclude, lessonSummary, sanitizeLesson,
@@ -54,14 +55,21 @@ export class LessonsService {
   }
 
   async remove(id: string, viewer: LessonViewer, courseId?: string) {
-    const lesson = await this.getLesson(id);
-    assertCourseManager(lessonCourse(lesson, courseId), viewer);
-    await this.prisma.lesson.delete({ where: { id } });
-    return { message: 'Сабақ жойылды' };
+    return serializable(this.prisma, async (tx) => {
+      const lesson = await tx.lesson.findUnique({ where: { id }, include: lessonCourseInclude });
+      if (!lesson) throw new NotFoundException('Сабақ табылмады');
+      assertCourseManager(lessonCourse(lesson, courseId), viewer);
+      const progress = await tx.lessonProgress.count({ where: { lessonId: id } });
+      const submissions = await tx.submission.count({ where: { step: { lessonId: id } } });
+      if (progress || submissions) throw new ConflictException('Оқу тарихы бар сабақты жоюға болмайды. Курсты мұрағаттаңыз');
+      await tx.lesson.delete({ where: { id } });
+      return { message: 'Сабақ жойылды' };
+    });
   }
 
-  async getMyProgress(courseId: string, userId: string) {
-    await this.getCourse(courseId);
+  async getMyProgress(courseId: string, userId: string, role = 'STUDENT') {
+    const course = await this.getCourse(courseId);
+    await assertCourseReader(this.prisma, course, { id: userId, role });
     const lessons = await this.prisma.lesson.findMany({
       where: { OR: [{ courseId }, { module: { courseId } }] },
       orderBy: [{ module: { order: 'asc' } }, { order: 'asc' }],
@@ -151,8 +159,11 @@ export class LessonsService {
       where: { OR: [{ courseId }, { module: { courseId } }] },
       include: { module: { select: { order: true } } },
     });
-    const currentKey = `${lesson.module?.order ?? 0}:${lesson.order}`;
-    const orderedPrevious = previous.filter((candidate) => `${candidate.module?.order ?? 0}:${candidate.order}` < currentKey);
+    const currentModuleOrder = lesson.module?.order ?? 0;
+    const orderedPrevious = previous.filter((candidate) => {
+      const moduleOrder = candidate.module?.order ?? 0;
+      return moduleOrder < currentModuleOrder || (moduleOrder === currentModuleOrder && candidate.order < lesson.order);
+    });
     const count = await this.prisma.lessonProgress.count({
       where: { userId: viewer.id, lessonId: { in: orderedPrevious.map(({ id }) => id) } },
     });

@@ -38,8 +38,8 @@ export class LessonsController {
 
   @Get('progress/my')
   @ApiOperation({ summary: 'Менің прогресім (курс бойынша)' })
-  getMyProgress(@Param('courseId') courseId: string, @CurrentUser('id') userId: string) {
-    return this.lessonsService.getMyProgress(courseId, userId);
+  getMyProgress(@Param('courseId') courseId: string, @CurrentUser('id') userId: string, @CurrentUser('role') role: string) {
+    return this.lessonsService.getMyProgress(courseId, userId, role);
   }
 
   @Get(':id')

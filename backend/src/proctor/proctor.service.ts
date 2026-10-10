@@ -201,11 +201,12 @@ export class ProctorService {
     return reason;
   }
 
-  private reviewResult(attempt: { id: string; status: string; reviewStatus: string; reviewedAt: Date | null; reviewedBy: string | null; reviewReason: string | null }, certificate: { id: string } | null) {
+  private reviewResult(attempt: { id: string; status: string; reviewStatus: string; reviewedAt: Date | null; reviewedBy: string | null; reviewReason: string | null }, certificate: { id: string; status?: string } | null) {
     return {
       attemptId: attempt.id, status: attempt.status, reviewStatus: attempt.reviewStatus,
       reviewedAt: attempt.reviewedAt, reviewedBy: attempt.reviewedBy, reviewReason: attempt.reviewReason,
-      certificatePending: false, certificateIssued: !!certificate,
+      certificatePending: false, certificateIssued: !!certificate && certificate.status !== 'REVOKED',
+      ...(certificate?.status === 'REVOKED' ? { certificateStatus: 'REVOKED' } : {}),
       ...(certificate ? { certificateId: certificate.id } : {}),
     };
   }

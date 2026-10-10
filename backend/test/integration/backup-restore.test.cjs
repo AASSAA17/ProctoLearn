@@ -4,7 +4,8 @@ const { randomUUID } = require('node:crypto');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const { S3Client, CreateBucketCommand, DeleteBucketCommand, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const { S3Client, CreateBucketCommand, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const { deleteEmptyFixtureBucket } = require('./storage-cleanup.cjs');
 const { backup, restore, verifyBackup, databaseConfig, pg, sql, assertEmptyDatabase, acquireRetentionLock } = require('../../../scripts/backup-cli.cjs');
 
 const fixtureUrl = new URL(process.env.TEST_DATABASE_URL || 'http://invalid');
@@ -144,7 +145,7 @@ test('real PostgreSQL custom backup and S3 restore preserve bytes, metadata and 
     for (const bucket of buckets) {
       assert.match(bucket, /^backup-test-(source|target|blocked)-[a-f0-9]{32}$/);
       for (;;) { const entries = (await list(bucket)).Contents || []; if (!entries.length) break; for (const entry of entries) await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: entry.Key })); }
-      await client.send(new DeleteBucketCommand({ Bucket: bucket }));
+      await deleteEmptyFixtureBucket(client, bucket);
     }
     client.destroy();
     const resolved = await fs.realpath(directory);

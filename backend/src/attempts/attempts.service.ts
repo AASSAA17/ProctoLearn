@@ -48,22 +48,24 @@ export class AttemptsService {
     if (enrollment.examAccessGrantedAt) return;
     const lessons = await tx.lesson.findMany({
       where: { OR: [{ courseId }, { module: { courseId } }] },
-      select: { id: true, assignmentAnswer: true, steps: { where: { type: 'TASK' }, select: { id: true } } },
+      select: { id: true, title: true, assignmentAnswer: true, steps: { where: { type: 'TASK' }, select: { id: true } } },
     });
     const progress = await tx.lessonProgress.findMany({
       where: { userId, lessonId: { in: lessons.map((lesson) => lesson.id) } },
       select: { lessonId: true, completionSource: true },
     });
     const completed = new Map(progress.map((entry) => [entry.lessonId, entry.completionSource]));
-    if (lessons.some((lesson) => !completed.has(lesson.id) || (lesson.assignmentAnswer && completed.get(lesson.id) !== 'ASSIGNMENT'))) {
-      throw new ForbiddenException({ code: 'COURSE_INCOMPLETE', message: 'Емтихан алдында барлық сабақтар мен тапсырмаларды аяқтаңыз' });
+    const missingLessons = lessons.filter((lesson) => !completed.has(lesson.id) || (lesson.assignmentAnswer && completed.get(lesson.id) !== 'ASSIGNMENT'));
+    if (missingLessons.length) {
+      throw new ForbiddenException({ code: 'COURSE_INCOMPLETE', message: `Емтихан алдында ${missingLessons.length} сабақты аяқтаңыз`,
+        missingLessons: missingLessons.map(({ id, title }) => ({ id, title })) });
     }
     const taskIds = lessons.flatMap((lesson) => lesson.steps.map((step) => step.id));
     if (taskIds.length) {
       const solved = await tx.submission.groupBy({
         by: ['stepId'], where: { userId, stepId: { in: taskIds }, isCorrect: true },
       });
-      if (solved.length !== taskIds.length) throw new ForbiddenException({ code: 'COURSE_INCOMPLETE', message: 'Емтихан алдында барлық тапсырмаларды орындаңыз' });
+      if (solved.length !== taskIds.length) throw new ForbiddenException({ code: 'COURSE_INCOMPLETE', message: `Емтихан алдында ${taskIds.length - solved.length} тапсырманы орындаңыз`, missingTaskIds: taskIds.filter((id) => !solved.some((row) => row.stepId === id)) });
     }
   }
 

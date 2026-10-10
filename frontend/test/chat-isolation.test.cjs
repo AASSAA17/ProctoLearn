@@ -38,7 +38,10 @@ test('late success/error/finally and stale handlers cannot affect a replacement 
     const f = fixture(); f.auth.getState().setUser({ id: 'A' });
     const oldVersion = f.chat.getState().sessionVersion;
     const old = f.chat.getState().sendMessage('old', oldVersion);
+    assert.equal(f.calls[0].config.timeout, 125000);
+    assert.equal(f.calls[0].config.signal.aborted, false);
     f.auth.getState().setUser({ id: 'B' }); f.auth.getState().setUser({ id: 'A' });
+    assert.equal(f.calls[0].config.signal.aborted, true);
     await f.chat.getState().sendMessage('stale handler', oldVersion); assert.equal(f.calls.length, 1);
     const current = f.chat.getState().sendMessage('current', f.chat.getState().sessionVersion);
     if (fail) f.calls[0].reject(new Error('failed')); else f.calls[0].resolve({ data: { reply: 'private old' } });
@@ -52,6 +55,7 @@ test('cross-tab changes and expiry immediately erase chat and invalidate outstan
     const f = fixture(); f.auth.getState().setUser({ id: 'A' });
     const pending = f.chat.getState().sendMessage('secret A', f.chat.getState().sessionVersion);
     f.event(event); assert.deepEqual(f.chat.getState().messages, []); assert.equal(f.chat.getState().ownerId, null);
+    assert.equal(f.calls[0].config.signal.aborted, true);
     f.calls[0].resolve({ data: { reply: 'late' } }); await pending;
     assert.deepEqual(f.chat.getState().messages, []);
   }

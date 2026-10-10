@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import Link from 'next/link';
-import { certificateVerificationUrl } from '@/lib/public-links';
 import toast from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
 import LoadFailure from '@/components/LoadFailure';
@@ -13,6 +12,9 @@ interface Certificate {
   id: string;
   qrCode: string;
   issuedAt: string;
+  status: string;
+  snapshotStatus: string;
+  verificationUrl: string;
   course: { title: string };
   user: { name: string };
 }
@@ -20,12 +22,10 @@ interface Certificate {
 export default function CertificatesPage() {
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [origin, setOrigin] = useState('');
   const [loadError, setLoadError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    setOrigin(window.location.origin);
     api
       .get('/certificates/my')
       .then(({ data }) => {
@@ -83,13 +83,15 @@ export default function CertificatesPage() {
             <div key={cert.id} className="workspace-certificate">
               <span className="mb-4 grid h-12 w-12 place-items-center rounded-full bg-violet-100 text-violet-700"><NavIcon icon="🏆" className="h-6 w-6" /></span>
               <p className="workspace-eyebrow">ProctoLearn · Сертификат</p>
+              {cert.status === 'REVOKED' && <p className="mb-3 font-semibold text-red-700">Күші жойылған</p>}
+              {cert.snapshotStatus === 'LEGACY_UNAVAILABLE' && <p className="mb-3 text-sm text-amber-800">Тарихи деректер толық сақталмаған</p>}
               <h3 className="text-lg font-semibold text-gray-900 mb-1">{cert.course.title}</h3>
               <p className="mb-2 text-sm font-medium text-slate-700">{cert.user.name}</p>
               <p className="text-sm text-gray-500 mb-5">
                 {new Date(cert.issuedAt).toLocaleDateString('kk-KZ')}
               </p>
               <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-3 mb-4">
-                {origin && <QRCodeSVG value={certificateVerificationUrl(origin, cert.qrCode)} size={120} title="Сертификатты тексеру QR коды" />}
+                {cert.verificationUrl && <QRCodeSVG value={cert.verificationUrl} size={120} title="Сертификатты тексеру QR коды" />}
               </div>
               <p className="text-xs text-gray-500 mb-4">Тексеру үшін QR кодын сканерлеңіз</p>
               <Link href={`/verify/${encodeURIComponent(cert.qrCode)}`} className="block text-sm text-primary-700 underline mb-4">Сертификатты тексеру</Link>

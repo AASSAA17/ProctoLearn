@@ -13,6 +13,7 @@ interface Course {
   title: string;
   description?: string;
   level: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   teacher: { name: string };
   modules?: { id: string; lessons?: { id: string; steps?: { id: string }[] }[] }[];
   _count?: { lessons: number; exams: number };
@@ -36,8 +37,7 @@ export default function TeacherCoursesPage() {
   const loadCourses = useCallback(async () => {
     setLoading(true);
     try {
-      const params = isAdmin ? '?limit=100' : teacherId ? `?limit=100&teacherId=${teacherId}` : '?limit=100';
-      const { data } = await api.get(`/courses${params}`);
+      const { data } = await api.get('/courses/manage?limit=100');
       setCourses(data.data ?? data);
       setLoadError(false);
     } catch {
@@ -50,13 +50,13 @@ export default function TeacherCoursesPage() {
   useEffect(() => { loadCourses(); }, [loadCourses]);
 
   const handleDelete = async (courseId: string, title: string) => {
-    if (!confirm(`"${title}" курсын жою керек пе?`)) return;
+    if (!confirm(`"${title}" курсын мұрағаттау керек пе? Тіркелген студенттердің қолжетімділігі сақталады.`)) return;
     try {
-      await api.delete(`/courses/${courseId}`);
-      toast.success('Курс жойылды');
-      setCourses((prev) => prev.filter((c) => c.id !== courseId));
+      await api.post(`/courses/${courseId}/archive`);
+      toast.success('Курс мұрағатталды');
+      await loadCourses();
     } catch {
-      toast.error('Жою қатесі');
+      toast.error('Мұрағаттау қатесі');
     }
   };
 
@@ -134,6 +134,7 @@ export default function TeacherCoursesPage() {
                       </span>
                     </div>
                     <h3 className="font-semibold text-gray-900 text-xl">{course.title}</h3>
+                    <p className="text-sm text-gray-600">{{ DRAFT: 'Жоба — тек авторға көрінеді', PUBLISHED: 'Жарияланған', ARCHIVED: 'Мұрағатта' }[course.status]}</p>
                     {course.description && (
                       <p className="text-sm text-gray-500 mt-1 line-clamp-2">{course.description}</p>
                     )}
@@ -152,11 +153,12 @@ export default function TeacherCoursesPage() {
                       ✏️ Өңдеу
                     </Link>
                     <button
-                      aria-label={`Курсты жою: ${course.title}`}
+                      aria-label={`Курсты мұрағаттау: ${course.title}`}
+                      disabled={course.status === 'ARCHIVED'}
                       onClick={() => handleDelete(course.id, course.title)}
                       className="px-4 py-2 bg-red-50 text-red-700 rounded-lg text-sm hover:bg-red-100 transition"
                     >
-                      🗑
+                      Мұрағаттау
                     </button>
                   </div>
                 </div>

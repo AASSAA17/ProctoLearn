@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateModuleDto, UpdateModuleDto, ReorderModuleDto } from './dto/module.dto';
 import { lessonSummary } from '../lessons/lesson-access';
@@ -20,6 +20,8 @@ export class ModulesService {
   }
 
   async findByCourse(courseId: string) {
+    const course = await this.prisma.course.findUnique({ where: { id: courseId } });
+    if (!course || course.status !== 'PUBLISHED') throw new NotFoundException('Курс табылмады');
     const modules = await this.prisma.courseModule.findMany({
       where: { courseId },
       orderBy: { order: 'asc' },
@@ -39,14 +41,16 @@ export class ModulesService {
     const mod = await this.prisma.courseModule.findUnique({
       where: { id },
       include: {
+        course: { select: { status: true } },
         lessons: {
           orderBy: { order: 'asc' },
           include: { steps: { orderBy: { order: 'asc' } } },
         },
       },
     });
-    if (!mod) throw new NotFoundException('Бөлім табылмады');
-    return { ...mod, lessons: mod.lessons.map((lesson) => lessonSummary(lesson)) };
+    if (!mod || mod.course.status !== 'PUBLISHED') throw new NotFoundException('Бөлім табылмады');
+    const { course, ...outline } = mod;
+    return { ...outline, lessons: mod.lessons.map((lesson) => lessonSummary(lesson)) };
   }
 
   async update(id: string, dto: UpdateModuleDto, teacherId: string, role = 'TEACHER') {
@@ -61,15 +65,20 @@ export class ModulesService {
   }
 
   async remove(id: string, teacherId: string, role = 'TEACHER') {
-    const mod = await this.prisma.courseModule.findUnique({
-      where: { id },
-      include: { course: true },
-    });
-    if (!mod) throw new NotFoundException('Бөлім табылмады');
-    if (role !== 'ADMIN' && mod.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
+    return serializable(this.prisma, async (tx) => {
+      const mod = await tx.courseModule.findUnique({
+        where: { id },
+        include: { course: true },
+      });
+      if (!mod) throw new NotFoundException('Бөлім табылмады');
+      if (role !== 'ADMIN' && mod.course.teacherId !== teacherId) throw new ForbiddenException('Рұқсат жоқ');
 
-    await this.prisma.courseModule.delete({ where: { id } });
-    return { message: 'Бөлім жойылды' };
+      const progress = await tx.lessonProgress.count({ where: { lesson: { moduleId: id } } });
+      const submissions = await tx.submission.count({ where: { step: { lesson: { moduleId: id } } } });
+      if (progress || submissions) throw new ConflictException('Оқу тарихы бар бөлімді жоюға болмайды. Курсты мұрағаттаңыз');
+      await tx.courseModule.delete({ where: { id } });
+      return { message: 'Бөлім жойылды' };
+    });
   }
 
   async reorder(dto: ReorderModuleDto, teacherId: string, role = 'TEACHER') {

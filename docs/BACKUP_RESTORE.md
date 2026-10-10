@@ -16,7 +16,24 @@
 docker compose --project-name proctolearn-local --env-file .env.local -f docker-compose.local.yml stop web api
 ```
 
-У native launcher остановка через Ctrl+C завершает также PostgreSQL и S3. Для резервного копирования запускайте только эти зависимости отдельно, с их исходными каталогами/настройками, и оставляйте API выключенным. Инструмент не запускает и не останавливает чужие процессы.
+У native launcher остановка через Ctrl+C завершает также PostgreSQL и S3. Для нового выделенного release профиля существует безопасное окно обслуживания:
+
+```powershell
+node scripts/demo-release.cjs stop
+node scripts/demo-release.cjs maintenance
+```
+
+Оставьте maintenance в первом терминале. Во втором выполните:
+
+```powershell
+node scripts/demo-release.cjs backup rehearsal-01
+node scripts/demo-release.cjs restore rehearsal-01
+node scripts/demo-release.cjs stop
+```
+
+Обёртка работает только с отмеченным профилем `.local/release-demo`, его БД `proctolearn_release` и bucket `proctolearn-release`; приватные ключи читает из конфигурации этого профиля. Backup требует maintenance без API/web. Restore сначала проверяет архив, создаёт новую пустую пару БД/bucket со случайным суффиксом, затем вызывает описанный ниже CLI. Исходные данные не заменяются. Цели и результат записываются в приватный `restore-<suffix>.json`. Для прежнего `.local` окружения по-прежнему нужна ручная остановка writers/запуск зависимостей с исходными настройками. Инструменты не останавливают чужие процессы.
+
+Release wrapper сохраняет приватную конфигурацию, accounts/access file, ownership marker и существующие certificate/scenario evidence в отдельный соседний `<backup>-operator` с хешами. DB/S3 archive остаётся самостоятельным строго проверяемым форматом. Оба каталога приватны; конфигурация не импортируется автоматически и не заменяет действующие настройки. Для проверки восстановления остановите maintenance, запустите `node scripts/demo-release.cjs start-restored restore-<suffix>.json`, затем `node scripts/demo-release-restore-smoke.cjs`. После проверки `stop` и обычный `start` вернут исходную пару.
 
 Backup удерживает PostgreSQL advisory lock `71083208`, который используют операции удаления записей. Это дополнительная координация с retention, **не атомарная транзакция между PostgreSQL и S3**. Незавершённое удаление (`deletionRequestedAt` установлен, `deletedAt` ещё нет) блокирует backup: сначала завершите/retry retention. Удалённые по политике объекты не требуются; их tombstone и история сохраняются.
 
@@ -70,6 +87,8 @@ node scripts/backup-cli.cjs restore --backup backups/recovery-2026-09-28 --targe
 - Автоматический срок удаления backup не задан. Правила хранения и внешняя зашифрованная копия зависят от назначения проекта и требований владельца.
 
 ## Проверки в репозитории
+
+Фактическая репетиция release 2026-10-10: `final-demo-20261010` получил `backup_verified`, отдельная новая пара — `restore_verified`; совпали инвентарь 25 таблиц, 32 объекта S3 (1 056 338 байт), ссылки и SHA256 объектов. Затем приложение действительно запускалось на восстановленной паре: браузерный вход, учебные материалы/пять завершённых уроков, одобренный результат, PDF/публичный QR, просмотр проктором и воспроизведение обоих синтетических потоков прошли; анонимный GET записей вернул 403. Отчёт хранится приватно в `.local/release-demo/evidence/restored-smoke.json`. После остановки восстановленной пары исходный профиль снова запущен; readiness, сохранность seed и оригинальные сценарии 4/5 и 5/5 повторно прошли. Это проверка локального восстановления, без утверждения о внешнем disaster recovery или физической камере.
 
 ```powershell
 node --test scripts/backup-cli.test.cjs

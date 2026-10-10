@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertCourseReader, lessonCourse, lessonCourseInclude } from '../lessons/lesson-access';
 
 @Injectable()
 export class SubmissionsService {
@@ -12,7 +13,10 @@ export class SubmissionsService {
     });
   }
 
-  async getLessonProgress(lessonId: string, userId: string) {
+  async getLessonProgress(lessonId: string, userId: string, role = 'STUDENT') {
+    const lesson = await this.prisma.lesson.findUnique({ where: { id: lessonId }, include: lessonCourseInclude });
+    if (!lesson) throw new NotFoundException('Сабақ табылмады');
+    await assertCourseReader(this.prisma, lessonCourse(lesson), { id: userId, role });
     const steps = await this.prisma.step.findMany({
       where: { lessonId },
       select: { id: true, type: true, order: true },
@@ -36,7 +40,10 @@ export class SubmissionsService {
     }));
   }
 
-  async getCourseProgress(courseId: string, userId: string) {
+  async getCourseProgress(courseId: string, userId: string, role = 'STUDENT') {
+    const course = await this.prisma.course.findUnique({ where: { id: courseId } });
+    if (!course) throw new NotFoundException('Курс табылмады');
+    await assertCourseReader(this.prisma, course, { id: userId, role });
     const modules = await this.prisma.courseModule.findMany({
       where: { courseId },
       include: {

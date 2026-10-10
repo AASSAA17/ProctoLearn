@@ -8,17 +8,29 @@ const { chromium } = require('playwright');
 const { PrismaClient } = require('../../backend/node_modules/@prisma/client');
 
 const root = path.resolve(__dirname, '../..');
-const env = parseEnv(fs.readFileSync(path.join(root, '.env.local'), 'utf8'));
+const profile = process.env.E2E_ENV_FILE ? path.resolve(process.env.E2E_ENV_FILE) : path.join(root, '.env.local');
+const releaseProfile = path.join(root, '.local', 'release-demo', '.env.local');
+if (profile !== path.join(root, '.env.local') && profile !== releaseProfile) throw new Error('Unrecognized E2E private environment profile');
+if (profile === releaseProfile && (fs.lstatSync(path.dirname(profile)).isSymbolicLink() || JSON.parse(fs.readFileSync(path.join(path.dirname(profile), 'ownership.json'), 'utf8')).kind !== 'proctolearn-isolated-release-v1')) throw new Error('Release ownership marker mismatch');
+const env = parseEnv(fs.readFileSync(profile, 'utf8'));
+const privateAccounts = profile === releaseProfile ? JSON.parse(fs.readFileSync(path.join(path.dirname(profile), 'accounts.json'), 'utf8')) : [];
+function account(role) {
+  const normalized = role.toUpperCase();
+  const selected = privateAccounts.find(item => item.role === normalized);
+  if (profile === releaseProfile && !selected) throw new Error('Release role account missing');
+  return selected ?? { email: `${normalized.toLowerCase()}@proctolearn.kz`, password: env[`DEMO_${normalized}_PASSWORD`] };
+}
 const web = 'http://localhost:3000';
 const api = 'http://localhost:4000';
 if (process.env.E2E_DISPOSABLE !== 'true' || env.NODE_ENV !== 'development' ||
     env.FRONTEND_URL !== web || env.NEXT_PUBLIC_API_URL !== api ||
-    env.POSTGRES_DB !== 'proctolearn_local') {
+    env.POSTGRES_DB !== (profile === releaseProfile ? 'proctolearn_release' : 'proctolearn_local')) {
   throw new Error('Stage 9 browser suite requires E2E_DISPOSABLE=true and the isolated localhost demo stack.');
 }
 const databaseUrl = `postgresql://${encodeURIComponent(env.POSTGRES_USER)}:${encodeURIComponent(env.POSTGRES_PASSWORD)}@127.0.0.1:5433/${env.POSTGRES_DB}`;
 const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
 const auditIssues = [];
+const createdFixtureCourses = new Set();
 const browserOptions = { headless: true };
 if (process.env.E2E_CHROME_PATH) browserOptions.executablePath = process.env.E2E_CHROME_PATH;
 
@@ -26,8 +38,8 @@ async function login(browser, role, viewport) {
   const context = await browser.newContext({ viewport: viewport || { width: 1365, height: 900 } });
   const page = await context.newPage();
   await page.goto(`${web}/auth/login`);
-  await page.getByLabel('Email', { exact: true }).fill(`${role.toLowerCase()}@proctolearn.kz`);
-  await page.getByLabel('Пароль', { exact: true }).fill(env[`DEMO_${role}_PASSWORD`]);
+  await page.getByLabel('Email', { exact: true }).fill(account(role).email);
+  await page.getByLabel('Пароль', { exact: true }).fill(account(role).password);
   await page.locator('button[type=submit]').click();
   await page.waitForURL('**/dashboard', { timeout: 30000 });
   const me = await context.request.get(`${api}/auth/me`);
@@ -46,18 +58,80 @@ async function auditPage(page) {
   auditIssues.push(...failures.map(failure => `${new URL(page.url()).pathname}: ${failure}`));
 }
 
-async function createExam() {
+async function publishCourse(context, courseId) {
+  const csrf = await context.request.get(`${api}/auth/csrf`);
+  assert.equal(csrf.status(), 200);
+  const response = await context.request.post(`${api}/courses/${courseId}/publish`, {
+    headers: { Origin: web, 'X-CSRF-Token': (await csrf.json()).csrfToken },
+  });
+  assert.equal(response.status(), 201, await response.text());
+}
+
+async function createPublicCatalogFixture(context) {
+  const csrf = await context.request.get(`${api}/auth/csrf`);
+  assert.equal(csrf.status(), 200);
+  const headers = { Origin: web, 'X-CSRF-Token': (await csrf.json()).csrfToken };
+  const created = await context.request.post(`${api}/courses`, { headers, data: {
+    title: `E2E public catalog ${randomUUID()}`,
+    description: 'Isolated public catalog fixture: introduction to HTML headings for beginning learners.',
+    level: 'BEGINNER',
+  } });
+  assert.equal(created.status(), 201);
+  const course = await created.json();
+  createdFixtureCourses.add(course.id);
+  assert.equal(course.status, 'DRAFT');
+  assert.equal((await fetch(`${api}/courses/${course.id}`)).status, 404);
+  const lesson = await context.request.post(`${api}/courses/${course.id}/lessons`, { headers, data: {
+    title: 'HTML heading introduction',
+    content: 'A page heading describes its main topic. Use an h1 element for the main heading and h2 elements for sections.',
+    order: 1,
+  } });
+  assert.equal(lesson.status(), 201);
+  await publishCourse(context, course.id);
+  assert.equal((await fetch(`${api}/courses/${course.id}`)).status, 200);
+  console.log('PASS owned catalog fixture created as draft and explicitly published through author API');
+}
+
+async function createExam(teacherContext) {
   const [teacher, student, proctor] = await Promise.all(['teacher', 'student', 'proctor'].map(email =>
-    prisma.user.findUniqueOrThrow({ where: { email: `${email}@proctolearn.kz` } })));
+    prisma.user.findUniqueOrThrow({ where: { email: account(email).email } })));
   const course = await prisma.course.create({ data: {
     title: `E2E браузер ${randomUUID()}`, description: 'Изолированный сценарий этапа 9', teacherId: teacher.id,
+    lessons: { create: { title: 'E2E fixture preparation', content: 'Explicitly seeded browser test material', order: 1 } },
     exams: { create: { title: 'E2E экзамен', duration: 10, passScore: 60,
       questions: { create: { text: 'E2E вопрос', type: 'SINGLE_CHOICE', options: ['A', 'B'], answer: 'A' } },
       proctorAssignments: { create: { proctorId: proctor.id } },
     } },
     enrollments: { create: { userId: student.id, examAccessGrantedAt: new Date(), examAccessGrantedBy: teacher.id } },
   }, include: { exams: true } });
+  createdFixtureCourses.add(course.id);
+  await publishCourse(teacherContext, course.id);
   return { examId: course.exams[0].id, studentId: student.id };
+}
+
+async function archiveFixtureCourses(context) {
+  if (!context) return;
+  const teacher = await prisma.user.findUniqueOrThrow({ where: { email: account('TEACHER').email } });
+  // The owned release retains recordings and enrollments; hide only positively identified
+  // synthetic stage9 courses from the public catalog, including prior runs of this suite.
+  if (profile === releaseProfile) {
+    const prior = await prisma.course.findMany({ where: { teacherId: teacher.id, status: 'PUBLISHED',
+      description: { in: ['Isolated keyboard enrollment check', 'Изолированный сценарий этапа 9'] },
+    }, select: { id: true, title: true, description: true } });
+    for (const row of prior) {
+      const prefix = row.description === 'Isolated keyboard enrollment check' ? 'E2E keyboard enrollment ' : 'E2E браузер ';
+      if (row.title.startsWith(prefix) && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(row.title.slice(prefix.length))) createdFixtureCourses.add(row.id);
+    }
+  }
+  const csrf = await context.request.get(`${api}/auth/csrf`);
+  assert.equal(csrf.status(), 200);
+  const headers = { Origin: web, 'X-CSRF-Token': (await csrf.json()).csrfToken };
+  for (const id of createdFixtureCourses) {
+    const response = await context.request.post(`${api}/courses/${id}/archive`, { headers });
+    assert.equal(response.status(), 201);
+    assert.equal((await fetch(`${api}/courses/${id}`)).status, 404);
+  }
+  console.log(`PASS archived ${createdFixtureCourses.size} identified stage9 course fixtures through owner API; history retained`);
 }
 
 const fakeCapture = () => {
@@ -158,7 +232,7 @@ async function verifyProctorFeed(proctor, studentPage, attempt) {
 async function verifyTeacherSteps(page, lessonId) {
   const cases = [
     { type: 'TEXT', field: 'Мәтін мазмұны', value: '<p>Original lesson text</p>', updated: '<p>Edited lesson text</p>' },
-    { type: 'VIDEO', field: 'Бейне сілтемесі', value: 'https://example.invalid/lesson', updated: 'https://example.invalid/updated' },
+    { type: 'VIDEO', field: 'Бейне сілтемесі', value: 'https://example.invalid/lesson', updated: '/demo/html-structure.webm' },
     { type: 'TASK', taskType: 'single_choice', button: '○ Бір жауап' },
     { type: 'TASK', taskType: 'multiple_choice', button: '☑ Бірнеше жауап' },
     { type: 'TASK', taskType: 'text_input', button: 'Аа Мәтін жауабы', value: 'Initial answer', updated: 'Edited answer' },
@@ -433,6 +507,12 @@ async function main() {
   const contexts = [];
   const sessions = new Map();
   try {
+    // Fresh CI seeds intentionally remain private drafts. Supply only this suite's
+    // own public fixture instead of depending on or publishing historical courses.
+    const teacher = await login(browser, 'TEACHER');
+    contexts.push(teacher.context);
+    sessions.set('TEACHER', teacher);
+    await createPublicCatalogFixture(teacher.context);
     const publicPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
     await publicPage.goto(web);
     await publicPage.locator('#courses').getByRole('heading', { name: 'Қолжетімді курстар', exact: true }).waitFor();
@@ -456,7 +536,7 @@ async function main() {
     assert.equal(await publicPage.getByText('Курстар жүктелуде...', { exact: true }).count(), 0, 'reselecting the current filter must not leave the catalog loading');
     assert.ok(await publicCards.count() > 0);
     assert.ok(await publicPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
-    if (await prisma.course.count() > 12) {
+    if (await prisma.course.count({ where: { status: 'PUBLISHED' } }) > 12) {
       const firstHref = await publicCards.first().getAttribute('href');
       await publicPage.getByRole('button', { name: 'Келесі бет' }).click();
       await publicPage.waitForFunction(previous => document.querySelector('a[href^="/courses/"]')?.getAttribute('href') !== previous, firstHref);
@@ -478,9 +558,12 @@ async function main() {
       ['PROCTOR', '/dashboard/proctor', 'Проктор'],
       ['ADMIN', '/dashboard/admin/users', 'Пайдаланушылар'],
     ]) {
-      const session = await login(browser, role);
-      contexts.push(session.context);
-      sessions.set(role, session);
+      let session = sessions.get(role);
+      if (!session) {
+        session = await login(browser, role);
+        contexts.push(session.context);
+        sessions.set(role, session);
+      }
       await session.page.goto(web + route);
       await session.page.getByRole('heading', { name: heading }).first().waitFor();
       await auditPage(session.page);
@@ -533,17 +616,17 @@ async function main() {
 
     const adminPage = sessions.get('ADMIN').page;
     await adminPage.goto(`${web}/dashboard/admin/users`);
-    await adminPage.getByRole('row').filter({ hasText: 'student@proctolearn.kz' }).getByRole('button', { name: '🎓 Рұқсат' }).waitFor();
-    assert.equal(await adminPage.getByRole('row').filter({ hasText: 'admin@proctolearn.kz' }).getByRole('combobox').isDisabled(), true);
+    await adminPage.getByRole('row').filter({ hasText: account('STUDENT').email }).getByRole('button', { name: '🎓 Рұқсат' }).waitFor();
+    assert.equal(await adminPage.getByRole('row').filter({ hasText: account('ADMIN').email }).getByRole('combobox').isDisabled(), true);
     for (const role of ['teacher', 'proctor', 'admin']) {
-      assert.equal(await adminPage.getByRole('row').filter({ hasText: `${role}@proctolearn.kz` }).getByRole('button', { name: '🎓 Рұқсат' }).count(), 0);
+      assert.equal(await adminPage.getByRole('row').filter({ hasText: account(role).email }).getByRole('button', { name: '🎓 Рұқсат' }).count(), 0);
     }
     const courseForGrant = await prisma.course.findFirstOrThrow();
     const csrfResponse = await sessions.get('ADMIN').context.request.get(`${api}/auth/csrf`);
     assert.equal(csrfResponse.status(), 200);
     const csrfToken = (await csrfResponse.json()).csrfToken;
     for (const role of ['TEACHER', 'PROCTOR', 'ADMIN']) {
-      const staff = await prisma.user.findUniqueOrThrow({ where: { email: `${role.toLowerCase()}@proctolearn.kz` } });
+      const staff = await prisma.user.findUniqueOrThrow({ where: { email: account(role).email } });
       const before = await prisma.enrollment.count({ where: { userId: staff.id, courseId: courseForGrant.id } });
       for (const action of ['grant-exam-access', 'grant-certificate']) {
         const response = await sessions.get('ADMIN').context.request.post(`${api}/admin/users/${staff.id}/${action}/${courseForGrant.id}`, {
@@ -566,7 +649,7 @@ async function main() {
     };
     await adminPage.route(isCoursesRequest, interceptCourses);
     await adminPage.goto(`${web}/dashboard/admin/users`);
-    await adminPage.getByRole('row').filter({ hasText: 'student@proctolearn.kz' }).getByRole('button', { name: '🎓 Рұқсат' }).click();
+    await adminPage.getByRole('row').filter({ hasText: account('STUDENT').email }).getByRole('button', { name: '🎓 Рұқсат' }).click();
     await adminPage.getByRole('alert').getByText('Курстарды жүктеу мүмкін болмады.').waitFor();
     coursesUnavailable = false;
     await adminPage.getByRole('alert').getByRole('button', { name: 'Қайта жүктеу' }).click();
@@ -578,10 +661,13 @@ async function main() {
 
     for (const role of ['TEACHER', 'ADMIN']) {
       const page = sessions.get(role).page;
-      const requestPromise = page.waitForRequest(request => new URL(request.url()).pathname === '/courses' && new URL(request.url()).searchParams.has('limit'));
+      const responsePromise = page.waitForResponse(response => new URL(response.url()).pathname === '/courses/manage');
       await page.goto(`${web}/dashboard/teacher/courses`);
-      const query = new URL((await requestPromise).url()).searchParams;
-      assert.equal(query.get('teacherId'), role === 'TEACHER' ? (await prisma.user.findUniqueOrThrow({ where: { email: 'teacher@proctolearn.kz' } })).id : null);
+      const managed = await (await responsePromise).json();
+      if (role === 'TEACHER') {
+        const teacher = await prisma.user.findUniqueOrThrow({ where: { email: account('TEACHER').email } });
+        assert.ok(managed.data.every(course => course.teacherId === teacher.id));
+      }
       await page.getByRole('heading', { name: role === 'ADMIN' ? 'Барлық курстар' : 'Менің курстарым' }).waitFor();
       assert.equal(await page.locator('a[href^="/dashboard/courses/"]').count(), 0, `${role} must not receive blocked student links`);
     }
@@ -603,7 +689,13 @@ async function main() {
       assert.deepEqual(auditIssues, []);
       const saved = await prisma.course.findFirstOrThrow({ where: { title: courseTitle } });
       assert.equal(saved.level, 'INTERMEDIATE');
-      assert.equal(saved.teacherId, (await prisma.user.findUniqueOrThrow({ where: { email: 'teacher@proctolearn.kz' } })).id);
+      assert.equal(saved.status, 'DRAFT');
+      assert.equal((await fetch(`${api}/courses/${saved.id}`)).status, 404);
+      await teacherPage.getByRole('region', { name: 'Курс мәліметтері мен жариялау' }).getByRole('textbox', { name: /^Сипаттама/ }).fill('Edited browser authoring description with intended audience and learning outcome.');
+      await teacherPage.getByRole('button', { name: 'Мәліметтерді сақтау', exact: true }).click();
+      await teacherPage.getByText('Курс мәліметтері сақталды', { exact: true }).waitFor();
+      assert.equal((await prisma.course.findUniqueOrThrow({ where: { id: saved.id } })).description, 'Edited browser authoring description with intended audience and learning outcome.');
+      assert.equal(saved.teacherId, (await prisma.user.findUniqueOrThrow({ where: { email: account('TEACHER').email } })).id);
       assert.equal((await sessions.get('PROCTOR').context.request.post(`${api}/courses`, { data: { title: 'Forbidden' } })).status(), 403);
       await teacherPage.getByRole('button', { name: '+ Бөлім қосу' }).click();
       await teacherPage.getByRole('textbox', { name: 'Бөлім атауы' }).fill(moduleTitle);
@@ -623,6 +715,12 @@ async function main() {
       await verifyTeacherExams(teacherPage, sessions.get('PROCTOR').context, saved.id);
 
       teacherPage.once('dialog', dialog => dialog.accept());
+      await teacherPage.getByRole('button', { name: 'Курсты жариялау', exact: true }).click();
+      await teacherPage.getByText('Курс жарияланды', { exact: true }).waitFor();
+      assert.equal((await fetch(`${api}/courses/${saved.id}`)).status, 200);
+      assert.equal((await prisma.course.findUniqueOrThrow({ where: { id: saved.id } })).status, 'PUBLISHED');
+
+      teacherPage.once('dialog', dialog => dialog.accept());
       await teacherPage.getByRole('button', { name: `Сабақты жою: ${updatedOutline.lesson.title}` }).click();
       await teacherPage.getByRole('button', { name: `Сабақты жою: ${updatedOutline.lesson.title}` }).waitFor({ state: 'hidden' });
       assert.equal(await prisma.lesson.count({ where: { id: savedLesson.id } }), 0);
@@ -635,22 +733,23 @@ async function main() {
       await teacherPage.goto(`${web}/dashboard/teacher/courses`);
       await teacherPage.getByText(courseTitle).first().waitFor();
       teacherPage.once('dialog', dialog => dialog.accept());
-      await teacherPage.getByRole('button', { name: `Курсты жою: ${courseTitle}` }).click();
-      await teacherPage.getByText(courseTitle).waitFor({ state: 'hidden' });
-      assert.equal(await prisma.course.count({ where: { id: saved.id } }), 0);
-      console.log('PASS teacher creates and deletes course structure; proctor cannot author');
+      await teacherPage.getByRole('button', { name: `Курсты мұрағаттау: ${courseTitle}` }).click();
+      await teacherPage.getByText('Курс мұрағатталды', { exact: true }).waitFor();
+      assert.equal((await prisma.course.findUniqueOrThrow({ where: { id: saved.id } })).status, 'ARCHIVED');
+      assert.equal((await fetch(`${api}/courses/${saved.id}`)).status, 404);
+      console.log('PASS teacher authors draft, deliberately publishes, archives preserving course; proctor cannot author');
     } finally {
       const created = await prisma.course.findFirst({ where: { title: courseTitle } });
       if (created) await prisma.course.delete({ where: { id: created.id } });
     }
 
     for (const [role, route, endpoint] of [
-      ['TEACHER', '/dashboard/teacher/courses', '/courses'],
+      ['TEACHER', '/dashboard/teacher/courses', '/courses/manage'],
       ['PROCTOR', '/dashboard/proctor', '/attempts'],
     ]) {
       const page = sessions.get(role).page;
       let fail = true;
-      const matches = url => url.pathname === endpoint && (role === 'PROCTOR' || url.searchParams.has('teacherId'));
+      const matches = url => url.pathname === endpoint;
       const intercept = async (request) => {
         if (fail) await request.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"unavailable"}' });
         else await request.continue();
@@ -715,9 +814,12 @@ async function main() {
     const keyboardCourse = await prisma.course.create({ data: {
       title: `E2E keyboard enrollment ${randomUUID()}`,
       description: 'Isolated keyboard enrollment check',
+      lessons: { create: { title: 'Keyboard fixture lesson', content: 'Original keyboard test material', order: 1 } },
       level: 'BEGINNER',
-      teacherId: (await prisma.user.findUniqueOrThrow({ where: { email: 'teacher@proctolearn.kz' } })).id,
+      teacherId: (await prisma.user.findUniqueOrThrow({ where: { email: account('TEACHER').email } })).id,
     } });
+    createdFixtureCourses.add(keyboardCourse.id);
+    await publishCourse(sessions.get('TEACHER').context, keyboardCourse.id);
     await mobile.page.reload();
     await mobile.page.getByRole('heading', { name: 'Курстар' }).waitFor();
     const course = mobile.page.getByRole('button', { name: `${keyboardCourse.title}: Курсқа тіркелу`, exact: true });
@@ -732,7 +834,7 @@ async function main() {
     assert.deepEqual(auditIssues, []);
     console.log('PASS keyboard course card and accessible enrollment dialog');
 
-    const fixture = await createExam();
+    const fixture = await createExam(sessions.get('TEACHER').context);
     const studentContext = mobile.context;
     const deniedPage = await studentContext.newPage();
     await deniedPage.addInitScript(() => {
@@ -813,9 +915,13 @@ async function main() {
     await proctor.page.getByText('Экран', { exact: true }).first().waitFor();
     console.log('PASS real browser capture -> API -> PostgreSQL -> S3 -> proctor UI');
   } finally {
-    for (const context of contexts) await context.close().catch(() => {});
-    await browser.close();
-    await prisma.$disconnect();
+    try {
+      await archiveFixtureCourses(sessions.get('TEACHER')?.context);
+    } finally {
+      for (const context of contexts) await context.close().catch(() => {});
+      await browser.close();
+      await prisma.$disconnect();
+    }
   }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
