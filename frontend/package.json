@@ -45,5 +45,13 @@
     "postcss": "^8.5.28",
     "tailwindcss": "^3.4.16",
     "typescript": "5.9.2"
+  },
+  "overrides": {
+    "tailwindcss": {
+      "postcss-selector-parser": "7.1.6",
+      "postcss-nested": {
+        "postcss-selector-parser": "7.1.6"
+      }
+    }
   }
 }

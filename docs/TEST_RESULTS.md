@@ -86,3 +86,34 @@ Physical phone QR, physical webcam/screen chooser, native browser zoom, Firefox/
 ## Independent CI findings
 
 First published handoff SHA `c0ec1a4`, workflow38049012057: secrets/backend/frontend passed. Fresh Linux/container local-stack correctly kept historical seed courses DRAFT; stage9 initially assumed at least one published course and timed out at its first catalog link. The test now creates its own UUID course and lesson through the owning teacher API, asserts anonymous404 while draft, deliberately publishes and asserts200, then archives that exact fixture in finally. No historical course is automatically published and no catalog/security assertion is skipped. The local rerun and subsequent final-SHA PR workflow provide the corrected acceptance evidence; consult current PR checks for completion.
+
+## Remaining-gates follow-up — 2026-10-10
+
+Source base: `19cd99e73afa2b9017ec0a93c539ad053e0eb13e`; focused branch `fix/demo-remaining-gates-20261010`. The following are fresh executions after the dependency/launcher changes, not reused baseline results. Final freeze revision and independent CI are recorded at publication.
+
+| Check | Actual result / scope |
+| --- | --- |
+| Native production frontend build | PASS with scoped parser7.1.6 override |
+| Frontend unit / typecheck / lint | 69PASS; typecheckPASS; lint0errors,19existing warnings |
+| Actual Tailwind/PostCSS compile | PASS,84,384bytes CSS |
+| Launcher regression | 6PASS: release4 + local-launch2 |
+| Actual AIoff browser smoke | PASS; visible explicit disabled reply187ms; readiness and public catalog200 before/concurrently/after; unique fictional user removed |
+| Current release role UI | PASS70reflow,10axe,10keyboard-focus; CSSzoom200only, not nativezoom |
+| Stage9 against current release | PASS teacher/admin boundaries, authoring/retry/mobile, exam/recording/review; real browser MediaRecorder→API→PG→S3→playback;3own course fixtures archived through owner API |
+| Deterministic AI / actual PostgreSQL scope | 12PASS /1PASS |
+| Actual model full candidate | FAIL,10/11 cases passed; RU3/3,KK2/3,lookup3/3,forbidden and unavailablePASS; see AI_LOCAL_SETUP exact per-run phases |
+| Dependency audit | frontend7high,0moderate,0critical; production-only0; all7remaining records trace to unpatched braces advisory |
+
+The model candidate was a diagnostic override only:4096context/4096output/GPU99/temp0.6,think=true,120s deadline. Original baseline cold RU104.165s failed semantics; identical warm native payload35.960s was also measured without claiming equivalent quality. Candidate warm RU6.199–12.720s, KK12.214–42.838s including24.306s failed definition; lookup20.211–47.914s. No new weights, original-template edits, increased deadlines or cloud fallback. The installed artifact supports thinking=true only. Core service code is unchanged; the currently running launch explicitly selects AIoff.
+
+Prepared learner4/5and completed5/5role pages remain usable in the repeated UI suite. Existing original backups/operator companion remain in place. Stage9's synthetic capture does not close physical camera/window chooser acceptance. Physical camera/screen/phone, nativezoom and screenreader remain AWAITING_OPERATOR. Owner confirmed no authorized HTTPS topology and chose an operator instruction. No phone PASS, tunnel, firewall or external deployment is claimed.
+
+Reproduce actual disabled-mode browser smoke in a second PowerShell while the owned release is already running in off mode:
+
+```powershell
+$env:DEMO_AI_PROVIDER='off'
+$env:E2E_CHROME_PATH='C:\Program Files\Google\Chrome\Application\chrome.exe'
+node scripts/demo-release.cjs exec frontend e2e/release-ai-disabled.cjs
+```
+
+The new real-model diagnostic is opt-in and excluded from routine CI; it uses bounded telemetry plus exact UUID fixture cleanup. Review added a10s timeout to metadata/placement requests; inference keeps its120s bound. This instrumentation-only repair was syntax-checked; no extra model trial was used to overwrite the reported failure. Its full-model failure must not be replaced by deterministic/mock CI success. Existing workflow covers launcher tests, backend/frontend checks and an independent Linux/container stage9; inspect the new exact HEAD before integration.

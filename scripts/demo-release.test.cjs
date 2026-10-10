@@ -3,8 +3,19 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { prepare, safeName, operatorBackup, main } = require('./demo-release.cjs');
+const { prepare, safeName, operatorBackup, optionalConfiguration, main } = require('./demo-release.cjs');
 const { lessons, questions, courseData } = require('./demo-release-seed.cjs');
+
+test('AI-disabled demonstration is explicit and never selects an external provider', () => {
+  assert.equal(optionalConfiguration({}).AI_PROVIDER, 'ollama');
+  const disabled = optionalConfiguration({ DEMO_AI_PROVIDER: 'off' });
+  assert.equal(disabled.AI_PROVIDER, 'off');
+  assert.equal(disabled.OLLAMA_BASE_URL, 'http://127.0.0.1:11434');
+  assert.throws(() => optionalConfiguration({ DEMO_AI_PROVIDER: 'cloud' }), /must be ollama or off/);
+  const phoneLink = optionalConfiguration({ DEMO_PUBLIC_APP_URL: 'https://demo.example.test' });
+  assert.equal(phoneLink.CERTIFICATE_PUBLIC_ORIGIN, 'https://demo.example.test');
+  assert.equal(phoneLink.NEXT_PUBLIC_API_URL, undefined, 'a QR origin alone does not configure a reachable browser API');
+});
 
 test('release preparation uses separate identities, stable credentials and preserves owner files', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'proctolearn-release-test-'));

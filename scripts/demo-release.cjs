@@ -71,13 +71,15 @@ async function start(env, maintenance, build, restored = false) {
     if (fs.existsSync(stopFile)) fs.unlinkSync(stopFile);
   }
 }
-function optionalConfiguration() {
+function optionalConfiguration(settings = process.env) {
   // Explicit release settings only. No external credentials or inherited SMTP configuration.
+  const aiProvider = settings.DEMO_AI_PROVIDER || 'ollama';
+  if (!['ollama', 'off'].includes(aiProvider)) throw new Error('DEMO_AI_PROVIDER must be ollama or off.');
   return {
     SMTP_HOST: '127.0.0.1', SMTP_PORT: '1025', SMTP_SECURE: 'false', SMTP_USER: '', SMTP_PASS: '',
     SMTP_FROM: 'demo@proctolearn.local',
-    CERTIFICATE_PUBLIC_ORIGIN: process.env.DEMO_PUBLIC_APP_URL || 'http://localhost:3000',
-    AI_PROVIDER: 'ollama', OLLAMA_MODEL: 'qwen3:4b', OLLAMA_BASE_URL: 'http://127.0.0.1:11434',
+    CERTIFICATE_PUBLIC_ORIGIN: settings.DEMO_PUBLIC_APP_URL || 'http://localhost:3000',
+    AI_PROVIDER: aiProvider, OLLAMA_MODEL: 'qwen3:4b', OLLAMA_BASE_URL: 'http://127.0.0.1:11434',
   };
 }
 async function stop() {

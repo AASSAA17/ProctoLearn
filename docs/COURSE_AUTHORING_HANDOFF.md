@@ -82,3 +82,21 @@ Then `POST /courses/{courseId}/publish` with an empty body. Public previews cont
 ## Deferred production work
 
 Phase B: comprehensive course programs, original lectures and transcripts, graded exercise sets, worked explanations, editorial and academic review, licensing/provenance records and learner evaluation. These are content deliverables. Human-scored essay/rubric authoring, independent content revisions and an import pipeline are not claimed as existing software capabilities.
+
+## Outline only: новый DRAFT «Веб-әзірлеу негіздері: HTML және CSS»
+
+Статус подготовки: **план контента, в БД не создан и не опубликован**. Это отдельный новый курс; существующий демонстрационный курс и его learner states не редактируются. Начать авторское наполнение можно независимо от AI, когда согласованы аудитория/результаты и материалы проходят checklist выше. Наличие структуры не означает готовность программы.
+
+Метаданные: level BEGINNER. В description: «Тілі: қазақша. Аудитория: веб-әзірлеуді бастайтындар. Алғышарт: браузер мен мәтіндік редакторды пайдалану. Нәтиже: семантикалық HTML құрылымын құру, CSS селекторлары мен box model қолдану, қарапайым бейімделгіш бетті тексеру». Отдельные поля language/outcomes не добавлять.
+
+| Module order / title | Planned ordered lessons | Existing supported assessment |
+|---|---|---|
+|1 — HTML құрылымы|1 Документ және негізгі тегтер;2 Тақырыптар, мәтін және сілтемелер;3 Семантика және суреттердің балама мәтіні|TEXT; single_choice по структуре; multiple_choice по семантическим элементам; text_input по точному имени тега|
+|2 — CSS негіздері|1 Селекторлар және каскад;2 Box model;3 Түстер, қаріптер және аралықтар|TEXT; single_choice по selector/cascade; number_input по детерминированному вычислению размеров|
+|3 — Бейімделгіш бет және тексеру|1 Flex/grid негіздері;2 Media queries;3 Қолжетімділік және тексеру|TEXT; multiple_choice по responsive/accessibility; короткие exact text_input ответы|
+
+Для каждого урока подготовить оригинальный текст, примеры HTML/CSS и объяснение правильного/неправильного ответа; private correctAnswer/explanation хранить через реальный редактор TASK, не в публичном описании. Практическое создание страницы выполняется учащимся в своём редакторе как упражнение: платформа не запускает его код и не умеет ставить за него human essay/rubric grade. Проверяемые TASK ограничить однозначными вопросами существующих типов. Видео добавлять только когда готов лицензированный HTTP(S)/site-root URL и транскрипт; загрузку/транскодирование не обещать.
+
+План итогового экзамена:12 вопросов существующих SINGLE_CHOICE/MULTIPLE_CHOICE/TEXT,20 минут,passScore75, назначенный проктор. Конкретные ключи и варианты создаются при авторской разработке и проверяются до публикации; равновесное автоматическое оценивание, без LLM/произвольных весов/кода. Финальный проект пока необязательное учебное упражнение, не скрытый обязательный human-graded prerequisite.
+
+Создать будущий курс кнопкой «Жаңа курс» как DRAFT, сохранять модули/уроки вручную, проверять каждый TASK верным и неверным ответом на отдельном вымышленном учащемся после готовности материала. Не публиковать неполный контент. Для серьёзной новой редакции нужен другой курс: parallel published/draft versions и content importer отсутствуют.
