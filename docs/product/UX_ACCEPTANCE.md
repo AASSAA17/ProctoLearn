@@ -39,3 +39,5 @@ AI assistance: реализация, тесты и этот журнал под�
 ## Финальный artifact
 
 83be191f017a3683, application source a6989be. Browser11 scenarios/60reflow/5axe PASSED; typecheck и optimized build PASSED; backend243/frontend85/proxy16 PASSED. Регистрация/каталог/preview доступны через прежний localhost3200. Новые manifests/docs не означают content approval. Полный отчёт: [DELIVERY_2026-10-20](DELIVERY_2026-10-20.md).
+
+Изменения сохранены в GitHub: draft PR12, base feat/controlled-pilot-curriculum-20261010, без merge. CI a97fdb5 queued/in_progress при последней проверке; local PASS не подменяет remote CI.
