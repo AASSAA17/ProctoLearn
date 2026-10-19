@@ -2,6 +2,8 @@
 
 ## Актуальное дополнение 20.10.2026
 
+PR №12: на aa0eab1 frontend/backend/secrets SUCCESS, local-stack FAILURE из-за устаревшего сценария ошибки кабинета. Исправление и текущие результаты: [CI-12](product/changes/CI-12.md). Локально после правки browser12/60reflow/5axe PASS; удалённый запуск исправления пока PENDING.
+
 Улучшения UX выполнены в feat/product-ux-20261020. Новые результаты и ограничения: [product/DELIVERY_2026-10-20.md](product/DELIVERY_2026-10-20.md), по каждой правке — [product/UX_ACCEPTANCE.md](product/UX_ACCEPTANCE.md). Исторические результаты ниже не подменяют новый запуск и не подтверждают физический телефон/новый CI.
 
 ## Controlled pilot / curriculum: отдельная область проверки

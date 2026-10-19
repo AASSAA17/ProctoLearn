@@ -1,5 +1,6 @@
 // UI fixtures only: intercept every /api request; never writes to pilot data.
 const { chromium } = require('playwright');
+const { verifyDashboardRecovery } = require('./dashboard-recovery.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -81,6 +82,11 @@ async function audit(page, name) {
     unavailablePolicy.policyFailure = false; await s.page.getByRole('button', { name: 'Қайталау', exact: true }).click();
     await s.page.waitForFunction(() => document.querySelector('#register-name')?.matches(':enabled'));
     report.checks.push('Unavailable policy disables registration; retry recovers server-confirmed access'); await s.context.close();
+
+    s = await setup(browser);
+    await verifyDashboardRecovery(s.page, origin, origin + '/api');
+    report.checks.push('Shared CI scenario: enrollments/attempts/certificates 503, healthy sections, no false zero, retry');
+    await s.context.close();
 
     s = await setup(browser, { certFailure: true });
     await s.page.goto(origin + '/dashboard'); await s.page.getByRole('link', { name: 'Оқуды жалғастыру →', exact: true }).waitFor();

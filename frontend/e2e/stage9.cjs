@@ -5,6 +5,7 @@ const path = require('node:path');
 const { parseEnv } = require('node:util');
 const { randomUUID } = require('node:crypto');
 const { chromium } = require('playwright');
+const { verifyDashboardRecovery } = require('./dashboard-recovery.cjs');
 const { PrismaClient } = require('../../backend/node_modules/@prisma/client');
 
 const root = path.resolve(__dirname, '../..');
@@ -765,8 +766,10 @@ async function main() {
     }
     console.log('PASS teacher and proctor load failures recover on retry');
 
+    await verifyDashboardRecovery(sessions.get('STUDENT').page, web, api);
+    console.log('PASS dashboard isolates all three API failures, preserves healthy sections and recovers on retry');
+
     for (const [role, route, endpoint, readyText] of [
-      ['STUDENT', '/dashboard', '/enrollments/my', 'Белсенді курс'],
       ['STUDENT', '/dashboard/my-attempts', '/attempts/my', 'Менің нәтижелерім'],
       ['STUDENT', '/dashboard/certificates', '/certificates/my', 'Менің сертификаттарым'],
       ['ADMIN', '/dashboard/admin', '/admin/stats', 'Жалпы статистика және басқару'],
