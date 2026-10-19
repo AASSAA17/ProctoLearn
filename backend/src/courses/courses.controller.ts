@@ -60,6 +60,15 @@ export class CoursesController {
     return this.coursesService.findById(id, viewer);
   }
 
+  @Get(':id/preview')
+  @ApiCookieAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.TEACHER, Role.ADMIN)
+  @ApiOperation({ summary: 'Курсты оқушы көрінісінде қауіпсіз алдын ала қарау' })
+  preview(@Param('id') id: string, @CurrentUser() viewer: LessonViewer) {
+    return this.coursesService.preview(id, viewer);
+  }
+
   @Post(':id/publish')
   @ApiCookieAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)

@@ -90,14 +90,14 @@ export function LearningProcess() {
   );
 }
 
-export function PremiumCTA() {
+export function PremiumCTA({ registrationLabel = 'Тіркелу' }: { registrationLabel?: string }) {
   return (
     <section aria-labelledby="cta-heading" className="mx-auto max-w-7xl px-4 pb-24 sm:px-6">
       <div className="rounded-[2rem] border border-violet-300/20 bg-gradient-to-br from-violet-500/20 to-cyan-400/10 p-8 sm:p-12">
         <p className="eyebrow text-violet-200">Келесі қадам — сенікі</p>
         <h2 id="cta-heading" className="mt-4 max-w-2xl text-3xl font-bold text-white sm:text-4xl">Бүгін үйрен. Ертең қолдан.</h2>
         <p className="mt-4 max-w-xl leading-7 text-slate-300">Курстарды зерттеп, өз оқу жолыңды баста.</p>
-        <Link href="/auth/register" className="premium-button mt-8 gap-3 bg-white text-slate-950 hover:bg-cyan-100">Тіркелу <ArrowRightIcon aria-hidden="true" className="h-4 w-4" /></Link>
+        <Link href="/auth/register" className="premium-button mt-8 gap-3 bg-white text-slate-950 hover:bg-cyan-100">{registrationLabel} <ArrowRightIcon aria-hidden="true" className="h-4 w-4" /></Link>
       </div>
     </section>
   );

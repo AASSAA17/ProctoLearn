@@ -66,3 +66,15 @@ ngrok account/self-setup; фактический phone preview; просмотр
 5. H5: послеH1–H4 согласие добровольцев/раскрытие записи, отдельное разрешение первой экспозиции participant data и малый pilot. LIVE_PARTICIPANT_TESTED=false.
 
 Автоматического продолжения после окончания сессии не обещается. CONTENT_READY=true означает готовые reviewable тексты и задания, не закрытие G4/G5 и не публикацию.
+
+## 20.10.2026 — PR №12, проверка CI и исправление сценария
+
+На aa0eab1 подтверждён FAILURE local-stack при SUCCESS frontend/backend/secrets: устаревшее ожидание глобальной ошибки кабинета. После правки stage9/product-ux добавлен общий сценарий независимого восстановления трёх ресурсов. Причина, пути и выполняемые проверки: [CI-12](product/changes/CI-12.md). Работающий pilot и его данные не изменены. Новые результаты до выполнения не объявляются PASS.
+
+Исправление f644334 проверено GitHub: frontend/backend/secrets/local-stack SUCCESS. После уточнения пользователя о кнопке PDF воспроизведено отсутствие Inter-шрифтов именно в изолированной pilot-сборке. Исправлен launcher, добавлен тест assets и настоящая генерация синтетического PDF перед принятием новой сборки. После каждой правки обновлены CI-12 и PILOT_RUNBOOK. Profile/proxy17 PASS после остановки, active exams0, backup/restore before-pdf-fix-20261020 verified28tables/0objects. Сборка86b5198, artifact cbb280a06573c443 запущен; скачивание вымышленного PDF24664bytes настоящей кнопкой в Chromium PASS. Чужие данные/выдача сертификатов не использовались; границы и ссылки на новый CI зафиксированы в CI-12.
+
+Следующий run выявил нестабильное ожидание исходного recording integration теста: допустимый409 после ограниченных serialization retries не является отказом RECORDING_QUOTA до повторного запроса. Независимый AI review подтвердил диагноз. Обе проверки квот уточнены без изменения сервиса/лимитов: ровно один успешный chunk, повтор проигравшего обязательно отклоняется квотой, байты не превышены. Два запуска на отдельной disposable55432 —16/16 PASS. Документация CI-12/TEST_RESULTS обновлена вместе с правкой; полный GitHub запуск проверяется на последнем commit.
+
+## 20.10.2026 — product UX, Codex/AI assistance
+
+Ветка feat/product-ux-20261020, code commits6992a0d/a6989be, artifact83be191f017a3683. После каждой смысловой правки обновлялись docs/product/changes. Независимый AI security review выявил redaction/WITHDRAWN/reason-length дефекты, они исправлены. Backend243/frontend85/proxy16 и final browser11/60reflow/5axe PASSED; native phone/zoom/screenreader NOT_RUN. Backup и отдельный restore28tables/0objects verified; records не сбрасывались. Publication15preliminary/human review PENDING сохранена. Подробности/пути/команды/ограничения: product/DELIVERY_2026-10-20.md. Это не личный дневник независимой работы студента и не изготовленное педагогическое одобрение.

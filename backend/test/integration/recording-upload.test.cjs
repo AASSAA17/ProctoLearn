@@ -193,9 +193,20 @@ test('PostgreSQL resumable recording transactions with deterministic object stor
       const path = await f.file(webm);
       const results = await Promise.allSettled([f.service.putChunk(first.id, 0, path, f.studentId), f.service.putChunk(second.id, 0, path, f.studentId)]);
       assert.equal(results.filter((result) => result.status === 'fulfilled').length, 1);
-      assert.equal(results.find((result) => result.status === 'rejected').reason.getResponse().code, 'RECORDING_QUOTA');
+      const rejectedIndex = results.findIndex((result) => result.status === 'rejected');
+      const rejection = results[rejectedIndex].reason;
+      // A losing Serializable transaction can exhaust the deliberately bounded
+      // retry budget before the winning commit is visible. That specific 409 is
+      // retryable; it is not an admission of bytes beyond the attempt quota.
+      if (!code('RECORDING_QUOTA')(rejection)) {
+        assert.equal(rejection.getStatus(), 409);
+        assert.equal(rejection.getResponse().message, 'Қатарлас сұрау орындалуда. Қайта көріңіз');
+      }
+      const loser = [first, second][rejectedIndex];
+      await assert.rejects(f.service.putChunk(loser.id, 0, path, f.studentId), code('RECORDING_QUOTA'));
       const sum = await f.db.recordingUpload.aggregate({ where: { attemptId: attempt.id }, _sum: { bytes: true } });
       assert.equal(sum._sum.bytes, ATTEMPT_BYTE_LIMIT - 8);
+      assert.equal(await f.db.recordingChunk.count({ where: { uploadId: { in: [first.id, second.id] } } }), 1);
     });
 
     await t.test('review decisions freeze writes; an open appeal grants its own 24-hour recovery window', async () => {
@@ -238,11 +249,22 @@ test('PostgreSQL resumable recording transactions with deterministic object stor
       const path = await f.file();
       const results = await Promise.allSettled([f.service.putChunk(first.id, 0, path, f.studentId), f.service.putChunk(second.id, 0, path, f.studentId)]);
       assert.equal(results.filter((result) => result.status === 'fulfilled').length, 1);
-      const rejected = results.find((result) => result.status === 'rejected').reason.getResponse();
-      assert.equal(rejected.code, 'RECORDING_QUOTA');
-      assert.match(rejected.message, /1 GiB/);
+      const rejectedIndex = results.findIndex((result) => result.status === 'rejected');
+      const rejection = results[rejectedIndex].reason;
+      if (!code('RECORDING_QUOTA')(rejection)) {
+        assert.equal(rejection.getStatus(), 409);
+        assert.equal(rejection.getResponse().message, 'Қатарлас сұрау орындалуда. Қайта көріңіз');
+      } else {
+        assert.match(rejection.getResponse().message, /1 GiB/);
+      }
+      await assert.rejects(f.service.putChunk([first, second][rejectedIndex].id, 0, path, f.studentId), error => {
+        assert.equal(error.getResponse().code, 'RECORDING_QUOTA');
+        assert.match(error.getResponse().message, /1 GiB/);
+        return true;
+      });
       const sum = await f.db.recordingUpload.aggregate({ where: { attemptId: attempt.id }, _sum: { bytes: true } });
       assert.equal(sum._sum.bytes, APPEAL_BYTE_LIMIT - 8);
+      assert.equal(await f.db.recordingChunk.count({ where: { uploadId: { in: [first.id, second.id] } } }), 1);
       await assert.rejects(f.service.putChunk(first.id, 1, path, f.studentId), code('RECORDING_QUOTA'));
     });
 

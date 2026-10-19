@@ -1,5 +1,13 @@
 # Final demo acceptance — 2026-10-10
 
+## Актуальное дополнение 20.10.2026
+
+PR №12: на aa0eab1 local-stack падал из-за устаревшего сценария кабинета. На f644334 все четыре jobs PR-run39323216510 SUCCESS. Локально browser12/60reflow/5axe PASS. Последующая PDF-правка86b5198: profile/proxy17 PASS, production build и реальный renderer PASS, download синтетического PDF через UI PASS, backup/restore28tables/0objects PASS. Artifact cbb280a06573c443 ready. Точные SHA, область проверок и ссылки на последующие GitHub runs: [CI-12](product/changes/CI-12.md).
+
+На удалённой проверке86b5198 выявлено отдельное недетерминированное ожидание в recording integration: после исчерпания трёх serialization retries допускается штатный409, а тест требовал немедленный отказ квоты. Уточнены две гонки, обычная и апелляционная: после повторного запроса требуется точный RECORDING_QUOTA, сумма и один сохранённый chunk проверяются. Два локальных запуска guarded recording suite —16/16 PASS каждый. Итог нового HEAD отслеживается отдельно в GitHub; код приложения и работающий PDF artifact этой тестовой правкой не изменены.
+
+Улучшения UX выполнены в feat/product-ux-20261020. Новые результаты и ограничения: [product/DELIVERY_2026-10-20.md](product/DELIVERY_2026-10-20.md), по каждой правке — [product/UX_ACCEPTANCE.md](product/UX_ACCEPTANCE.md). Исторические результаты ниже не подменяют новый запуск и не подтверждают физический телефон/новый CI.
+
 ## Controlled pilot / curriculum: отдельная область проверки
 
 Финальный локальный artifact `338f8ecaac2e105a`, source `bca47b8734704257d28d39be9400277b10e432db`: backend238PASS/frontend75PASS/integration90PASS/migrations3PASS. Workload1/3/5 повторён на этом artifact:352HTTP,0failures,p95≈36.99/41.31/28.12ms. Все15 DRAFT импортированы и replay проверен; C01 actual editor PATCH200. Полный scope и незакрытые gates — WORK_LOG/PILOT_RUNBOOK, а не выведенный из этих чисел production readiness.

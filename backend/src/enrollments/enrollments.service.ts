@@ -60,14 +60,13 @@ export class EnrollmentsService {
 
   /** Get all enrollments for the current user */
   async getMyEnrollments(userId: string) {
-    const pilot = this.pilot();
     const lessonSelect = {
       id: true,
       assignmentAnswer: true,
       lessonProgress: { where: { userId }, select: { completionSource: true } },
     } as const;
     const enrollments = await this.prisma.enrollment.findMany({
-      where: { userId, ...(pilot.enabled ? { accessStatus: 'ACTIVE' as const } : {}) },
+      where: { userId, accessStatus: 'ACTIVE' },
       include: {
         course: {
           select: {
@@ -111,7 +110,7 @@ export class EnrollmentsService {
       where: { userId_courseId: { userId, courseId } },
     });
     if (!enrollment) throw new NotFoundException('Тіркелу табылмады');
-    if (this.pilot().enabled && enrollment.accessStatus === 'WITHDRAWN') throw new ForbiddenException('Курсқа белсенді тіркелу жоқ');
+    if (enrollment.accessStatus === 'WITHDRAWN') throw new ForbiddenException('Курсқа белсенді тіркелу жоқ');
     if (enrollment.completedAt) return { message: 'Курс бұрын аяқталған', enrollment };
 
     const certificate = await this.prisma.certificate.findFirst({ where: { userId, courseId } });
@@ -199,7 +198,7 @@ export class EnrollmentsService {
     const enrollment = await this.prisma.enrollment.findUnique({
       where: { userId_courseId: { userId, courseId } },
     });
-    const active = !!enrollment && (!this.pilot().enabled || enrollment.accessStatus !== 'WITHDRAWN');
+    const active = !!enrollment && enrollment.accessStatus !== 'WITHDRAWN';
     return {
       enrolled: active,
       completed: enrollment?.completedAt ? true : false,

@@ -92,6 +92,30 @@ export class CoursesService {
     };
   }
 
+  /**
+   * Read-only student presentation for an author or administrator. This uses
+   * the learner-safe serializer even for staff so author answer material never
+   * crosses the preview boundary.
+   */
+  async preview(id: string, viewer: LessonViewer) {
+    const courseAccess = await this.prisma.course.findUnique({
+      where: { id }, select: { teacherId: true },
+    });
+    if (!courseAccess) throw new NotFoundException('Курс табылмады');
+    if (!canManageCourse(courseAccess, viewer)) throw new ForbiddenException('Рұқсат жоқ');
+
+    const course = await this.loadCourse(id);
+    return {
+      ...course,
+      preview: { readOnly: true, academicWrites: false },
+      lessons: course.lessons.map((lesson) => sanitizeLesson(lesson, false)),
+      modules: course.modules.map((module) => ({
+        ...module,
+        lessons: module.lessons.map((lesson) => sanitizeLesson(lesson, false)),
+      })),
+    };
+  }
+
   private async loadCourse(id: string) {
     const course = await this.prisma.course.findUnique({
       where: { id },

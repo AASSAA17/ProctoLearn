@@ -10,6 +10,9 @@
 
 ## Working rules
 
+- Product context: `docs/product/PRODUCT.md`; visual rules: `docs/product/DESIGN_SYSTEM.md`; current acceptance/evidence: `docs/product/UX_ACCEPTANCE.md`.
+- After each meaningful edit, update its documentation entry with the reason, affected paths, actual checks and remaining limits. Never mark an unexecuted check as passed.
+
 - Keep changes focused. Do not reformat unrelated files or update dependencies unless the task requires it.
 - Treat recordings, evidence, user data, passwords, JWT keys, SMTP settings, storage credentials, and `.env*` files as private. Do not print, commit, or replace them.
 - Preserve the security boundaries for role based access, exam attempts, recording uploads, and reviewer decisions. Changes to these areas need matching backend authorization checks and tests.

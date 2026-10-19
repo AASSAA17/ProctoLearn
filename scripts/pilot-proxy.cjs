@@ -12,7 +12,7 @@ const ID = '[A-Za-z0-9_-]{1,100}';
 const re = (source) => new RegExp(`^${source}$`, 'i');
 
 const apiRules = [
-  ['GET', re('auth/(?:csrf|me)')],
+  ['GET', re('auth/(?:csrf|me|registration-policy)')],
   ['POST', re('auth/(?:login|register|refresh|logout|change-password)')],
   ['GET', re('courses(?:\\?.*)?')],
   ['GET', re(`courses/${ID}(?:/overview|/material)?(?:\\?.*)?`)],
@@ -52,6 +52,7 @@ const localStaffApiRules = [
   ['PATCH', re('users/' + ID + '/role')],
   ['POST', re('courses')],
   ['GET', re('courses/manage(?:\\?.*)?')],
+  ['GET', re('courses/' + ID + '/preview')],
   ['PATCH', re('courses/' + ID)],
   ['DELETE', re('courses/' + ID)],
   ['POST', re('courses/' + ID + '/(?:publish|archive|modules|exams)')],

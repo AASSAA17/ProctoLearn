@@ -27,6 +27,11 @@ export class AuthService {
     private pilot: PilotService,
   ) {}
 
+  registrationPolicy() {
+    const invitationRequired = this.pilot.enabled;
+    return { invitationRequired, registrationOpen: !invitationRequired };
+  }
+
   async register(dto: RegisterDto) {
     const email = dto.email.toLowerCase().trim();
     if (this.pilot?.enabled && !dto.invitationToken) {
