@@ -71,7 +71,7 @@ ngrok account/self-setup; фактический phone preview; просмотр
 
 На aa0eab1 подтверждён FAILURE local-stack при SUCCESS frontend/backend/secrets: устаревшее ожидание глобальной ошибки кабинета. После правки stage9/product-ux добавлен общий сценарий независимого восстановления трёх ресурсов. Причина, пути и выполняемые проверки: [CI-12](product/changes/CI-12.md). Работающий pilot и его данные не изменены. Новые результаты до выполнения не объявляются PASS.
 
-Исправление f644334 проверено GitHub: frontend/backend/secrets/local-stack SUCCESS. После уточнения пользователя о кнопке PDF воспроизведено отсутствие Inter-шрифтов именно в изолированной pilot-сборке. Исправлен launcher, добавлен тест assets и настоящая генерация синтетического PDF перед принятием новой сборки. После каждой правки обновлены CI-12 и PILOT_RUNBOOK. Profile/proxy17 PASS после остановки, active exams0, backup before-pdf-fix-20261020 verified28tables/0objects; последующий запуск ещё проверяется.
+Исправление f644334 проверено GitHub: frontend/backend/secrets/local-stack SUCCESS. После уточнения пользователя о кнопке PDF воспроизведено отсутствие Inter-шрифтов именно в изолированной pilot-сборке. Исправлен launcher, добавлен тест assets и настоящая генерация синтетического PDF перед принятием новой сборки. После каждой правки обновлены CI-12 и PILOT_RUNBOOK. Profile/proxy17 PASS после остановки, active exams0, backup/restore before-pdf-fix-20261020 verified28tables/0objects. Сборка86b5198, artifact cbb280a06573c443 запущен; скачивание вымышленного PDF24664bytes настоящей кнопкой в Chromium PASS. Чужие данные/выдача сертификатов не использовались; границы и ссылки на новый CI зафиксированы в CI-12.
 
 ## 20.10.2026 — product UX, Codex/AI assistance
 
