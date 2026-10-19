@@ -35,3 +35,7 @@ GitHub API 20.10: PR11 открыт, base fix/qr-phone-verification-20261010; Pl
 Backend243/243, frontend85/85, proxy/profile16/16 PASSED; full frontend lint0errors/18warnings. Исходная неудачная сборка 19.10 из-за буквы «ч» описана в истории чата; в этой работе дефекты concurrent typecheck зафиксированы в per-change docs и исправлены. После final artifact будет повторена browser матрица. Secret scan553 index files PASSED (локальный pinned Gitleaks8.30.1; первый вызов без PATH был BLOCKED, затем указан существующий binary, ничего не скачивалось).
 
 AI assistance: реализация, тесты и этот журнал подготовлены Codex с профильными subagents. Human content review не выполнялся и не записан как APPROVED. Не создавались реальные участники/экзамены/сертификаты. Миграций и новых зависимостей нет. Перечень изменённых путей доступен через git diff исходного9ab1a94 к ветке feat/product-ux-20261020; два пользовательских audit файла исключены.
+
+## Финальный artifact
+
+83be191f017a3683, application source a6989be. Browser11 scenarios/60reflow/5axe PASSED; typecheck и optimized build PASSED; backend243/frontend85/proxy16 PASSED. Регистрация/каталог/preview доступны через прежний localhost3200. Новые manifests/docs не означают content approval. Полный отчёт: [DELIVERY_2026-10-20](DELIVERY_2026-10-20.md).

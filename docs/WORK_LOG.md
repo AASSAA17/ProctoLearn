@@ -66,3 +66,7 @@ ngrok account/self-setup; фактический phone preview; просмотр
 5. H5: послеH1–H4 согласие добровольцев/раскрытие записи, отдельное разрешение первой экспозиции participant data и малый pilot. LIVE_PARTICIPANT_TESTED=false.
 
 Автоматического продолжения после окончания сессии не обещается. CONTENT_READY=true означает готовые reviewable тексты и задания, не закрытие G4/G5 и не публикацию.
+
+## 20.10.2026 — product UX, Codex/AI assistance
+
+Ветка feat/product-ux-20261020, code commits6992a0d/a6989be, artifact83be191f017a3683. После каждой смысловой правки обновлялись docs/product/changes. Независимый AI security review выявил redaction/WITHDRAWN/reason-length дефекты, они исправлены. Backend243/frontend85/proxy16 и final browser11/60reflow/5axe PASSED; native phone/zoom/screenreader NOT_RUN. Backup и отдельный restore28tables/0objects verified; records не сбрасывались. Publication15preliminary/human review PENDING сохранена. Подробности/пути/команды/ограничения: product/DELIVERY_2026-10-20.md. Это не личный дневник независимой работы студента и не изготовленное педагогическое одобрение.

@@ -1,5 +1,9 @@
 # Final demo release — acceptance ledger
 
+## Обновление UX 20.10.2026
+
+Текущий локальный профиль: обычная регистрация,15 preliminary PUBLISHED по явному решению владельца19.10, human review PENDING. Новый UI/API результат, проверки и точная версия описаны в [product/DELIVERY_2026-10-20.md](product/DELIVERY_2026-10-20.md). Ниже сохранён исторический acceptance ledger10.10; его DRAFT/старые SHA не обозначают текущее состояние курсов. Физический телефон/HTTPS/локальный AI gates не закрыты этой работой.
+
 ## Отдельный controlled pilot — 10.10.2026
 
 Это дополнение не повышает статус демонстрации до production. `.local/release-demo` сохраняется; pilot использует отдельные DB/bucket/ports и production build. Операторские действия, действующие ограничения провайдера и открытые gates приведены в `PILOT_RUNBOOK.md` и `WORK_LOG.md`.

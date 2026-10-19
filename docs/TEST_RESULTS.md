@@ -1,5 +1,9 @@
 # Final demo acceptance — 2026-10-10
 
+## Актуальное дополнение 20.10.2026
+
+Улучшения UX выполнены в feat/product-ux-20261020. Новые результаты и ограничения: [product/DELIVERY_2026-10-20.md](product/DELIVERY_2026-10-20.md), по каждой правке — [product/UX_ACCEPTANCE.md](product/UX_ACCEPTANCE.md). Исторические результаты ниже не подменяют новый запуск и не подтверждают физический телефон/новый CI.
+
 ## Controlled pilot / curriculum: отдельная область проверки
 
 Финальный локальный artifact `338f8ecaac2e105a`, source `bca47b8734704257d28d39be9400277b10e432db`: backend238PASS/frontend75PASS/integration90PASS/migrations3PASS. Workload1/3/5 повторён на этом artifact:352HTTP,0failures,p95≈36.99/41.31/28.12ms. Все15 DRAFT импортированы и replay проверен; C01 actual editor PATCH200. Полный scope и незакрытые gates — WORK_LOG/PILOT_RUNBOOK, а не выведенный из этих чисел production readiness.

@@ -76,10 +76,10 @@ async function audit(page, name) {
 
     const unavailablePolicy = { policyFailure: true };
     s = await setup(browser, unavailablePolicy); await s.page.goto(origin + '/auth/register');
-    await s.page.getByRole('alert').waitFor();
+    await s.page.getByRole('alert').filter({ hasText: 'Тіркелу шарттарын жүктеу мүмкін болмады.' }).waitFor();
     assert.equal(await s.page.locator('#register-name').isDisabled(), true);
     unavailablePolicy.policyFailure = false; await s.page.getByRole('button', { name: 'Қайталау', exact: true }).click();
-    await s.page.waitForFunction(() => !document.querySelector('#register-name')?.disabled);
+    await s.page.waitForFunction(() => document.querySelector('#register-name')?.matches(':enabled'));
     report.checks.push('Unavailable policy disables registration; retry recovers server-confirmed access'); await s.context.close();
 
     s = await setup(browser, { certFailure: true });
