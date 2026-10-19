@@ -28,7 +28,6 @@ const LEVEL_LABELS: Record<string, { label: string; color: string }> = {
 export default function TeacherCoursesPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const teacherId = user?.id;
   const isAdmin = user?.role === 'ADMIN';
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,9 +44,12 @@ export default function TeacherCoursesPage() {
     } finally {
       setLoading(false);
     }
-  }, [teacherId, isAdmin]);
+  }, []);
 
-  useEffect(() => { loadCourses(); }, [loadCourses]);
+  useEffect(() => {
+    const request = window.setTimeout(() => { void loadCourses(); }, 0);
+    return () => window.clearTimeout(request);
+  }, [loadCourses]);
 
   const handleDelete = async (courseId: string, title: string) => {
     if (!confirm(`"${title}" курсын мұрағаттау керек пе? Тіркелген студенттердің қолжетімділігі сақталады.`)) return;
@@ -121,6 +123,7 @@ export default function TeacherCoursesPage() {
             const stepCount = (course.modules ?? []).reduce(
               (sum, m) => sum + (m.lessons ?? []).reduce((ls, l) => ls + (l.steps?.length ?? 0), 0), 0,
             );
+            const preliminary = course.description?.trimStart().startsWith('Алдын ала оқу материалы.') ?? false;
             return (
               <div
                 key={course.id}
@@ -134,7 +137,8 @@ export default function TeacherCoursesPage() {
                       </span>
                     </div>
                     <h3 className="font-semibold text-gray-900 text-xl">{course.title}</h3>
-                    <p className="text-sm text-gray-600">{{ DRAFT: 'Жоба — тек авторға көрінеді', PUBLISHED: 'Жарияланған', ARCHIVED: 'Мұрағатта' }[course.status]}</p>
+                    <p className="text-sm text-gray-600">{course.status === 'DRAFT' ? 'Жоба — тек авторға көрінеді' : course.status === 'ARCHIVED' ? 'Мұрағатта' : preliminary ? 'Алдын ала жарияланған' : 'Жарияланған'}</p>
+                    <p className={`mt-1 text-xs font-medium ${preliminary ? 'text-amber-800' : 'text-gray-600'}`}>{preliminary ? 'Адам тексеруі күтілуде' : 'Тексеру мәртебесі API-де сақталмайды'}</p>
                     {course.description && (
                       <p className="text-sm text-gray-500 mt-1 line-clamp-2">{course.description}</p>
                     )}
@@ -145,7 +149,13 @@ export default function TeacherCoursesPage() {
                       <span>🎯 {course._count?.exams ?? 0} емтихан</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                    <Link
+                      href={`/dashboard/teacher/courses/${course.id}/preview`}
+                      className="px-4 py-2 bg-primary-50 text-primary-800 rounded-lg text-sm hover:bg-primary-100 transition"
+                    >
+                      👁 Оқушы көрінісі
+                    </Link>
                     <Link
                       href={`/dashboard/teacher/courses/${course.id}/edit`}
                       className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition"

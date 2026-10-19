@@ -48,7 +48,7 @@ before(async () => {
 after(async () => { for (const socket of upgradeSockets) socket.destroy(); await close(proxy); await close(api); await close(web); });
 
 test('route policy exposes learner flow and denies staff, diagnostics and importer', () => {
-  for (const [method, path] of [['GET', '/'], ['GET', '/dashboard/courses/x/learn'], ['POST', '/api/auth/register'], ['GET', '/api/enrollments/my'], ['PUT', '/api/evidence/uploads/u/chunks/0']]) {
+  for (const [method, path] of [['GET', '/'], ['GET', '/dashboard/courses/x/learn'], ['GET', '/api/auth/registration-policy'], ['POST', '/api/auth/register'], ['GET', '/api/enrollments/my'], ['PUT', '/api/evidence/uploads/u/chunks/0']]) {
     assert.ok(routeRequest(method, path).upstream, `${method} ${path}`);
   }
   for (const [method, path] of [['GET', '/dashboard/admin'], ['GET', '/dashboard/teacher/courses'], ['GET', '/dashboard/proctor'], ['GET', '/auth/forgot-password'], ['GET', '/auth/reset-password'], ['POST', '/api/auth/forgot-password'], ['POST', '/api/auth/reset-password'], ['POST', '/api/content-import/draft'], ['GET', '/api/metrics'], ['GET', '/api/admin/users'], ['GET', '/api/pilot/overview'], ['GET', '/api/courses/manage']]) {
@@ -59,9 +59,9 @@ test('route policy exposes learner flow and denies staff, diagnostics and import
 test('loopback mode exposes exact staff workflows while public routing keeps them closed', async () => {
   const localStaff = { localStaff: true };
   for (const [method, path] of [
-    ['GET', '/dashboard/admin/pilot'], ['GET', '/dashboard/teacher/courses/c/edit'], ['GET', '/dashboard/proctor/evidence/a'],
+    ['GET', '/dashboard/admin/pilot'], ['GET', '/dashboard/teacher/courses/c/edit'], ['GET', '/dashboard/teacher/courses/c/preview'], ['GET', '/dashboard/proctor/evidence/a'],
     ['GET', '/api/pilot/overview'], ['POST', '/api/pilot/invitations'], ['POST', '/api/content-import/draft'],
-    ['GET', '/api/courses/manage?limit=100'], ['PATCH', '/api/courses/c'], ['POST', '/api/courses/c/exams'],
+    ['GET', '/api/courses/manage?limit=100'], ['GET', '/api/courses/c/preview'], ['PATCH', '/api/courses/c'], ['POST', '/api/courses/c/exams'],
     ['POST', '/api/lessons/l/steps'], ['GET', '/api/proctor/sessions/a'], ['POST', '/api/proctor/sessions/a/review'],
   ]) assert.ok(routeRequest(method, path, localStaff).upstream, `${method} ${path}`);
 
@@ -80,6 +80,8 @@ test('loopback mode exposes exact staff workflows while public routing keeps the
   const headers = { 'x-proctolearn-gateway': secret, 'x-proctolearn-client-ip': '198.51.100.7' };
   try {
     assert.equal((await fetch(`http://127.0.0.1:${port}/dashboard/admin/pilot`, { headers })).status, 404);
+    assert.equal((await fetch(`http://127.0.0.1:${port}/dashboard/teacher/courses/c/preview`, { headers })).status, 404);
+    assert.equal((await fetch(`http://127.0.0.1:${port}/api/courses/c/preview`, { headers })).status, 404);
     assert.equal((await fetch(`http://127.0.0.1:${port}/api/pilot/overview`, { headers })).status, 404);
     assert.equal((await fetch(`http://127.0.0.1:${port}/api/content-import/draft`, { method: 'POST', headers })).status, 404);
   } finally { await close(publicProxy); }

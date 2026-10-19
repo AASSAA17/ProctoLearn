@@ -22,7 +22,7 @@ test('enrollment progress counts unique direct and module lessons without exposi
   const assigned = { id: 'assigned', assignmentAnswer: 'private key', lessonProgress: [{ completionSource: 'MANUAL' }] };
   const done = { id: 'done', assignmentAnswer: 'private key', lessonProgress: [{ completionSource: 'ASSIGNMENT' }] };
   const service = new EnrollmentsService({ enrollment: { findMany: async query => {
-    assert.deepEqual(query.where, { userId: 'student' });
+    assert.deepEqual(query.where, { userId: 'student', accessStatus: 'ACTIVE' });
     assert.deepEqual(query.include.course.select.lessons.select.lessonProgress.where, { userId: 'student' });
     return [{ id: 'enrolled', completedAt: null, course: {
       id: 'course', title: 'Course', _count: { lessons: 1, exams: 1 },
@@ -238,6 +238,12 @@ test('course HTTP endpoints enforce authentication, ownership and deliberate pub
   assert.equal((await request('/courses/manage')).status, 401);
   assert.equal((await request('/courses/manage', actors[2])).status, 403);
   assert.deepEqual((await (await request('/courses/manage', actors[1])).json()).data, []);
+  assert.equal((await request('/courses/course/preview')).status, 401);
+  assert.equal((await request('/courses/course/preview', actors[2])).status, 403);
+  assert.equal((await request('/courses/course/preview', actors[1])).status, 403);
+  const preview = await request('/courses/course/preview', actors[0]);
+  assert.equal(preview.status, 200);
+  assert.equal(JSON.stringify(await preview.json()).includes('correctAnswer'), false);
   assert.equal((await request('/courses/course')).status, 404);
   assert.equal((await request('/courses/course/publish', actors[1], 'POST')).status, 403);
   assert.equal((await request('/courses/course', actors[1], 'PATCH', { title: 'forbidden' })).status, 403);
@@ -277,6 +283,57 @@ test('course material requires enrollment or an owning teacher/admin and returns
     assert.equal(full.modules[0].lessons[0].steps[0].content.correctAnswer, 'A');
   }
   assert.ok(Reflect.getMetadata(GUARDS_METADATA, CoursesController.prototype.getMaterial).includes(JwtAuthGuard));
+});
+
+test('student-view preview is owner/admin only, strips every answer key and performs no academic writes', async () => {
+  const { course } = contentFixture();
+  course.lessons[0].steps = [
+    course.modules[0].lessons[0].steps[0],
+    { id: 'text-step', type: 'TEXT', order: 2, content: { html: '<p>Visible text</p>', correctAnswer: 'answer after type change', nested: { answer: 'nested text answer' } } },
+    { id: 'video-step', type: 'VIDEO', order: 3, content: { videoUrl: 'https://example.test/video.mp4', description: 'Visible video', explanation: 'private video explanation', meta: { isCorrect: true } } },
+  ];
+  course.modules[0].lessons[0].steps = course.lessons[0].steps;
+  course.lessons[0].content = {
+    blocks: [{ text: 'Visible lesson material', answer: 'nested answer', explanation: 'nested explanation' }],
+  };
+  let materialLoads = 0;
+  let academicWrites = 0;
+  const service = new CoursesService({
+    course: { findUnique: async ({ select }) => {
+      if (select) return { teacherId: 'teacher' };
+      materialLoads++;
+      return course;
+    } },
+    enrollment: { create: async () => { academicWrites++; } },
+    lessonProgress: { upsert: async () => { academicWrites++; } },
+    submission: { create: async () => { academicWrites++; } },
+    attempt: { create: async () => { academicWrites++; } },
+    certificate: { create: async () => { academicWrites++; } },
+  });
+
+  for (const viewer of [
+    { id: 'student', role: 'STUDENT' },
+    { id: 'foreign-teacher', role: 'TEACHER' },
+  ]) await assert.rejects(service.preview('course', viewer), ForbiddenException);
+  assert.equal(materialLoads, 0, 'unauthorized readers must be rejected before material is loaded');
+
+  for (const viewer of [
+    { id: 'teacher', role: 'TEACHER' },
+    { id: 'admin', role: 'ADMIN' },
+  ]) {
+    const preview = await service.preview('course', viewer);
+    assert.deepEqual(preview.preview, { readOnly: true, academicWrites: false });
+    const json = JSON.stringify(preview);
+    for (const privateValue of [
+      'correctAnswer', 'Private solution', 'Private answer', 'nested answer', 'nested explanation',
+      'answer after type change', 'nested text answer', 'private video explanation', 'isCorrect',
+    ]) assert.equal(json.includes(privateValue), false, privateValue);
+    assert.match(json, /Visible lesson material/);
+    assert.match(json, /Visible text/);
+    assert.match(json, /Visible video/);
+  }
+  assert.equal(academicWrites, 0);
+  assert.ok(Reflect.getMetadata(GUARDS_METADATA, CoursesController.prototype.preview).includes(JwtAuthGuard));
 });
 
 function reorderFixture(modules) {

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRightIcon, Bars3Icon, XMarkIcon, CheckIcon, CodeBracketIcon } from '@heroicons/react/24/outline';
 import { API_URL } from '@/lib/api';
+import { useRegistrationPolicy } from '@/lib/use-registration-policy';
 import PremiumHeroScene from '@/components/landing/PremiumHeroScene';
 import { TechnologyCategories, PremiumFeatures, LearningProcess, PremiumCTA } from '@/components/landing/PremiumSections';
 
@@ -28,7 +29,7 @@ const LEVEL_STYLES: Record<string, string> = {
   ADVANCED: 'text-rose-200 bg-rose-400/10 border-rose-300/20',
 };
 
-function MarketingNavigation() {
+function MarketingNavigation({ registrationLabel }: { registrationLabel: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const toggle = useRef<HTMLButtonElement>(null);
   const links = [['#courses', 'Курстар'], ['#features', 'Мүмкіндіктер'], ['#how', 'Оқу жолы']];
@@ -51,7 +52,7 @@ function MarketingNavigation() {
         </div>
         <div className="hidden items-center gap-3 md:flex">
           <Link href="/auth/login" className="px-3 py-3 text-sm text-slate-300 hover:text-white">Кіру</Link>
-          <Link href="/auth/register" className="premium-button bg-white text-slate-950 hover:bg-cyan-100">Бастау</Link>
+          <Link href="/auth/register" className="premium-button bg-white text-slate-950 hover:bg-cyan-100">{registrationLabel}</Link>
         </div>
         <button ref={toggle} type="button" aria-expanded={menuOpen} aria-controls="marketing-menu" aria-label={menuOpen ? 'Мәзірді жабу' : 'Мәзірді ашу'} onClick={() => setMenuOpen((open) => !open)} className="rounded-xl border border-white/20 p-3 text-slate-200 md:hidden">
           {menuOpen ? <XMarkIcon aria-hidden="true" className="h-5 w-5" /> : <Bars3Icon aria-hidden="true" className="h-5 w-5" />}
@@ -61,7 +62,7 @@ function MarketingNavigation() {
         <nav id="marketing-menu" aria-label="Мобильді навигация" className="flex flex-col gap-1 border-t border-white/10 px-4 py-4 text-sm text-slate-200 md:hidden">
           {links.map(([href, label]) => <a key={href} href={href} onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 hover:bg-white/5">{label}</a>)}
           <Link href="/auth/login" className="px-3 py-3">Кіру</Link>
-          <Link href="/auth/register" className="premium-button mt-2 bg-white text-slate-950">Тіркелу</Link>
+          <Link href="/auth/register" className="premium-button mt-2 bg-white text-slate-950">{registrationLabel}</Link>
         </nav>
       )}
     </header>
@@ -69,6 +70,8 @@ function MarketingNavigation() {
 }
 
 export default function HomePage() {
+  const { policy } = useRegistrationPolicy();
+  const registrationLabel = policy ? policy.invitationRequired ? 'Шақырумен қосылу' : 'Тіркелу' : 'Қосылу шарттары';
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [coursesError, setCoursesError] = useState(false);
@@ -88,7 +91,7 @@ export default function HomePage() {
   return (
     <div className="marketing-shell min-h-screen">
       <a href="#main-content" className="skip-link">Негізгі мазмұнға өту</a>
-      <MarketingNavigation />
+      <MarketingNavigation registrationLabel={registrationLabel} />
       <main id="main-content" tabIndex={-1}>
         <section className="marketing-grid overflow-hidden border-b border-white/10">
           <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:py-24">
@@ -99,7 +102,7 @@ export default function HomePage() {
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-8 text-slate-300">Технологиялық дағдыларды жүйелі меңгер. Практикалық тапсырмалар орындап, емтихан арқылы өз прогресіңді көр.</p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link href="/auth/register" className="premium-button gap-3 bg-violet-600 text-white shadow-lg shadow-violet-500/20 hover:bg-violet-700">Оқуды бастау <ArrowRightIcon aria-hidden="true" className="h-4 w-4" /></Link>
+                <Link href="/auth/register" className="premium-button gap-3 bg-violet-600 text-white shadow-lg shadow-violet-500/20 hover:bg-violet-700">{registrationLabel} <ArrowRightIcon aria-hidden="true" className="h-4 w-4" /></Link>
                 <a href="#courses" className="premium-button border border-white/20 bg-white/5 text-white hover:bg-white/10">Курстарды көру</a>
               </div>
               <ul className="mt-8 flex flex-wrap gap-x-5 gap-y-3 text-xs text-slate-300">
@@ -162,7 +165,8 @@ export default function HomePage() {
           </div>
         </section>
         <LearningProcess />
-        <PremiumCTA />
+        {policy?.invitationRequired && <p role="status" className="mx-auto max-w-7xl px-4 py-5 text-slate-200">ProctoLearn қазір жабық пилот режимінде. Қатысу үшін шақыру коды қажет. Курстарды тіркелмей қарауға болады.</p>}
+        <PremiumCTA registrationLabel={registrationLabel} />
       </main>
       <footer className="border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-8 px-4 py-12 sm:flex-row sm:px-6">

@@ -19,13 +19,16 @@ function withoutAnswers(value: any): any {
 }
 
 export function sanitizeStep(step: any, revealAnswers = false): any {
-  if (revealAnswers || step.type !== 'TASK') return step;
+  if (revealAnswers) return step;
   return { ...step, content: withoutAnswers(step.content) };
 }
 
 export function sanitizeLesson(lesson: any, revealAnswers = false): any {
   const { course, module, ...result } = lesson;
-  if (!revealAnswers) delete result.assignmentAnswer;
+  if (!revealAnswers) {
+    delete result.assignmentAnswer;
+    if (result.content && typeof result.content === 'object') result.content = withoutAnswers(result.content);
+  }
   result.hasAssignment = !!lesson.assignmentAnswer;
   if (result.steps) result.steps = result.steps.map((step: any) => sanitizeStep(step, revealAnswers));
   return result;

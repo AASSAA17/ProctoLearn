@@ -8,6 +8,7 @@ import Link from 'next/link';
 import ProctorAssignments from '@/components/ProctorAssignments';
 import OutlineSettings from '@/components/OutlineSettings';
 import { ExamSettings, QuestionEditor, type EditableQuestion } from '@/components/ExamEditor';
+import CourseReviewChecklist from '@/components/teacher/CourseReviewChecklist';
 
 function mutationError(error: unknown, fallback: string) {
   const message = (error as { response?: { data?: { message?: unknown } } })?.response?.data?.message;
@@ -774,7 +775,12 @@ export default function EditCoursePage() {
             <span>📝 {exams.length} емтихан</span>
           </div>
         </div>
+        <Link href={`/dashboard/teacher/courses/${course.id}/preview`} className="btn-secondary">
+          Оқушы ретінде алдын ала қарау
+        </Link>
       </div>
+
+      <CourseReviewChecklist course={course} exams={exams} />
 
       {/* Modules */}
       <section className="rounded-xl border bg-white p-5 space-y-4" aria-label="Курс мәліметтері мен жариялау">

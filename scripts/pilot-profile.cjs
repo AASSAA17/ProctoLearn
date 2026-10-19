@@ -48,6 +48,7 @@ function ownedDirectory() {
 }
 
 function validateEnvironment(env) {
+  if (env.PILOT_MODE !== undefined && !['true', 'false'].includes(env.PILOT_MODE)) throw new Error('PILOT_MODE must be true or false.');
   const exact = { POSTGRES_USER: 'proctolearn_pilot', POSTGRES_DB: 'proctolearn_pilot', MINIO_ROOT_USER: 'proctolearn-pilot', MINIO_BUCKET: 'proctolearn-pilot' };
   for (const [key, value] of Object.entries(exact)) if (env[key] !== value) throw new Error(`Private pilot ${key} identity mismatch.`);
   for (const key of ['POSTGRES_PASSWORD', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'MINIO_ROOT_PASSWORD', 'PILOT_GATEWAY_SECRET']) if ((env[key] || '').length < 43) throw new Error(`Private pilot ${key} is missing or too short.`);
@@ -92,12 +93,12 @@ function git(args) {
   return result.stdout;
 }
 
-function sourceRevision() {
+function sourceRevision(env = {}) {
   const head = git(['rev-parse', 'HEAD']).trim();
   const status = git(['status', '--porcelain=v1', '--untracked-files=all']);
   const diff = git(['diff', '--binary', 'HEAD', '--', 'backend', 'frontend', 'scripts', 'package.json']);
   const untracked = status.split(/\r?\n/).filter(line => line.startsWith('?? ')).map(line => line.slice(3)).filter(file => /^(?:backend|frontend|scripts)\//.test(file)).sort();
-  const hash = createHash('sha256').update(head).update('\0').update(diff);
+  const hash = createHash('sha256').update(head).update('\0').update(diff).update('\0pilotMode=').update(env.PILOT_MODE || 'true');
   for (const file of untracked) hash.update('\0').update(file).update('\0').update(fs.readFileSync(path.join(ROOT, file)));
   return { head, dirty: Boolean(diff || untracked.length), fingerprint: hash.digest('hex') };
 }
@@ -133,7 +134,7 @@ function promotionBackupEligible(backup, release, lastRun) {
 
 async function validateUpdate(env = prepare()) {
   if (running()?.pid && alive(running().pid)) throw new Error('Stop the pilot before validating a new build.');
-  const revision = sourceRevision();
+  const revision = sourceRevision(env);
   const id = revision.fingerprint.slice(0, 16);
   const buildRoot = path.join(DIRECTORY, 'builds', id);
   const frontendDist = path.join(ROOT, 'frontend', '.next-pilot', id);
@@ -173,13 +174,13 @@ async function validateUpdate(env = prepare()) {
   const generatedConfigFiles = ['next-env.d.ts', 'tsconfig.json'].map(file => ({ file: path.join(ROOT, 'frontend', file), bytes: fs.readFileSync(path.join(ROOT, 'frontend', file)) }));
   try {
     await run(process.execPath, [cli, 'run', 'build'], { cwd: path.join(ROOT, 'frontend'), env: { ...buildEnv, NEXT_DIST_DIR: relativeFrontendDist,
-      NEXT_PUBLIC_API_URL: '/api', NEXT_PUBLIC_WS_URL: '', NEXT_PUBLIC_PILOT_MODE: 'true', NEXT_PUBLIC_RELEASE_LABEL: `pilot-${id}` } });
+      NEXT_PUBLIC_API_URL: '/api', NEXT_PUBLIC_WS_URL: '', NEXT_PUBLIC_PILOT_MODE: env.PILOT_MODE || 'true', NEXT_PUBLIC_RELEASE_LABEL: `pilot-${id}` } });
   } finally {
     // Next rewrites these tracked helper files for a custom distDir. Restore the
     // exact pre-build bytes so validation cannot alter the working source tree.
     for (const entry of generatedConfigFiles) fs.writeFileSync(entry.file, entry.bytes);
   }
-  const record = { kind: 'proctolearn-pilot-build-v1', id, status: 'validated', head: revision.head, dirty: revision.dirty,
+  const record = { kind: 'proctolearn-pilot-build-v1', id, status: 'validated', pilotMode: env.PILOT_MODE || 'true', head: revision.head, dirty: revision.dirty,
     fingerprint: revision.fingerprint, createdAt: new Date().toISOString(), backendEntry, frontendDist: relativeFrontendDist };
   privateWrite(manifest, JSON.stringify(record, null, 2) + '\n');
   fs.writeFileSync(candidateFile(), JSON.stringify(record, null, 2) + '\n', { mode: 0o600 });
@@ -225,11 +226,12 @@ function runtimeEnvironment(env, origin) {
     CERTIFICATE_PUBLIC_ORIGIN: origin, TRUSTED_PROXIES: '127.0.0.1/32,::1/128', AI_PROVIDER: 'off',
     INTERNAL_API_ORIGIN: `http://127.0.0.1:${PORTS.api}`,
     SMTP_HOST: '', SMTP_PORT: '', SMTP_USER: '', SMTP_PASS: '', SMTP_FROM: '',
-    MINIO_PUBLIC_URL: `http://127.0.0.1:${PORTS.s3}`, PILOT_MODE: 'true', PILOT_MAX_PARTICIPANTS: '10', PILOT_DEFAULT_COURSE_SEATS: '10', PILOT_PUBLIC_SIGNUP: 'false' };
+    MINIO_PUBLIC_URL: `http://127.0.0.1:${PORTS.s3}`, PILOT_MODE: env.PILOT_MODE || 'true', PILOT_MAX_PARTICIPANTS: '10', PILOT_DEFAULT_COURSE_SEATS: '10', PILOT_PUBLIC_SIGNUP: 'false' };
 }
 
 async function start(env = prepare()) {
   const active = readRecord(activeFile(), 'Active build');
+  if ((active.pilotMode || 'true') !== (env.PILOT_MODE || 'true')) throw new Error('Registration mode changed. Run validate-update and promote before starting the matching frontend and API.');
   const current = running();
   if (current && alive(current.pid)) throw new Error('Pilot supervisor is already running. Use status or stop.');
   const origin = publicOrigin();
@@ -246,7 +248,7 @@ async function start(env = prepare()) {
     await native(runtimeEnvironment(env, origin), { localDir: DIRECTORY, controlDir: DIRECTORY, controlToken: `${process.pid}@${startedAt}`,
       pgPort: PORTS.postgres, apiPort: PORTS.api, webPort: PORTS.web, storagePorts: { s3: PORTS.s3, s3grpc: PORTS.s3grpc, master: PORTS.master, volume: PORTS.volume, filer: PORTS.filer },
       extraPorts: [PORTS.proxy], noStorageAdmin: true, skipBuild: true, backendEntry: active.backendEntry,
-      frontendRuntimeEnv: { NEXT_DIST_DIR: active.frontendDist, NEXT_PUBLIC_API_URL: '/api', NEXT_PUBLIC_WS_URL: '', NEXT_PUBLIC_PILOT_MODE: 'true', NEXT_PUBLIC_RELEASE_LABEL: `pilot-${active.id}` },
+      frontendRuntimeEnv: { NEXT_DIST_DIR: active.frontendDist, NEXT_PUBLIC_API_URL: '/api', NEXT_PUBLIC_WS_URL: '', NEXT_PUBLIC_PILOT_MODE: env.PILOT_MODE || 'true', NEXT_PUBLIC_RELEASE_LABEL: `pilot-${active.id}` },
       storageAllowedOrigin: origin, seedScript: path.join(__dirname, 'pilot-seed.cjs'), seedEnv: { PILOT_PROFILE_DIR: DIRECTORY },
       onReady: async () => {
         proxy = createPilotProxy({ publicOrigin: origin, gatewaySecret: env.PILOT_GATEWAY_SECRET });

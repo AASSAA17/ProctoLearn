@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/auth.store';
 import toast from 'react-hot-toast';
 import { analyzePassword } from '@/lib/password-policy';
 import PremiumAuthFrame from '@/components/PremiumAuthFrame';
+import { useRegistrationPolicy } from '@/lib/use-registration-policy';
 
 function EyeIcon({ open }: { open: boolean }) {
   return (
@@ -32,6 +33,7 @@ const STRENGTH_COLORS = ['', 'bg-red-500', 'bg-yellow-400', 'bg-green-500'];
 const STRENGTH_TEXT = ['', 'text-red-700', 'text-amber-800', 'text-green-700'];
 
 export default function RegisterPage() {
+  const { policy, error: policyError, retry: retryPolicy } = useRegistrationPolicy();
   const [form, setForm] = useState({ name: '', email: '', phoneDigits: '', invitationToken: '', password: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -56,13 +58,15 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!policy) return;
+    if (policy.invitationRequired && !form.invitationToken.trim()) { setError('Қатысу үшін шақыру коды қажет.'); return; }
     if (form.password !== form.confirmPassword) { toast.error('Парольдер сәйкес келмейді'); return; }
     if (!isPasswordValid) { toast.error('Пароль талаптарға сай емес'); return; }
     if (form.phoneDigits && form.phoneDigits.length !== 10) { toast.error('Телефон нөмірі толық емес'); return; }
     setLoading(true);
     setError('');
     try {
-      await register(form.name, form.email, form.password, phone || undefined, form.invitationToken.trim() || undefined);
+      await register(form.name, form.email, form.password, phone || undefined, policy.invitationRequired ? form.invitationToken.trim() : undefined);
       toast.success('Тіркелу сәтті!');
       router.push('/dashboard');
     } catch (err: any) {
@@ -76,8 +80,17 @@ export default function RegisterPage() {
   const ic = (err?: boolean) =>
     `input min-h-12 pr-12 ${err ? 'border-red-400 bg-red-50' : ''}`;
 
+  if (!policy) return <PremiumAuthFrame title="Тіркелу" description="Тіркелу шарттарын тексереміз.">
+    {policyError ? <div role="alert"><p>Тіркелу шарттарын жүктеу мүмкін болмады. Кейінірек қайталап көріңіз.</p><button type="button" className="btn-secondary mt-4 min-h-11" onClick={retryPolicy}>Қайталау</button></div> : <p role="status">Тіркелу шарттары жүктелуде…</p>}
+    <Link href="/courses" className="mt-4 inline-flex min-h-11 items-center text-primary-700">Курстарды қарау</Link>
+  </PremiumAuthFrame>;
+
   return (
     <PremiumAuthFrame title="Оқу жолыңызды бастаңыз" description="Жаңа тіркелгі жасап, өзіңізге сай курсты таңдаңыз.">
+        {policy.invitationRequired && <section aria-label="Пилотқа қатысу шарттары" className="mb-5 rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm text-slate-800">
+          <h2 className="font-semibold">ProctoLearn қазір жабық пилот режимінде.</h2><p className="mt-2">Қатысу үшін шақыру коды қажет. Иесі берген код пен шақырылған email мекенжайын енгізіңіз. Код жарамаса, мерзімі өтсе немесе қолданылған болса, жаңа шақыруды иесінен сұраңыз.</p>
+          <Link href="/courses" className="mt-2 inline-flex min-h-11 items-center font-medium text-violet-700">Курстарды қарау →</Link>
+        </section>}
         <form onSubmit={handleSubmit} className="space-y-4" aria-busy={loading}>
           <div>
             <label htmlFor="register-name" className="block text-sm font-medium text-gray-700 mb-1">Аты-жөні <span className="text-red-500">*</span></label>
@@ -100,11 +113,11 @@ export default function RegisterPage() {
             )}
             {form.phoneDigits.length === 10 && <p className="text-xs text-green-700 mt-1">✓ {phone}</p>}</div>
           </div>
-          <div>
-            <label htmlFor="register-invitation" className="block text-sm font-medium text-gray-700 mb-1">Пилотқа шақыру коды <span className="font-normal text-gray-500">(шақырылғандар үшін)</span></label>
-            <input id="register-invitation" autoComplete="off" name="invitationToken" type="password" className={ic()} value={form.invitationToken} onChange={handleChange} maxLength={128} aria-describedby="invitation-hint" />
+          {policy.invitationRequired && <div>
+            <label htmlFor="register-invitation" className="block text-sm font-medium text-gray-700 mb-1">Шақыру коды <span aria-hidden="true">*</span></label>
+            <input id="register-invitation" autoComplete="off" name="invitationToken" type="password" className={ic()} value={form.invitationToken} onChange={handleChange} required maxLength={128} aria-describedby="invitation-hint" />
             <p id="invitation-hint" className="mt-1 text-xs text-gray-500">Кодты пилот иесі жеке береді. Оны сілтемеге қоспаңыз және басқа адамға жібермеңіз.</p>
-          </div>
+          </div>}
           <div>
             <label htmlFor="register-password" className="block text-sm font-medium text-gray-700 mb-1">Құпиясөз <span className="text-red-500">*</span></label>
             <div className="relative">
@@ -150,7 +163,7 @@ export default function RegisterPage() {
           <button type="submit"
             disabled={loading || !isPasswordValid || passwordMismatch || (form.phoneDigits.length > 0 && form.phoneDigits.length !== 10)}
             className="btn-primary min-h-12 w-full">
-            {loading ? 'Тіркелуде...' : 'Тіркелу'}
+            {loading ? 'Тіркелуде...' : policy.invitationRequired ? 'Шақырумен қосылу' : 'Тіркелу'}
           </button>
         </form>
         <p className="text-center text-sm text-gray-500 mt-6">

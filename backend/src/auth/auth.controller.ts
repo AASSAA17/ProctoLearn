@@ -24,6 +24,13 @@ export class AuthController {
     return this.csrf.issue(request, response);
   }
 
+  @Get('registration-policy')
+  @ApiOperation({ summary: 'Тіркелудің ағымдағы қолжетімділігі' })
+  registrationPolicy(@Res({ passthrough: true }) response: Response) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.authService.registrationPolicy();
+  }
+
   // 5 registrations per minute per IP
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('register')
