@@ -80,18 +80,16 @@ export default function RegisterPage() {
   const ic = (err?: boolean) =>
     `input min-h-12 pr-12 ${err ? 'border-red-400 bg-red-50' : ''}`;
 
-  if (!policy) return <PremiumAuthFrame title="Тіркелу" description="Тіркелу шарттарын тексереміз.">
-    {policyError ? <div role="alert"><p>Тіркелу шарттарын жүктеу мүмкін болмады. Кейінірек қайталап көріңіз.</p><button type="button" className="btn-secondary mt-4 min-h-11" onClick={retryPolicy}>Қайталау</button></div> : <p role="status">Тіркелу шарттары жүктелуде…</p>}
-    <Link href="/courses" className="mt-4 inline-flex min-h-11 items-center text-primary-700">Курстарды қарау</Link>
-  </PremiumAuthFrame>;
-
   return (
     <PremiumAuthFrame title="Оқу жолыңызды бастаңыз" description="Жаңа тіркелгі жасап, өзіңізге сай курсты таңдаңыз.">
-        {policy.invitationRequired && <section aria-label="Пилотқа қатысу шарттары" className="mb-5 rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm text-slate-800">
+        {policyError && <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900"><p>Тіркелу шарттарын жүктеу мүмкін болмады. Қазір тіркелу қолжетімсіз.</p><button type="button" className="btn-secondary mt-3 min-h-11" onClick={retryPolicy}>Қайталау</button><Link href="/courses" className="ml-3 inline-flex min-h-11 items-center">Курстарды қарау</Link></div>}
+        {policy?.invitationRequired && <section aria-label="Пилотқа қатысу шарттары" className="mb-5 rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm text-slate-800">
           <h2 className="font-semibold">ProctoLearn қазір жабық пилот режимінде.</h2><p className="mt-2">Қатысу үшін шақыру коды қажет. Иесі берген код пен шақырылған email мекенжайын енгізіңіз. Код жарамаса, мерзімі өтсе немесе қолданылған болса, жаңа шақыруды иесінен сұраңыз.</p>
           <Link href="/courses" className="mt-2 inline-flex min-h-11 items-center font-medium text-violet-700">Курстарды қарау →</Link>
         </section>}
-        <form onSubmit={handleSubmit} className="space-y-4" aria-busy={loading}>
+        <form onSubmit={handleSubmit} aria-busy={loading || !policy}>
+          <fieldset disabled={!policy || loading} className="min-w-0 space-y-4 disabled:opacity-60">
+          {!policy && <legend className="sr-only">Тіркелу шарттары жүктелуде</legend>}
           <div>
             <label htmlFor="register-name" className="block text-sm font-medium text-gray-700 mb-1">Аты-жөні <span className="text-red-500">*</span></label>
             <input id="register-name" autoComplete="name" name="name" type="text" className={ic()} value={form.name} onChange={handleChange} placeholder="Толық атыңыз" required />
@@ -113,7 +111,7 @@ export default function RegisterPage() {
             )}
             {form.phoneDigits.length === 10 && <p className="text-xs text-green-700 mt-1">✓ {phone}</p>}</div>
           </div>
-          {policy.invitationRequired && <div>
+          {policy?.invitationRequired && <div>
             <label htmlFor="register-invitation" className="block text-sm font-medium text-gray-700 mb-1">Шақыру коды <span aria-hidden="true">*</span></label>
             <input id="register-invitation" autoComplete="off" name="invitationToken" type="password" className={ic()} value={form.invitationToken} onChange={handleChange} required maxLength={128} aria-describedby="invitation-hint" />
             <p id="invitation-hint" className="mt-1 text-xs text-gray-500">Кодты пилот иесі жеке береді. Оны сілтемеге қоспаңыз және басқа адамға жібермеңіз.</p>
@@ -161,10 +159,11 @@ export default function RegisterPage() {
           </div>
           {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
           <button type="submit"
-            disabled={loading || !isPasswordValid || passwordMismatch || (form.phoneDigits.length > 0 && form.phoneDigits.length !== 10)}
+            disabled={!policy || loading || !isPasswordValid || passwordMismatch || (form.phoneDigits.length > 0 && form.phoneDigits.length !== 10)}
             className="btn-primary min-h-12 w-full">
-            {loading ? 'Тіркелуде...' : policy.invitationRequired ? 'Шақырумен қосылу' : 'Тіркелу'}
+            {!policy ? 'Тексерілуде…' : loading ? 'Тіркелуде...' : policy.invitationRequired ? 'Шақырумен қосылу' : 'Тіркелу'}
           </button>
+          </fieldset>
         </form>
         <p className="text-center text-sm text-gray-500 mt-6">
           Тіркелгіңіз бар ма?{' '}

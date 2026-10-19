@@ -27,7 +27,7 @@ async function setup(browser, options = {}) {
     const request = route.request(), url = new URL(request.url()), p = url.pathname.replace(/^\/api/, '');
     calls.push({ path: p, method: request.method() });
     let status = 200, data = [];
-    if (p === '/auth/registration-policy') data = { registrationOpen: !options.closed, invitationRequired: !!options.closed };
+    if (p === '/auth/registration-policy') { status = options.policyFailure ? 503 : 200; data = { registrationOpen: !options.closed, invitationRequired: !!options.closed }; }
     else if (p === '/auth/me') data = { id: 'fixture-user', name: 'Ойдан шығарылған қолданушы', email: 'fixture@example.test', role: options.role || 'STUDENT' };
     else if (p === '/auth/csrf') data = { csrfToken: 'fixture-only-token' };
     else if (p === '/auth/register') { status = 403; data = { message: 'Шақыру жарамсыз немесе мерзімі өткен' }; }
@@ -73,6 +73,14 @@ async function audit(page, name) {
     await s.page.goto(origin + '/auth/register'); await s.page.locator('#register-name').waitFor();
     assert.equal(await s.page.locator('#register-invitation').count(), 0);
     report.checks.push('Open policy preserves ordinary registration'); await s.context.close();
+
+    const unavailablePolicy = { policyFailure: true };
+    s = await setup(browser, unavailablePolicy); await s.page.goto(origin + '/auth/register');
+    await s.page.getByRole('alert').waitFor();
+    assert.equal(await s.page.locator('#register-name').isDisabled(), true);
+    unavailablePolicy.policyFailure = false; await s.page.getByRole('button', { name: 'Қайталау', exact: true }).click();
+    await s.page.waitForFunction(() => !document.querySelector('#register-name')?.disabled);
+    report.checks.push('Unavailable policy disables registration; retry recovers server-confirmed access'); await s.context.close();
 
     s = await setup(browser, { certFailure: true });
     await s.page.goto(origin + '/dashboard'); await s.page.getByRole('link', { name: 'Оқуды жалғастыру →', exact: true }).waitFor();

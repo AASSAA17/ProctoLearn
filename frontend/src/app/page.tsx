@@ -52,7 +52,7 @@ function MarketingNavigation({ registrationLabel }: { registrationLabel: string 
         </div>
         <div className="hidden items-center gap-3 md:flex">
           <Link href="/auth/login" className="px-3 py-3 text-sm text-slate-300 hover:text-white">Кіру</Link>
-          <Link href="/auth/register" className="premium-button bg-white text-slate-950 hover:bg-cyan-100">{registrationLabel}</Link>
+          <Link href="/auth/register" className="premium-button min-w-[13rem] bg-white text-slate-950 hover:bg-cyan-100">{registrationLabel}</Link>
         </div>
         <button ref={toggle} type="button" aria-expanded={menuOpen} aria-controls="marketing-menu" aria-label={menuOpen ? 'Мәзірді жабу' : 'Мәзірді ашу'} onClick={() => setMenuOpen((open) => !open)} className="rounded-xl border border-white/20 p-3 text-slate-200 md:hidden">
           {menuOpen ? <XMarkIcon aria-hidden="true" className="h-5 w-5" /> : <Bars3Icon aria-hidden="true" className="h-5 w-5" />}
@@ -102,7 +102,7 @@ export default function HomePage() {
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-8 text-slate-300">Технологиялық дағдыларды жүйелі меңгер. Практикалық тапсырмалар орындап, емтихан арқылы өз прогресіңді көр.</p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link href="/auth/register" className="premium-button gap-3 bg-violet-600 text-white shadow-lg shadow-violet-500/20 hover:bg-violet-700">{registrationLabel} <ArrowRightIcon aria-hidden="true" className="h-4 w-4" /></Link>
+                <Link href="/auth/register" className="premium-button min-w-[13rem] gap-3 bg-violet-600 text-white shadow-lg shadow-violet-500/20 hover:bg-violet-700">{registrationLabel} <ArrowRightIcon aria-hidden="true" className="h-4 w-4" /></Link>
                 <a href="#courses" className="premium-button border border-white/20 bg-white/5 text-white hover:bg-white/10">Курстарды көру</a>
               </div>
               <ul className="mt-8 flex flex-wrap gap-x-5 gap-y-3 text-xs text-slate-300">
