@@ -71,6 +71,8 @@ ngrok account/self-setup; фактический phone preview; просмотр
 
 На aa0eab1 подтверждён FAILURE local-stack при SUCCESS frontend/backend/secrets: устаревшее ожидание глобальной ошибки кабинета. После правки stage9/product-ux добавлен общий сценарий независимого восстановления трёх ресурсов. Причина, пути и выполняемые проверки: [CI-12](product/changes/CI-12.md). Работающий pilot и его данные не изменены. Новые результаты до выполнения не объявляются PASS.
 
+Исправление f644334 проверено GitHub: frontend/backend/secrets/local-stack SUCCESS. После уточнения пользователя о кнопке PDF воспроизведено отсутствие Inter-шрифтов именно в изолированной pilot-сборке. Исправлен launcher, добавлен тест assets и настоящая генерация синтетического PDF перед принятием новой сборки. После каждой правки обновлены CI-12 и PILOT_RUNBOOK. Profile/proxy17 PASS после остановки, active exams0, backup before-pdf-fix-20261020 verified28tables/0objects; последующий запуск ещё проверяется.
+
 ## 20.10.2026 — product UX, Codex/AI assistance
 
 Ветка feat/product-ux-20261020, code commits6992a0d/a6989be, artifact83be191f017a3683. После каждой смысловой правки обновлялись docs/product/changes. Независимый AI security review выявил redaction/WITHDRAWN/reason-length дефекты, они исправлены. Backend243/frontend85/proxy16 и final browser11/60reflow/5axe PASSED; native phone/zoom/screenreader NOT_RUN. Backup и отдельный restore28tables/0objects verified; records не сбрасывались. Publication15preliminary/human review PENDING сохранена. Подробности/пути/команды/ограничения: product/DELIVERY_2026-10-20.md. Это не личный дневник независимой работы студента и не изготовленное педагогическое одобрение.

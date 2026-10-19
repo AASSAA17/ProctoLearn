@@ -117,6 +117,22 @@ function unresolvedCompiledAliases(directory) {
 }
 
 function candidateFile() { return path.join(DIRECTORY, 'candidate.json'); }
+const CERTIFICATE_ASSETS = ['Inter-Regular.ttf', 'Inter-Bold.ttf', 'Inter-LICENSE.txt'];
+function assertCertificateAssets(backendDist) {
+  for (const name of CERTIFICATE_ASSETS) {
+    const file = path.join(backendDist, 'assets', 'fonts', name);
+    if (!fs.existsSync(file) || !fs.statSync(file).isFile() || fs.statSync(file).size === 0) {
+      throw new Error(`Pilot certificate asset is missing or empty: ${name}`);
+    }
+  }
+}
+function copyCertificateAssets(backendDist) {
+  const target = path.join(backendDist, 'assets', 'fonts');
+  fs.mkdirSync(target, { recursive: true });
+  for (const name of CERTIFICATE_ASSETS) fs.copyFileSync(path.join(ROOT, 'backend', 'assets', 'fonts', name), path.join(target, name));
+  assertCertificateAssets(backendDist);
+}
+
 function activeFile() { return path.join(DIRECTORY, 'active-build.json'); }
 function readRecord(file, label) {
   if (!fs.existsSync(file)) throw new Error(`${label} is absent. Run validate-update first.`);
@@ -148,6 +164,7 @@ async function validateUpdate(env = prepare()) {
     if (!fs.existsSync(existing.backendEntry) || !fs.existsSync(path.join(ROOT, 'frontend', existing.frontendDist, 'BUILD_ID'))) {
       throw new Error('Validated candidate artifacts are incomplete. Preserve the record and validate a new source revision.');
     }
+    assertCertificateAssets(path.resolve(path.dirname(existing.backendEntry), '..'));
     fs.writeFileSync(candidateFile(), JSON.stringify(existing, null, 2) + '\n', { mode: 0o600 });
     console.log(`Candidate ${id} was already validated; no running release was changed.`); return existing;
   }
@@ -168,6 +185,17 @@ async function validateUpdate(env = prepare()) {
     '--incremental', 'false', '--sourceMap', 'false'], { cwd: path.join(ROOT, 'backend'), env: buildEnv });
   const backendEntry = path.join(backendDist, 'src', 'main.js');
   if (!fs.existsSync(backendEntry)) throw new Error('Pilot backend build did not produce its isolated entrypoint.');
+  // tsc emits code only. The renderer resolves assets beside this isolated src tree.
+  copyCertificateAssets(backendDist);
+  await run(process.execPath, ['-e', `
+    const { renderCertificatePdf } = require(${JSON.stringify(path.join(backendDist, 'src', 'certificates', 'certificate-pdf.js'))});
+    renderCertificatePdf({ qrCode: '00000000-0000-4000-8000-000000000012', issuedAt: new Date('2026-10-20'),
+      status: 'VALID', issuedVia: 'PROCTORED_EXAM', recipientName: 'Сынақ қолданушы', courseTitle: 'Сынақ курсы',
+      issuerName: 'ProctoLearn', snapshotStatus: 'CAPTURED' }).then(buffer => {
+        if (buffer.subarray(0, 5).toString() !== '%PDF-' || buffer.length < 1000) throw new Error('Invalid certificate PDF');
+        console.log('Isolated certificate PDF render passed (synthetic data).');
+      }).catch(error => { console.error(error.message); process.exitCode = 1; });
+  `], { cwd: path.join(ROOT, 'backend'), env: { ...buildEnv, CERTIFICATE_PUBLIC_ORIGIN: 'https://verify.example.test' } });
   const unresolvedAlias = unresolvedCompiledAliases(backendDist);
   if (unresolvedAlias) throw new Error(`Pilot backend build contains a runtime-unresolved path alias in ${path.relative(ROOT, unresolvedAlias)}.`);
   const relativeFrontendDist = path.relative(path.join(ROOT, 'frontend'), frontendDist).replaceAll('\\', '/');
@@ -357,5 +385,5 @@ async function main(args = process.argv.slice(2)) {
   return restoreCheck(env, value);
 }
 
-module.exports = { ROOT, DIRECTORY, MARKER, PORTS, validateEnvironment, ngrokTrafficPolicy, prepare, sourceRevision, unresolvedCompiledAliases, publicOrigin, runtimeEnvironment, promotionBackupEligible, safeName, validateUpdate, promote, start, stop, status, backup, restoreCheck, main };
+module.exports = { ROOT, DIRECTORY, MARKER, PORTS, validateEnvironment, ngrokTrafficPolicy, prepare, sourceRevision, unresolvedCompiledAliases, assertCertificateAssets, copyCertificateAssets, publicOrigin, runtimeEnvironment, promotionBackupEligible, safeName, validateUpdate, promote, start, stop, status, backup, restoreCheck, main };
 if (require.main === module) main().catch((error) => { console.error(error?.constructor === Error ? error.message : 'Pilot operation failed. Private data was preserved.'); process.exitCode = 1; });

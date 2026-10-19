@@ -4,7 +4,21 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { PORTS, publicOrigin, runtimeEnvironment, promotionBackupEligible, ngrokTrafficPolicy, unresolvedCompiledAliases, safeName } = require('./pilot-profile.cjs');
+const { ROOT, PORTS, publicOrigin, runtimeEnvironment, promotionBackupEligible, ngrokTrafficPolicy, unresolvedCompiledAliases, assertCertificateAssets, copyCertificateAssets, safeName } = require('./pilot-profile.cjs');
+
+test('isolated pilot build carries both PDF fonts and license and rejects incomplete assets', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'proctolearn-pdf-assets-'));
+  try {
+    assert.throws(() => assertCertificateAssets(root), /Inter-Regular/);
+    copyCertificateAssets(root);
+    for (const name of ['Inter-Regular.ttf', 'Inter-Bold.ttf', 'Inter-LICENSE.txt']) {
+      assert.deepEqual(fs.readFileSync(path.join(root, 'assets', 'fonts', name)), fs.readFileSync(path.join(ROOT, 'backend', 'assets', 'fonts', name)));
+    }
+    assertCertificateAssets(root);
+    fs.writeFileSync(path.join(root, 'assets', 'fonts', 'Inter-Bold.ttf'), '');
+    assert.throws(() => assertCertificateAssets(root), /Inter-Bold/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
 
 test('pilot ports are isolated from the known-good demo profile', () => {
   assert.deepEqual(PORTS, { proxy: 3200, web: 3100, api: 4100, postgres: 5434, s3: 9100, s3grpc: 29100, master: 19433, volume: 19440, filer: 18988 });

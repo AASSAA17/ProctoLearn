@@ -2,7 +2,7 @@
 
 ## Актуальное дополнение 20.10.2026
 
-PR №12: на aa0eab1 frontend/backend/secrets SUCCESS, local-stack FAILURE из-за устаревшего сценария ошибки кабинета. Исправление и текущие результаты: [CI-12](product/changes/CI-12.md). Локально после правки browser12/60reflow/5axe PASS; удалённый запуск исправления пока PENDING.
+PR №12: на aa0eab1 local-stack падал из-за устаревшего сценария кабинета. На f644334 все четыре jobs PR-run39323216510 SUCCESS. Локально browser12/60reflow/5axe PASS. Затем обнаружен отдельный пропуск шрифтов в pilot artifact при скачивании PDF: исправление упаковки, profile/proxy17 PASS; сборка/удалённый CI этой последующей правки пока PENDING. Подробная хронология: [CI-12](product/changes/CI-12.md).
 
 Улучшения UX выполнены в feat/product-ux-20261020. Новые результаты и ограничения: [product/DELIVERY_2026-10-20.md](product/DELIVERY_2026-10-20.md), по каждой правке — [product/UX_ACCEPTANCE.md](product/UX_ACCEPTANCE.md). Исторические результаты ниже не подменяют новый запуск и не подтверждают физический телефон/новый CI.
 
